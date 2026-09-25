@@ -1,0 +1,374 @@
+import { useEffect, useRef, useState } from "react";
+import { CloudDownload, FilePlus, FolderOpen, Upload, User } from "lucide-react";
+import { toast } from "@/lib/toast";
+import { cn } from "cn";
+import { getLocale, m } from "@/i18n";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { Catalog } from "@/lib/primitives/catalog";
+import { uniqueName } from "@/lib/primitives/name";
+import { nameTaken, type Profile } from "@/lib/primitives/profile";
+import { Subjects } from "@/lib/primitives/subject";
+import type { TimetableSource } from "@/lib/primitives/timetable";
+import { blockedRows, finalNames, libraryRows, loadRow, type LibraryRow } from "@/lib/library";
+import { readTimetableFiles, type UploadError } from "@/lib/upload";
+
+type Props = {
+  open: boolean;
+  // `new-profile` names the profile first; `add` copies into the active one.
+  mode: "new-profile" | "add";
+  onOpenChange: (open: boolean) => void;
+  profiles: Profile[];
+  // Lists nothing while offline.
+  catalog: Catalog;
+  // Offline the catalog lists nothing, which the dialog says once per opening.
+  offline: boolean;
+  // The profile the picks go to; undefined while a new one is being named.
+  target?: Profile;
+  // The profile name (new-profile mode) and the timetables, under their final
+  // names.
+  onConfirm: (name: string, sources: TimetableSource[]) => void;
+};
+
+// One dialog for both roads into a profile: creating one, and extending one.
+// One row per source — each catalog entry, each copy in any profile, each
+// upload here. Picking a row copies its content into the profile; nothing is
+// shared afterwards. Rows identical to a picked or held one are blocked, and
+// picked rows that would share a name in the profile become "Name 2".
+export function TimetablePickerDialog({
+  open,
+  mode,
+  onOpenChange,
+  profiles,
+  catalog,
+  offline,
+  target,
+  onConfirm,
+}: Props) {
+  const [name, setName] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<TimetableSource[]>([]);
+  // Empty timetables asked for here; one is created only if it is still
+  // checked on confirm.
+  const [empties, setEmpties] = useState<TimetableSource[]>([]);
+  // Checked rows, by row key. Held rows are never in here: they are checked
+  // and disabled on their own.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [errors, setErrors] = useState<UploadError[]>([]);
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  // Bumped by every reset: an upload or confirm still awaiting a file or a
+  // download when the dialog closes finds it changed and does nothing.
+  const session = useRef(0);
+
+  // One warning per opening, the same way the import dialog does it.
+  const warned = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      warned.current = false;
+      return;
+    }
+    if (!offline || warned.current) return;
+    warned.current = true;
+    toast.warning(m.picker_offline_warning());
+  }, [open, offline]);
+
+  const rows = libraryRows({ profiles, catalog, uploaded, empties, target });
+  const blocked = blockedRows(rows, picked);
+  const chosen = new Set([...picked].filter((key) => !blocked.has(key)));
+  const held = (target?.timetables ?? []).map((timetable) => timetable.name);
+  const names = finalNames(rows, chosen, held);
+
+  const nameValue =
+    name ??
+    uniqueName(
+      profiles.map((profile) => profile.name),
+      m.profile_default(),
+    );
+  const nameClash = mode === "new-profile" && nameTaken(profiles, nameValue.trim());
+  const nameInvalid = mode === "new-profile" && (!nameValue.trim() || nameClash);
+
+  const reset = () => {
+    setName(null);
+    setUploaded([]);
+    setEmpties([]);
+    setPicked(new Set());
+    setErrors([]);
+    setBusy(false);
+    session.current++;
+  };
+
+  const upload = async (files: File[]) => {
+    const run = session.current;
+    const result = await readTimetableFiles(files);
+    if (run !== session.current) return;
+    setErrors(result.errors);
+    if (result.sources.length === 0) return;
+    const all = [...uploaded, ...result.sources];
+    setUploaded(all);
+    // An uploaded file is the user's answer, so it arrives checked — unless
+    // its content is already picked or held.
+    const fresh = libraryRows({ profiles, catalog, uploaded: all, empties, target });
+    const next = new Set(chosen);
+    for (let i = uploaded.length; i < all.length; i++) {
+      const key = "u:" + i;
+      if (!blockedRows(fresh, next).has(key)) next.add(key);
+    }
+    setPicked(next);
+  };
+
+  // Always local and checked right away; `finalNames` gives it a free name
+  // ("New timetable 2") like any other pick.
+  const addEmpty = () => {
+    const empty: TimetableSource = {
+      name: m.timetable_default_name(),
+      origin: { kind: "local" },
+      subjects: Subjects.empty(),
+    };
+    setPicked(new Set([...chosen, "e:" + empties.length]));
+    setEmpties([...empties, empty]);
+  };
+
+  const confirm = async () => {
+    if (nameInvalid) return;
+    const run = session.current;
+    setBusy(true);
+    const sources: TimetableSource[] = [];
+    for (const row of rows) {
+      const finalName = names.get(row.key);
+      if (finalName === undefined) continue;
+      // A catalog row is downloaded now; a failed download (or content that
+      // no longer matches the index) is reported and does not join the picks.
+      // A profile's copy comes with its selection.
+      const loaded = await loadRow(row);
+      // Closed while a download was running: the user cancelled, nothing is
+      // added and nothing more is reported.
+      if (run !== session.current) return;
+      if (loaded) sources.push({ ...loaded, name: finalName });
+      else toast.error(m.catalog_error_fetch({ file: fileOf(row) }));
+    }
+    setBusy(false);
+    if (sources.length === 0 && mode === "add") return;
+    onConfirm(nameValue.trim(), sources);
+    close();
+  };
+
+  // Every way out forgets the dialog's state, so the next opening starts
+  // fresh.
+  const close = () => {
+    reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) reset();
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{mode === "add" ? m.picker_add_title() : m.picker_new_title()}</DialogTitle>
+          <DialogDescription>
+            {mode === "add" ? m.picker_add_text() : m.picker_new_text()}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4">
+          {mode === "new-profile" && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="picker-name">{m.profile_name()}</Label>
+              <Input
+                id="picker-name"
+                value={nameValue}
+                autoFocus
+                aria-invalid={nameClash || undefined}
+                onChange={(event) => setName(event.target.value)}
+              />
+              {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+            </div>
+          )}
+
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{m.picker_none()}</p>
+          ) : (
+            // The list scrolls inside itself, like the catalog lists did: the
+            // dialog keeps its height however many versions exist.
+            <ul className="flex max-h-[18rem] flex-col divide-y overflow-y-auto pr-2">
+              {rows.map((row) => (
+                <PickerRow
+                  key={row.key}
+                  row={row}
+                  checked={row.held || chosen.has(row.key)}
+                  blocked={blocked.has(row.key)}
+                  addedAs={names.get(row.key)}
+                  onToggle={(checked) =>
+                    setPicked((previous) => {
+                      const next = new Set(previous);
+                      if (checked) next.add(row.key);
+                      else next.delete(row.key);
+                      return next;
+                    })
+                  }
+                />
+              ))}
+            </ul>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <input
+              ref={input}
+              type="file"
+              accept=".timetable"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                const selected = [...(event.target.files ?? [])];
+                // Reset so picking the same file again fires `change`.
+                event.target.value = "";
+                if (selected.length > 0) void upload(selected);
+              }}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={addEmpty}>
+                <FilePlus data-icon="inline-start" />
+                {m.picker_empty()}
+              </Button>
+              {/* With a catalog around, the upload is the fallback and stays a
+                quiet icon; without one it is the only way in. */}
+              {catalog.timetables.length > 0 ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title={m.picker_upload()}
+                  aria-label={m.picker_upload()}
+                  onClick={() => input.current?.click()}
+                >
+                  <Upload />
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => input.current?.click()}>
+                  <Upload data-icon="inline-start" />
+                  {m.picker_upload()}
+                </Button>
+              )}
+            </div>
+            {errors.length > 0 && (
+              <ul className="flex flex-col gap-1 text-sm text-destructive">
+                {errors.map((error) => (
+                  <li key={error.file + error.message}>
+                    {error.file ? `${error.file}: ${error.message}` : error.message}
+                    {error.details && (
+                      <ul className="list-disc pl-4 break-words">
+                        {error.details.map((detail, i) => (
+                          <li key={i}>{detail}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={close}>
+            {m.cancel()}
+          </Button>
+          <Button
+            // A new profile may start empty; adding nothing to an existing one
+            // would be a no-op.
+            disabled={busy || nameInvalid || (mode === "add" && chosen.size === 0)}
+            onClick={() => void confirm()}
+          >
+            {mode === "add" ? m.picker_confirm() : m.profile_create()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Status under the name, never beside it: the dialog is too narrow for name,
+// source and the final name on one line at 360px in German.
+function PickerRow({
+  row,
+  checked,
+  blocked,
+  addedAs,
+  onToggle,
+}: {
+  row: LibraryRow;
+  checked: boolean;
+  // Identical to a picked or held row: greyed out, unchecked, disabled.
+  blocked: boolean;
+  // The name the row lands under, when it is picked.
+  addedAs: string | undefined;
+  onToggle: (checked: boolean) => void;
+}) {
+  const id = "pick-" + row.key;
+  const Icon =
+    row.kind === "catalog"
+      ? CloudDownload
+      : row.kind === "profile"
+        ? User
+        : row.kind === "empty"
+          ? FilePlus
+          : FolderOpen;
+  return (
+    <li className={cn("flex items-center gap-3 py-2", blocked && "opacity-50")}>
+      <Checkbox
+        id={id}
+        checked={checked && !blocked}
+        disabled={row.held || blocked}
+        onCheckedChange={(next) => onToggle(next === true)}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Label htmlFor={id}>{row.name}</Label>
+        <span className="text-xs text-muted-foreground">
+          {[
+            sourceLabel(row),
+            row.selection ? m.picker_selection(row.selection) : null,
+            row.modified ? m.picker_modified({ date: dateLabel(row.modified) }) : null,
+            addedAs !== undefined && addedAs !== row.name
+              ? m.picker_added_as({ name: addedAs })
+              : null,
+          ]
+            .filter((part) => part !== null)
+            .join(" · ")}
+        </span>
+      </div>
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+    </li>
+  );
+}
+
+function sourceLabel(row: LibraryRow): string {
+  if (row.kind === "catalog") return m.picker_source_catalog();
+  if (row.kind === "upload") return m.picker_source_upload();
+  if (row.kind === "empty") return m.picker_source_empty();
+  return m.picker_source_profile({ name: row.profileName ?? "" });
+}
+
+// When a catalog file last changed, in the UI language.
+function dateLabel(iso: string): string {
+  return new Intl.DateTimeFormat(getLocale(), { dateStyle: "medium" }).format(new Date(iso));
+}
+
+// The catalog file a failed row came from, for the error toast.
+function fileOf(row: LibraryRow): string {
+  const { origin } = row.source;
+  return origin.kind === "catalog" ? origin.path : row.name;
+}

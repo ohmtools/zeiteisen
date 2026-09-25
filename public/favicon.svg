@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="64 64 384 384" width="512" height="512">
+  <defs>
+    <radialGradient id="faceGrad" cx="42%" cy="32%" r="75%">
+      <stop offset="0%" stop-color="#262B35"/>
+      <stop offset="100%" stop-color="#12151A"/>
+    </radialGradient>
+    <linearGradient id="bezelGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F5F5F4"/>
+      <stop offset="45%" stop-color="#D6D3CE"/>
+      <stop offset="100%" stop-color="#8C8884"/>
+    </linearGradient>
+    <linearGradient id="scarletGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E23A46"/>
+      <stop offset="100%" stop-color="#9E0711"/>
+    </linearGradient>
+    <linearGradient id="maroonGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9E0711"/>
+      <stop offset="100%" stop-color="#5C040A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Pocket watch glyph -->
+  <g>
+    <!-- Winding stem -->
+    <rect x="244" y="112" width="24" height="30" rx="7" fill="url(#bezelGrad)"/>
+    <!-- Crown / chain loop (now neutral, not blue) -->
+    <circle cx="256" cy="100" r="20" fill="none" stroke="url(#bezelGrad)" stroke-width="18"/>
+    <!-- Bezel & face -->
+    <circle cx="256" cy="288" r="144" fill="url(#faceGrad)" stroke="url(#bezelGrad)" stroke-width="22"/>
+    <!-- Timetable grid: centered, sized to clear the inner ring edge -->
+    <rect x="174" y="202" width="70" height="80" rx="12" fill="url(#scarletGrad)"/>
+    <rect x="174" y="294" width="70" height="80" rx="12" fill="#FFFFFF"/>
+    <rect x="258" y="202" width="80" height="172" rx="12" fill="url(#maroonGrad)"/>
+  </g>
+</svg>
