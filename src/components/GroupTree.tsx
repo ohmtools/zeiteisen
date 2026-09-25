@@ -86,13 +86,14 @@ function saveTimetable(timetable: Timetable) {
 }
 
 // What the heading of a timetable shows about the catalog: nothing for a local
-// one; offline before anything else, because then nothing can be checked;
-// otherwise whether an update is waiting. A refused update counts as current —
-// the user settled it.
+// one, nor while there is no index to compare with (the catalog is ignored or
+// was never read); offline before anything else, because then nothing can be
+// checked; otherwise whether an update is waiting. A refused update counts as
+// current — the user settled it.
 type CatalogStatus = "none" | "offline" | "update" | "current";
 
 function catalogStatus(timetable: Timetable, catalog: Catalog, online: boolean): CatalogStatus {
-  if (timetable.origin.kind !== "catalog") return "none";
+  if (timetable.origin.kind !== "catalog" || !catalog.index) return "none";
   if (!online) return "offline";
   return timetableHasUpdate(timetable, catalog) ? "update" : "current";
 }

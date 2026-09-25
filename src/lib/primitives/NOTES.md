@@ -69,10 +69,26 @@ parameter so tests run without a browser.
 - Backup (`loadBackup` / `getBackupFile` / `parseBackupFile` / `saveBackup`) =
   every key except the catalog cache (the catalog hands it out again) and the
   iOS hint (about this device only): profiles in their stored shape incl.
-  `locked` and `rejected`, active profile, dates, sources, auto-update. The
+  `locked` and `rejected`, active profile, dates, own locations and
+  abbreviations, sources, catalog mode and URL. Fields an older file lacks
+  (own files, mode, URL) restore as their defaults. The
   language stays with the browser. `parseBackupFile` is STRICT, unlike the
   loaders: one broken profile, a repeated profile or timetable name or a bad
   field refuses the whole file, because a restore replaces everything.
+- `tt.locations.v1` = the user's own locations file, used INSTEAD of the
+  catalog's; `null` or missing = the catalog's. `tt.abbreviations.v1` = the
+  user's own abbreviations files (`OwnAbbreviationsFile[]`, unique file names,
+  upload order), MERGED OVER the catalog's, later files winning (user
+  decision). Present = "own", so `CatalogSources` carries no flag for them
+  (dates need `datesManual` because one key holds catalog and own dates
+  alike).
+- `tt.catalogmode.v1` = `CatalogMode` (`catalog.ts`), default `auto`:
+  `ignore` reads nothing and uses none of the catalog's data, `freeze` reads
+  the index but keeps what the device has (`refreshCache` / `datesToInstall`
+  get `mode === "auto"`). `tt.catalogurl.v1` = the user's catalog base URL,
+  absolute http(s) only, `null` = the built-in one. `saveDates(null)` removes
+  the dates (the app drops catalog-installed ones on `ignore` and on another
+  URL).
 - `tt.ioshint.v1` = the one-time "add to home screen" hint was shown.
 
 ## Catalog (`catalog.ts`)

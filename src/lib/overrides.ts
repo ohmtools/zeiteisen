@@ -1,6 +1,7 @@
 import type { CatalogLocation, Localized } from "@/lib/primitives/meta";
 
-// The catalog's locations.json and abbreviations/*.json only ever extend the
+// The catalog's locations.json and abbreviations/*.json (or the user's own file
+// of that kind, in place of the catalog's) only ever extend the
 // tables built into `buildings.ts` and `subjects.ts`. They are module state
 // instead of props because every lookup happens deep inside render helpers
 // (`subjectName`, `buildingLinks`) that are called from many places; the

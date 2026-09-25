@@ -5,7 +5,7 @@
   `src/lib/*` words and wires. No second model — import types from
   primitives.
 - **First paint = the grid.** `App.tsx` statically imports only the shell
-  (header, view switch, week nav, day toggle, grid, footer, tab bar), the state hooks and
+  (view switch, week nav, day toggle, grid, footer, tab bar), the state hooks and
   what they need. Sidebar, dialogs, toaster and the footer's "Data" menu come
   from ONE deferred chunk: `components/deferred.ts` re-exports them and App
   `lazy()`s each through the same `import()`. Anything new that is not the

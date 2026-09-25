@@ -10,7 +10,7 @@
 //     locations.json
 //     dates.json
 //     abbreviations/*.json
-//     timetables/**/*.json  plain Subject[], subdirectories allowed
+//     timetables/**/*.{json,timetable}  plain Subject[], subdirectories allowed
 //
 // Every entry carries an 8-character hash, so the app only re-downloads what
 // really changed. A timetable's hash is `Subjects.hash()` of its validated
@@ -28,6 +28,7 @@ const jiti = createJiti(import.meta.url);
 const { shortHash, subjectsFileSchema, subjectsHash } = await jiti.import(
   "../src/lib/primitives/subject.ts",
 );
+const { abbreviationsSchema } = await jiti.import("../src/lib/primitives/meta.ts");
 
 const usage = "usage: npm run catalog -- <catalog-dir> [--stdout]\n";
 
@@ -52,20 +53,26 @@ if (options.positionals.length !== 1) {
 const toStdout = options.values.stdout;
 const dir = options.positionals[0];
 
-// Every `.json` below `sub`, subdirectories included, as paths relative to the
-// catalog root.
-async function jsonFiles(sub) {
+// Every file below `sub` ending in one of `extensions`, subdirectories
+// included, as paths relative to the catalog root. Any other file is reported,
+// so a file the index leaves out never goes unnoticed.
+async function filesIn(sub, extensions) {
+  let entries;
   try {
-    const entries = await readdir(path.join(dir, sub), { recursive: true, withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)))
-      .map((relative) => relative.split(path.sep).join("/"))
-      .sort();
+    entries = await readdir(path.join(dir, sub), { recursive: true, withFileTypes: true });
   } catch {
     // A missing subdirectory is normal: the catalog may serve only some kinds.
     return [];
   }
+  const relative = (entry) =>
+    path.relative(dir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
+  const files = [];
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (extensions.some((extension) => entry.name.endsWith(extension))) files.push(relative(entry));
+    else process.stderr.write(`skipped ${relative(entry)}: not ${extensions.join(" or ")}\n`);
+  }
+  return files.sort();
 }
 
 async function read(relative) {
@@ -87,12 +94,44 @@ function timetableHash(json) {
 
 const files = [];
 
+// The parsed JSON of the file added, `undefined` when it was skipped.
 async function add(relative, kind, hashOf = shortHash) {
   try {
     const file = await read(relative);
     files.push({ path: relative, kind, hash: hashOf(file.json), modified: file.modified });
+    return file.json;
   } catch (error) {
     process.stderr.write(`skipped ${relative}: ${error.message}\n`);
+    return undefined;
+  }
+}
+
+// Subject code (upper case, as the app compares them) -> every file listing
+// it, in index order. The app merges all abbreviations files into one table,
+// the last listing winning, so a code in two files (or twice in one) silently
+// hides a name: worth a warning, not a refusal.
+const codes = new Map();
+
+function collectCodes(relative, json) {
+  const parsed = abbreviationsSchema.safeParse(json);
+  if (!parsed.success) {
+    process.stderr.write(`warning: ${relative} does not match the abbreviations format\n`);
+    return;
+  }
+  for (const { code } of parsed.data.subjects) {
+    const key = code.toUpperCase();
+    codes.set(key, [...(codes.get(key) ?? []), relative]);
+  }
+}
+
+function warnRepeatedCodes() {
+  for (const [code, where] of codes) {
+    if (where.length < 2) continue;
+    const winner = where.at(-1);
+    process.stderr.write(
+      `warning: abbreviation ${code} is listed ${where.length} times (${where.join(", ")}); ` +
+        `the app uses the one in ${winner}\n`,
+    );
   }
 }
 
@@ -100,8 +139,14 @@ await add("locations.json", "locations");
 // One dates file, like one locations file: the app holds a single
 // `SemesterDates` and installs this one by itself.
 await add("dates.json", "dates");
-for (const relative of await jsonFiles("abbreviations")) await add(relative, "abbreviations");
-for (const relative of await jsonFiles("timetables")) {
+for (const relative of await filesIn("abbreviations", [".json"])) {
+  const json = await add(relative, "abbreviations");
+  if (json !== undefined) collectCodes(relative, json);
+}
+warnRepeatedCodes();
+// `.timetable` is what the app downloads and uploads, so such a file can be
+// dropped in as it is; the app names it after the file without the extension.
+for (const relative of await filesIn("timetables", [".json", ".timetable"])) {
   await add(relative, "timetables", timetableHash);
 }
 

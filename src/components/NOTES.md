@@ -5,8 +5,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 
 ## Shell
 
-- Full width, no max-width container. Header = title only, no subtitle (user
-  decision).
+- Full width, no max-width container. No header (user decision): logo and
+  name (`Brand`) sit in the desktop footer and the phone's Settings menu; an
+  `sr-only` h1 keeps the page titled.
 - **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 700px) is exactly
   one viewport tall, the page never scrolls.** Left column 24rem:
   `ProfileSection` (constant height) and `GroupTree` (takes the rest; only its
@@ -22,18 +23,37 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   by a primary line on the bar's divider, not a filled button. Start tab:
   Groups when the active profile has no timetables, else Timetable; not
   persisted. The page keeps bottom padding for the bar, toasts sit above it.
-- The dock is the same element as the desktop toolbar: last in the timetable
-  column and `sticky` to the top of the bar, so it needs no guessed page
-  padding; `desktop:` puts it back above the grid. `WeekNav` stays one row
-  there (short range label below `sm`) so the dock is at most three rows.
+- The Timetable tab is exactly one viewport tall on phones, no page scroll
+  (user decision; Groups keeps page scroll). Top to bottom: grid (the hour
+  rows share the leftover height, floor 36px like a button; below that the
+  grid scrolls inside itself), week nav (an empty row of the same height in
+  General, so the grid keeps its height), day toggle, view
+  switch, tab bar (user decision). The dock is the same element as the
+  desktop toolbar, last in the timetable column; `desktop:` puts it back
+  above the grid as one row (switch left, week nav right) with fixed 56px
+  hours. `WeekNav` stays one row (short range label below `sm`).
 - **No boxes** (user decision): sections are split by divider lines, `Section`
   is shadcn's `Card` minus background, shadow and ring. One spacing unit
   (24px) around every divider — change the paddings together so edges stay
   aligned.
 - Footer (desktop only; phones: the tab bar's Settings menu, same
-  `DataMenu` with `settings`) = note · "Data" menu · EN/DE. The Data menu holds own dates ↔
-  catalog dates, "Update catalog data" (dates, locations, abbreviations only —
-  timetables never update by themselves), Save backup, Load backup. Load
+  `DataMenu` with `settings`) = logo and name · note · "Data" menu · EN/DE. The Data menu holds:
+  own files — dates and locations one item each ("Load own …" while the
+  catalog's is in use, "Use catalog …" plus a trailing "own file" note while
+  an own file is, disabled while the catalog is ignored); abbreviations
+  "Load own …" / "Add own …" (several files, trailing "n own files") plus
+  "Remove own abbreviations…", a dialog listing the files in winning order
+  (later over earlier) with a remove button each and "Remove all"; removing
+  is immediate (the user still has the file), the last one closes it. One
+  hidden file input outside the menu, which
+  unmounts its content on closing. While any own file is in use a muted line
+  says how they combine with the catalog and that it never updates them.
+  Then the catalog — "Catalog" cycles ignore → auto-update → freeze on click
+  WITHOUT closing the menu (`closeOnClick={false}`), the mode as trailing
+  note and its explanation as a muted line below (phones have no tooltips);
+  "Catalog URL…" opens a dialog (empty or "Use default" = built-in, absolute
+  http(s) only, trailing "custom" note when set). Then Save backup, Load
+  backup. Load
   validates first (broken → error toast, nothing touched), then confirms
   ("Profiles now: N, in the backup: M") with "Save current backup first" in
   the dialog; restoring replaces everything but the catalog cache.
@@ -48,7 +68,8 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`; the pickers accept only their
   own. Downloads go out as `application/octet-stream` so no browser appends
-  `.json`. Catalog files and own dates uploads stay `.json`.
+  `.json`. Catalog files and own dates / locations / abbreviations uploads stay
+  `.json`.
 - `@/lib/ics` is only reached through `import()`, date pickers only through
   `LazyCalendar` — both stay out of the first load.
 
@@ -62,6 +83,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   owns the day), other columns hidden with CSS; horizontal touch swipe changes the day. The overlay is
   `pointer-events-none` so swipes work; a pointer that moved > 10px is a
   swipe, not a click.
+- The all-day row (Current week) has a fixed height (48px phones, 64px from
+  `md`), more events scroll inside their cell; General leaves the same space
+  on top, so switching views never moves the hours (user decision).
 - Opens on Current week inside the lecture period, General otherwise (user
   decision).
 - Block popup spells out subject, kinds and repeat; the letter badge is hidden

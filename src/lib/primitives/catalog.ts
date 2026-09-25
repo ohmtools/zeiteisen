@@ -28,7 +28,7 @@ import type { TimetableName } from "./timetable";
 //     locations.json
 //     dates.json
 //     abbreviations/*.json
-//     timetables/**/*.json  plain Subject[], named after the file
+//     timetables/**/*.{json,timetable}  plain Subject[], named after the file
 
 export const CatalogKind = {
   Locations: "locations",
@@ -261,6 +261,16 @@ export function parseDates(payload: unknown): SemesterDates | null {
   const parsed = semesterDatesSchema.safeParse(payload);
   return parsed.success ? parsed.data : null;
 }
+
+// --- how the app uses the catalog ---
+
+// `auto` reads the catalog and keeps dates, locations and abbreviations
+// current; `freeze` still reads the index (the picker lists it) but keeps what
+// the device has, downloading only what it has no copy of; `ignore` reads
+// nothing at all and uses none of the catalog's data.
+export type CatalogMode = "ignore" | "auto" | "freeze";
+
+export const catalogModeSchema: z.ZodMiniType<CatalogMode> = z.enum(["ignore", "auto", "freeze"]);
 
 // --- where the installed dates came from ---
 

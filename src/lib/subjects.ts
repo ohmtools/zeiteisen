@@ -42,6 +42,10 @@ export function kindName(kind: Kind): string {
       return m.kind_exercise();
     case Kind.Tutorial:
       return m.kind_tutorial();
+    case Kind.Seminar:
+      return m.kind_seminar();
+    case Kind.Elective:
+      return m.kind_elective();
   }
 }
 

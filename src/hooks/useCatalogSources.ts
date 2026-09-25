@@ -1,25 +1,32 @@
 import { useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
-import type { CatalogEntry, CatalogSources } from "@/lib/primitives/catalog";
+import type { CatalogEntry, CatalogMode, CatalogSources } from "@/lib/primitives/catalog";
 import {
-  AUTO_UPDATE_KEY,
-  loadAutoUpdate,
+  CATALOG_MODE_KEY,
+  CATALOG_URL_KEY,
+  loadCatalogMode,
+  loadCatalogUrl,
   loadSources,
-  saveAutoUpdate,
+  saveCatalogMode,
+  saveCatalogUrl,
   saveSources,
   SOURCES_KEY,
 } from "@/lib/primitives/storage";
 
 // Owns `tt.sources.v1` (where the global dates came from, and whether the user
-// picked them by hand) and `tt.autoupdate.v1` (the footer switch). Timetables
-// are not in here: every profile records the origin of its own timetables.
+// picked them by hand), `tt.catalogmode.v1` (the Data menu's "Catalog":
+// ignore, auto-update, freeze) and `tt.catalogurl.v1` (the user's catalog
+// URL). Timetables are not in here: every profile records the origin of its
+// own timetables.
 export function useCatalogSources() {
   const [sources, setSources] = useState<CatalogSources>(loadSources);
-  const [autoUpdate, setAutoUpdateState] = useState<boolean>(loadAutoUpdate);
+  const [mode, setModeState] = useState<CatalogMode>(loadCatalogMode);
+  const [url, setUrlState] = useState<string | null>(loadCatalogUrl);
   // Changed in another tab: this one's next write would undo it otherwise.
-  useStorageSync([SOURCES_KEY, AUTO_UPDATE_KEY], () => {
+  useStorageSync([SOURCES_KEY, CATALOG_MODE_KEY, CATALOG_URL_KEY], () => {
     setSources(loadSources());
-    setAutoUpdateState(loadAutoUpdate());
+    setModeState(loadCatalogMode());
+    setUrlState(loadCatalogUrl());
   });
 
   const write = (update: (previous: CatalogSources) => CatalogSources) => {
@@ -33,13 +40,22 @@ export function useCatalogSources() {
   return {
     datesManual: sources.datesManual,
     sources,
-    autoUpdate,
-    setAutoUpdate: (on: boolean) => {
-      setAutoUpdateState(on);
-      saveAutoUpdate(on);
+    mode,
+    setMode: (next: CatalogMode) => {
+      setModeState(next);
+      saveCatalogMode(next);
+    },
+    url,
+    setUrl: (next: string | null) => {
+      setUrlState(next);
+      saveCatalogUrl(next);
     },
     markDates: (entry: CatalogEntry) =>
       write((previous) => ({ ...previous, dates: { path: entry.path, hash: entry.hash } })),
+    // The catalog's dates were removed: the next catalog read installs its
+    // dates as a first install again.
+    forgetDates: () =>
+      write((previous) => (previous.dates === null ? previous : { ...previous, dates: null })),
     // A dates file the user picked by hand stops the catalog from installing
     // its own, until they ask for the catalog ones again.
     setDatesManual: (manual: boolean) =>

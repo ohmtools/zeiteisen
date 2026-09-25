@@ -1,15 +1,17 @@
 import * as z from "zod/mini";
 import {
   catalogCacheSchema,
+  catalogModeSchema,
   catalogSourcesSchema,
   emptyCatalogCache,
   emptySources,
   type CatalogCache,
+  type CatalogMode,
   type CatalogSources,
 } from "./catalog";
-import type { SemesterDates } from "./meta";
+import type { Abbreviations, Locations, SemesterDates } from "./meta";
 import type { Profile, ProfileName } from "./profile";
-import { semesterDatesSchema } from "./meta";
+import { abbreviationsSchema, locationsSchema, semesterDatesSchema } from "./meta";
 import { timetableFromJSON, timetableJSONSchema, type Timetable } from "./timetable";
 
 // localStorage is the only persistence: the app never talks to a server.
@@ -25,12 +27,19 @@ export const PROFILES_KEY = "tt.profiles.v1";
 export const ACTIVE_KEY = "tt.active.v1";
 // Global semester dates: local-only, never in a link or a profile file.
 export const DATES_KEY = "tt.dates.v1";
+// The user's own locations file, used instead of the catalog's; `null` (or
+// missing) = the catalog's.
+export const LOCATIONS_KEY = "tt.locations.v1";
+// The user's own abbreviations files, merged over the catalog's.
+export const ABBREVIATIONS_KEY = "tt.abbreviations.v1";
 // Last catalog index plus the small files downloaded from it.
 export const CATALOG_KEY = "tt.catalog.v1";
 // Where the installed dates came from.
 export const SOURCES_KEY = "tt.sources.v1";
-// Footer switch, "on" / "off".
-export const AUTO_UPDATE_KEY = "tt.autoupdate.v1";
+// How the catalog is used, a `CatalogMode`.
+export const CATALOG_MODE_KEY = "tt.catalogmode.v1";
+// The catalog's base URL the user set, `null` (or missing) = the built-in one.
+export const CATALOG_URL_KEY = "tt.catalogurl.v1";
 
 export type KeyValueStore = Pick<Storage, "getItem" | "setItem">;
 
@@ -138,8 +147,44 @@ export function loadDates(store = defaultStore()): SemesterDates | null {
   return read(DATES_KEY, z.nullable(semesterDatesSchema), null, store);
 }
 
-export function saveDates(dates: SemesterDates, store = defaultStore()): boolean {
+// `null` removes the dates.
+export function saveDates(dates: SemesterDates | null, store = defaultStore()): boolean {
   return writeJson(DATES_KEY, dates, store);
+}
+
+// --- own locations and abbreviations ---
+
+// Stored as uploaded; `null` hands locations back to the catalog.
+export function loadOwnLocations(store = defaultStore()): Locations | null {
+  return read(LOCATIONS_KEY, z.nullable(locationsSchema), null, store);
+}
+
+export function saveOwnLocations(locations: Locations | null, store = defaultStore()): boolean {
+  return writeJson(LOCATIONS_KEY, locations, store);
+}
+
+// One uploaded abbreviations file, named after it. Names are unique: the same
+// name again replaces the file. In upload order; later files win on a code.
+export type OwnAbbreviationsFile = { name: string; data: Abbreviations };
+
+const ownAbbreviationsSchema: z.ZodMiniType<OwnAbbreviationsFile[]> = z
+  .array(z.object({ name: z.string().check(z.minLength(1)), data: abbreviationsSchema }))
+  .check(
+    z.refine((files) => new Set(files.map((file) => file.name)).size === files.length, {
+      message: "file names are unique",
+    }),
+  );
+
+// `[]` = none, the catalog's alone.
+export function loadOwnAbbreviations(store = defaultStore()): OwnAbbreviationsFile[] {
+  return read(ABBREVIATIONS_KEY, ownAbbreviationsSchema, [], store);
+}
+
+export function saveOwnAbbreviations(
+  files: readonly OwnAbbreviationsFile[],
+  store = defaultStore(),
+): boolean {
+  return writeJson(ABBREVIATIONS_KEY, files, store);
 }
 
 // --- catalog ---
@@ -160,23 +205,25 @@ export function saveSources(sources: CatalogSources, store = defaultStore()): bo
   return writeJson(SOURCES_KEY, sources, store);
 }
 
-// On unless explicitly switched off.
-export function loadAutoUpdate(store = defaultStore()): boolean {
-  try {
-    return store?.getItem(AUTO_UPDATE_KEY) !== "off";
-  } catch {
-    return true;
-  }
+// `auto` unless the user picked another mode.
+export function loadCatalogMode(store = defaultStore()): CatalogMode {
+  return read(CATALOG_MODE_KEY, catalogModeSchema, "auto", store);
 }
 
-export function saveAutoUpdate(autoUpdate: boolean, store = defaultStore()): boolean {
-  try {
-    if (!store) return false;
-    store.setItem(AUTO_UPDATE_KEY, autoUpdate ? "on" : "off");
-    return true;
-  } catch {
-    return false;
-  }
+export function saveCatalogMode(mode: CatalogMode, store = defaultStore()): boolean {
+  return writeJson(CATALOG_MODE_KEY, mode, store);
+}
+
+// An absolute http(s) URL; anything else reads as the built-in catalog.
+const catalogUrlSchema = z.nullable(z.url({ protocol: /^https?$/ }));
+
+export function loadCatalogUrl(store = defaultStore()): string | null {
+  return read(CATALOG_URL_KEY, catalogUrlSchema, null, store);
+}
+
+// `null` goes back to the built-in catalog.
+export function saveCatalogUrl(url: string | null, store = defaultStore()): boolean {
+  return writeJson(CATALOG_URL_KEY, url, store);
 }
 
 // --- iOS home screen hint ---
@@ -213,8 +260,11 @@ export type Backup = {
   profiles: Profile[];
   active: ProfileName | null;
   dates: SemesterDates | null;
+  locations: Locations | null;
+  abbreviations: OwnAbbreviationsFile[];
   sources: CatalogSources;
-  autoUpdate: boolean;
+  catalogMode: CatalogMode;
+  catalogUrl: string | null;
 };
 
 export function loadBackup(store = defaultStore()): Backup {
@@ -222,8 +272,11 @@ export function loadBackup(store = defaultStore()): Backup {
     profiles: loadProfiles(store),
     active: loadActive(store),
     dates: loadDates(store),
+    locations: loadOwnLocations(store),
+    abbreviations: loadOwnAbbreviations(store),
     sources: loadSources(store),
-    autoUpdate: loadAutoUpdate(store),
+    catalogMode: loadCatalogMode(store),
+    catalogUrl: loadCatalogUrl(store),
   };
 }
 
@@ -238,8 +291,11 @@ export const backupFileSchema = z.object({
   ),
   active: z.nullable(z.string().check(z.minLength(1))),
   dates: z.nullable(semesterDatesSchema),
+  locations: z._default(z.nullable(locationsSchema), null),
+  abbreviations: z._default(ownAbbreviationsSchema, []),
   sources: catalogSourcesSchema,
-  autoUpdate: z.boolean(),
+  catalogMode: z._default(catalogModeSchema, "auto"),
+  catalogUrl: z._default(catalogUrlSchema, null),
 });
 
 export type BackupFile = z.infer<typeof backupFileSchema>;
@@ -250,8 +306,11 @@ export function getBackupFile(backup: Backup): BackupFile {
     profiles: backup.profiles.map(toStored),
     active: backup.active,
     dates: backup.dates,
+    locations: backup.locations,
+    abbreviations: backup.abbreviations,
     sources: backup.sources,
-    autoUpdate: backup.autoUpdate,
+    catalogMode: backup.catalogMode,
+    catalogUrl: backup.catalogUrl,
   };
 }
 
@@ -266,8 +325,8 @@ export function parseBackupFile(json: unknown): Backup | null {
     (profile, i) => profile.timetables.length !== parsed.data.profiles[i].timetables.length,
   );
   if (repeated) return null;
-  const { active, dates, sources, autoUpdate } = parsed.data;
-  return { profiles, active, dates, sources, autoUpdate };
+  const { active, dates, locations, abbreviations, sources, catalogMode, catalogUrl } = parsed.data;
+  return { profiles, active, dates, locations, abbreviations, sources, catalogMode, catalogUrl };
 }
 
 // Replaces every key a backup holds; the catalog cache stays. `false` when
@@ -276,9 +335,12 @@ export function saveBackup(backup: Backup, store = defaultStore()): boolean {
   const written = [
     saveProfiles(backup.profiles, store),
     writeJson(ACTIVE_KEY, backup.active, store),
-    writeJson(DATES_KEY, backup.dates, store),
+    saveDates(backup.dates, store),
+    saveOwnLocations(backup.locations, store),
+    saveOwnAbbreviations(backup.abbreviations, store),
     saveSources(backup.sources, store),
-    saveAutoUpdate(backup.autoUpdate, store),
+    saveCatalogMode(backup.catalogMode, store),
+    saveCatalogUrl(backup.catalogUrl, store),
   ];
   return written.every(Boolean);
 }

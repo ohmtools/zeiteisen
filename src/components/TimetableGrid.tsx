@@ -74,7 +74,12 @@ export function TimetableGrid({
   // moves. The swipe covers grid and list, so it moves between them too.
   return (
     <div
-      className="flex touch-pan-y flex-col gap-4 text-sm md:flex-row"
+      className={cn(
+        "flex flex-1 touch-pan-y flex-col gap-4 text-sm md:flex-row desktop:flex-none",
+        // The all-day row's height (divider included) as space on top, so the
+        // hours do not move when switching between general and week view.
+        !week && "mt-12 md:mt-16",
+      )}
       onPointerDown={(event) => {
         if (event.pointerType === "mouse") return;
         swipeStart.current = { x: event.clientX, y: event.clientY };
@@ -89,7 +94,7 @@ export function TimetableGrid({
         swipeStart.current = null;
       }}
     >
-      <div className={cn("min-w-0 flex-1 border", showOther && "hidden md:block")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col border", showOther && "hidden md:flex")}>
         {/* On phones the day toggle in the dock already names the shown day. */}
         <div className={`${COLUMNS} hidden border-b md:grid`}>
           <div className="flex items-center justify-center p-2 text-center text-muted-foreground">
@@ -105,8 +110,10 @@ export function TimetableGrid({
           ))}
         </div>
 
+        {/* Fixed height, whatever the events: a growing row would move the
+              hours. More events than fit scroll inside their cell. */}
         {week && (
-          <div className={`${COLUMNS} border-b`}>
+          <div className={`${COLUMNS} h-12 shrink-0 border-b md:h-16`}>
             <div className="flex items-center justify-center p-2 text-center text-muted-foreground">
               {m.grid_allday()}
             </div>
@@ -114,7 +121,7 @@ export function TimetableGrid({
               <div
                 key={day}
                 className={cn(
-                  "flex min-h-10 min-w-0 flex-col gap-1 border-l p-2",
+                  "flex min-w-0 flex-col gap-1 overflow-y-auto border-l p-1.5",
                   dayColumn(day, selectedDay),
                 )}
               >
@@ -128,13 +135,19 @@ export function TimetableGrid({
 
         {/* Hour rows draw the grid lines; the subjects sit in an overlay of
               the same columns so they can span and share a slot freely. */}
-        <div className="relative">
+        {/* Below `desktop` the hours share the height left over (one
+              viewport, no page scroll), down to a floor; desktop scrolls. */}
+        <div className="relative flex flex-1 flex-col desktop:flex-none">
           {hours.map((hour, index) => (
             <div
               key={hour}
-              className={cn(COLUMNS, "h-10.5 md:h-14", index < hours.length - 1 && "border-b")}
+              className={cn(
+                COLUMNS,
+                "min-h-9 flex-1 desktop:h-14 desktop:flex-none",
+                index < hours.length - 1 && "border-b",
+              )}
             >
-              <div className="flex items-center justify-center p-2 text-muted-foreground tabular-nums">
+              <div className="flex items-center justify-center px-2 text-muted-foreground tabular-nums">
                 {String(hour).padStart(2, "0")}:00
               </div>
               {WEEKDAYS.map((day) => (
@@ -183,15 +196,18 @@ export function TimetableGrid({
       {/* `other`: what the hour grid cannot hold (weekends, `other` classes,
             dates and SH1/SH2 in the general view, anything outside the grid
             hours) as a plain list in time order, not aligned to the hours.
-            From `md` up it is as tall as the grid and scrolls inside itself. */}
+            As tall as the grid (phones: the space it leaves), scrolls inside itself. */}
       <div
-        className={cn("flex flex-col border md:w-48 md:shrink-0", !showOther && "hidden md:flex")}
+        className={cn(
+          "flex flex-1 flex-col border md:w-48 md:flex-none",
+          !showOther && "hidden md:flex",
+        )}
       >
         <div className="hidden border-b p-2 text-center font-medium md:block">
           {dayLabel(Day.other)}
         </div>
         <div className="relative flex-1">
-          <div className="flex flex-col gap-1 p-2 md:absolute md:inset-0 md:overflow-y-auto">
+          <div className="absolute inset-0 flex flex-col gap-1 overflow-y-auto p-2">
             {otherEvents.map((event) => (
               <EventBadge key={localized(event.title) + event.startDate} event={event} />
             ))}

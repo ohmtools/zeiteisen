@@ -13,7 +13,11 @@ re-implements primitive logic.
 - `subjects.ts` — words for subjects. Unknown abbreviations fall back to
   themselves, `/` variants to their base.
 - `warnings.ts` — wording of the primitives' warning data only.
-- `upload.ts` — reads files and words failures (zod details capped at 5 +
+- `upload.ts` — reads files and words failures; dates, locations and
+  abbreviations go through one `readJsonFile`, and the latter two refuse a
+  file listing nothing (every list defaults to empty, so a dates file would
+  otherwise pass as locations). `toastUploadError` = the Data menu's error
+  toast (zod details capped at 5 +
   "n more"). Runs `z.config(de() | en())` once: zod/mini ships no locale, so
   messages read "Invalid input" wherever this module was not loaded. Off the
   first load.
@@ -53,9 +57,10 @@ re-implements primitive logic.
   adding or renaming one may shift the others. Hue never changes, all red
   (user decision); only lightness + chroma step down so `--primary-foreground`
   keeps contrast. Colour is never the only cue.
-- `overrides.ts` — module-level tables the catalog fills (locations,
-  abbreviations): lookups sit deep in render helpers. Building links and full
-  names live only in the catalog.
+- `overrides.ts` — module-level tables the catalog (or the user's own file
+  of that kind, instead of it) fills (locations, abbreviations): lookups sit
+  deep in render helpers. Building links and full names live only in the
+  catalog or the user's own file, never in the app.
 - `backup.ts` — footer "Data" menu backup: `zeiteisen-<date>.backup`; a restore
   writes storage and reloads the page, because every hook read its state on
   the first render.

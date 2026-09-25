@@ -3,14 +3,15 @@ import { useStorageSync } from "@/hooks/useStorageSync";
 import { requestPersistence } from "@/lib/persist";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
-import { Catalog, parseDates, type CatalogEntry } from "@/lib/primitives/catalog";
+import { Catalog, parseDates, type CatalogEntry, type FetchJson } from "@/lib/primitives/catalog";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import { DATES_KEY, loadDates, saveDates } from "@/lib/primitives/storage";
-import { fetchCatalogJson } from "@/lib/catalog";
 
 type Sources = {
   datesManual: boolean;
+  sources: { dates: unknown };
   markDates: (entry: CatalogEntry) => void;
+  forgetDates: () => void;
   setDatesManual: (manual: boolean) => void;
 };
 
@@ -26,7 +27,7 @@ export function useSemesterDates(sources: Sources) {
   // reload, and the caller records nothing about where they came from.
   // `persist` only for the user's own actions: the catalog installing its
   // dates on a first visit must not trigger Firefox's storage prompt.
-  const apply = (next: SemesterDates, persist: boolean): boolean => {
+  const apply = (next: SemesterDates | null, persist: boolean): boolean => {
     setDates(next);
     const saved = saveDates(next);
     if (saved && persist) requestPersistence();
@@ -43,17 +44,11 @@ export function useSemesterDates(sources: Sources) {
     // details. `@/lib/upload` (and zod's locales) load on the first upload
     // only.
     upload: async (file: File) => {
-      const { readDatesFile } = await import("@/lib/upload");
+      const { readDatesFile, toastUploadError } = await import("@/lib/upload");
       const result = await readDatesFile(file);
-      if ("error" in result) {
-        const { error } = result;
-        toast.error(`${error.file}: ${error.message}`, {
-          description: error.details?.join(" · "),
-        });
-        return;
-      }
-      if (!apply(result.dates, true)) return;
-      toast.success(m.upload_dates_loaded());
+      if ("error" in result) return toastUploadError(result.error);
+      if (!apply(result.data, true)) return;
+      toast.success(m.upload_dates_loaded(), { description: m.upload_own_no_updates() });
       sources.setDatesManual(true);
     },
 
@@ -65,12 +60,22 @@ export function useSemesterDates(sources: Sources) {
       sources.markDates(entry);
     },
 
-    // The footer's way back: take the catalog's dates again and let it keep
-    // them current. It fetches on its own, because it may run long after the
-    // catalog refresh of this page load.
-    useCatalogDates: async () => {
-      const entry = (await Catalog.load(fetchCatalogJson)).dates;
-      const next = entry ? parseDates(await fetchCatalogJson(entry.path)) : null;
+    // The catalog is ignored or another one was set: dates it installed go
+    // with it. The user's own dates stay.
+    // `quiet` when another catalog is about to install its own.
+    removeCatalogDates: (options?: { quiet?: boolean }) => {
+      if (sources.datesManual || sources.sources.dates === null) return;
+      if (!apply(null, false)) return;
+      sources.forgetDates();
+      if (!options?.quiet) toast.success(m.toast_catalog_dates_removed());
+    },
+
+    // The Data menu's way back: take the catalog's dates again and let it
+    // keep them current. It fetches on its own, because it may run long after
+    // the last catalog refresh.
+    useCatalogDates: async (fetchJson: FetchJson) => {
+      const entry = (await Catalog.load(fetchJson)).dates;
+      const next = entry ? parseDates(await fetchJson(entry.path)) : null;
       if (!entry || !next) {
         toast.error(m.catalog_error_fetch({ file: entry?.path ?? "dates.json" }));
         return;

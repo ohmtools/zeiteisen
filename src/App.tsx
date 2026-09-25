@@ -4,7 +4,7 @@ import { ChevronDown, Database, Settings } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
 import { DayToggle } from "@/components/DayToggle";
-import { Header } from "@/components/Header";
+import { Brand } from "@/components/Brand";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
 import { TAB_ITEM, TabBar, type Tab } from "@/components/TabBar";
@@ -15,6 +15,7 @@ import { useCatalog } from "@/hooks/useCatalog";
 import { useCatalogSources } from "@/hooks/useCatalogSources";
 import { useInstallHint } from "@/hooks/useInstallHint";
 import { useOnline } from "@/hooks/useOnline";
+import { useOwnData } from "@/hooks/useOwnData";
 import { useSemesterDates } from "@/hooks/useSemesterDates";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useShareLink } from "@/hooks/useShareLink";
@@ -24,6 +25,7 @@ import type { Day } from "@/lib/primitives/subject";
 import type { TimetableName } from "@/lib/primitives/timetable";
 import { dayOf, eventsForWeek, semesterBegin, semesterWeek } from "@/lib/primitives/week";
 import { generalEntries, weekEntries } from "@/lib/layout";
+import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
 import { isDesktop } from "@/lib/media";
@@ -44,6 +46,8 @@ export default function App() {
   // Where the global dates came from, plus the footer switch.
   const sources = useCatalogSources();
   const dates = useSemesterDates(sources);
+  // The user's own locations and abbreviations, in place of the catalog's.
+  const own = useOwnData();
   // Current week during the lecture period, else the general grid.
   const [view, setView] = useState<View>(() => defaultView(dates.dates, new Date()));
   // The one day the grid shows below `md`; weekends start on "other", where
@@ -52,12 +56,21 @@ export default function App() {
   // Only used to explain the catalog: nothing in the app needs the network.
   const online = useOnline();
   // The optional static catalog: locations, abbreviations, dates and ready-made
-  // timetables fetched from `VITE_CATALOG_URL`. Missing or offline changes
-  // nothing — the dates stay as they are and the picker simply lists less.
-  const catalog = useCatalog({
-    autoUpdate: sources.autoUpdate,
+  // timetables fetched from `VITE_CATALOG_URL` or the user's URL. Missing or
+  // offline changes nothing — the dates stay as they are and the picker
+  // simply lists less. Ignored, it is not read at all.
+  const {
+    catalog,
+    refresh: refreshCatalog,
+    fetchJson: fetchCatalogJson,
+  } = useCatalog({
+    mode: sources.mode,
+    url: sources.url,
     sources: sources.sources,
     onDates: dates.install,
+    // Silent when another catalog is about to install its own dates.
+    onDropDates: () => dates.removeCatalogDates({ quiet: sources.mode !== "ignore" }),
+    own: { locations: own.locations, abbreviations: own.abbreviations },
   });
   // Profiles own their timetables: there is no device-wide file store.
   const profiles = useProfiles();
@@ -71,9 +84,20 @@ export default function App() {
     const link = payloadFromLocation();
     return link && !isKnownSharedProfile(link, profiles.profiles) ? link : null;
   });
-  const [importing, setImporting] = useState(() => linkPayload !== null);
+  const [importing, setImportingState] = useState(() => linkPayload !== null);
   // Which timetables the picker may offer, and which of its two modes it is in.
-  const [picking, setPicking] = useState<"new-profile" | "add" | null>(null);
+  const [picking, setPickingState] = useState<"new-profile" | "add" | null>(null);
+  // Both dialogs offer catalog timetables: ask the catalog again on opening,
+  // so they never list an index the page read hours ago. A link opened
+  // directly needs no extra call, the page load refreshes anyway.
+  const setImporting = (open: boolean) => {
+    if (open && !importing) refreshCatalog();
+    setImportingState(open);
+  };
+  const setPicking = (mode: "new-profile" | "add" | null) => {
+    if (mode && !picking) refreshCatalog();
+    setPickingState(mode);
+  };
   // The timetable the update dialog is asking about, by name.
   const [updating, setUpdating] = useState<TimetableName | null>(null);
   // The link behind the share button; the global dates never go in it.
@@ -112,11 +136,20 @@ export default function App() {
   const offerCatalog = online ? catalog : Catalog.empty;
 
   const dataMenu: DataMenuProps = {
-    autoUpdate: sources.autoUpdate,
-    onAutoUpdate: sources.setAutoUpdate,
+    catalogMode: sources.mode,
+    onCatalogMode: sources.setMode,
+    catalogUrl: sources.url,
+    defaultCatalogUrl: DEFAULT_CATALOG_URL,
+    onCatalogUrl: sources.setUrl,
     datesManual: dates.manual,
     onUploadDates: (file) => void dates.upload(file),
-    onCatalogDates: () => void dates.useCatalogDates(),
+    onCatalogDates: () => void dates.useCatalogDates(fetchCatalogJson),
+    ownLocations: own.locations !== null,
+    onUploadLocations: (file) => void own.uploadLocations(file),
+    onCatalogLocations: own.useCatalogLocations,
+    ownAbbreviations: own.abbreviations,
+    onUploadAbbreviations: (files) => void own.uploadAbbreviations(files),
+    onRemoveAbbreviations: own.removeAbbreviations,
     profileCount: profiles.profiles.length,
   };
 
@@ -140,12 +173,19 @@ export default function App() {
     // Desktop: the page itself never scrolls — the shell is exactly one
     // viewport tall and the subject section takes whatever height the
     // fixed-height profile section leaves. Phones (and any viewport too short,
-    // see the `desktop` variant in index.css) keep the ordinary page scroll.
-    // Phones keep room for the fixed tab bar at the bottom.
-    <div className="flex min-h-screen flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] desktop:h-screen desktop:min-h-0 desktop:overflow-hidden desktop:pb-0">
-      <Header />
+    // see the `desktop` variant in index.css): the Timetable tab is one
+    // viewport tall too, the grid stretches to fill it; the Groups tab keeps
+    // the ordinary page scroll. Phones keep room for the fixed tab bar.
+    <div
+      className={cn(
+        "flex flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] desktop:h-screen desktop:min-h-0 desktop:overflow-hidden desktop:pb-0",
+        tab === "timetable" ? "h-dvh overflow-hidden" : "min-h-screen",
+      )}
+    >
+      {/* No visible header (user decision); the name lives in the footer. */}
+      <h1 className="sr-only">{m.app_title()}</h1>
 
-      <main className="grid w-full min-h-0 grid-cols-1 desktop:flex-1 desktop:grid-cols-[24rem_minmax(0,1fr)]">
+      <main className="grid w-full min-h-0 flex-1 grid-cols-1 desktop:grid-cols-[24rem_minmax(0,1fr)]">
         {/* Desktop shows both columns, phones the one their tab picks.
             Divider lines separate the sections instead of boxes. */}
         <div
@@ -199,13 +239,13 @@ export default function App() {
         <div
           className={cn("min-h-0 flex-col desktop:flex", tab === "timetable" ? "flex" : "hidden")}
         >
-          {/* Phones: a dock sticking to the top of the tab bar, where the
-              thumb is — last in the column so it ends up in flow below the
-              grid and the page needs no room guessed for it. Desktop: the
-              toolbar above the grid. */}
-          <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 order-last flex flex-col gap-2 border-t bg-background px-6 py-3 desktop:static desktop:order-none desktop:border-0 desktop:pt-6 desktop:pb-0">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <ViewSwitch value={view} onChange={setView} />
+          {/* Phones: a dock between grid and tab bar, where the thumb is —
+              last in the column. Rows: week nav (an empty row in the general
+              view), day, view switch. Desktop: one toolbar row above the grid, switch
+              left, week nav right. */}
+          <div className="order-last flex flex-col gap-2 border-t px-6 py-3 desktop:order-none desktop:flex-row desktop:flex-wrap desktop:items-center desktop:justify-between desktop:border-0 desktop:pt-6 desktop:pb-0">
+            {/* Stays in the general view, empty, so the grid keeps its height. */}
+            <div className="flex h-8 items-center desktop:order-last">
               {view === "week" && (
                 <WeekNav
                   value={weekStart}
@@ -215,8 +255,11 @@ export default function App() {
               )}
             </div>
             <DayToggle value={day} onChange={setDay} className="md:hidden" />
+            <ViewSwitch value={view} onChange={setView} />
           </div>
-          <div className="p-6 desktop:min-h-0 desktop:flex-1 desktop:overflow-auto desktop:pt-4">
+          {/* Below `desktop` the grid fills the height the dock leaves and
+              scrolls only when that is too short for its minimum rows. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 desktop:pt-4">
             <TimetableGrid
               entries={entries}
               week={week}
@@ -291,13 +334,16 @@ function SettingsFallback() {
   );
 }
 
-// Note · Data menu · language. The menu comes with the deferred chunk; until
+// Logo and name · note · Data menu · language. The menu comes with the deferred chunk; until
 // then a disabled look-alike holds its place, so nothing shifts.
 function Footer({ data }: { data: DataMenuProps }) {
   return (
     <footer className="hidden border-t desktop:block">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 text-sm text-muted-foreground">
-        {m.footer_note()}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Brand className="text-foreground" />
+          {m.footer_note()}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Suspense
             fallback={

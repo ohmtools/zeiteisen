@@ -14,7 +14,8 @@ changes; old data that no longer parses reads as empty.
 Why groups exist — read before touching the tree, `ClassPicker` or warnings.
 
 A subject is taught in several variations (`Kind`: `SU` lecture, `Pr`
-laboratory, `Ue` exercise, `Tu` tutorial), each split into classes:
+laboratory, `Ue` exercise, `Tu` tutorial, `S` seminar, `WF` elective subject
+/ Wahlfach), each split into classes:
 
 - The university assigns each subject variation to exactly one group
   category; several may share one. Category _n_ = the whole student body split
@@ -47,7 +48,9 @@ semesters.
   are offered, never applied, per profile.
 - The catalog (`VITE_CATALOG_URL`, dev copy `srv/catalog/`, mounted in
   `npm run dev` only) is optional and read-only: missing, broken or offline
-  changes nothing. Building links and subject full names live ONLY there.
+  changes nothing; the user can also point it elsewhere or ignore it (Data
+  menu). Building links and subject full names live ONLY there (or in the
+  user's own files uploaded in the Data menu).
   Re-run `npm run catalog -- ./srv/catalog` after editing it.
 - Global dates never go into a link, a profile file or anywhere but this
   device (and its backup).

@@ -56,6 +56,8 @@ export const Kind = {
   Laboratory: "Pr",
   Exercise: "Ue",
   Tutorial: "Tu",
+  Seminar: "S",
+  Elective: "WF",
 } as const;
 
 export type Kind = (typeof Kind)[keyof typeof Kind];

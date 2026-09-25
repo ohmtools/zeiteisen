@@ -1,7 +1,8 @@
 import * as z from "zod/mini";
 import { de, en } from "zod/locales";
 import { getLocale, m } from "@/i18n";
-import { semesterDatesSchema, type SemesterDates } from "@/lib/primitives/meta";
+import { toast } from "@/lib/toast";
+import { abbreviationsSchema, locationsSchema, semesterDatesSchema } from "@/lib/primitives/meta";
 import { parseTimetableFile, type TimetableSource } from "@/lib/primitives/timetable";
 
 // Localized zod issue messages; `setLocale` reloads the page, so once is enough.
@@ -93,24 +94,51 @@ export async function readTimetableFiles(files: File[]): Promise<UploadResult> {
   return result;
 }
 
-export async function readDatesFile(
+// One JSON file against `schema`; `empty` refuses a file that parses but
+// holds nothing — every list defaults to empty, so without it any other JSON
+// object (a dates file picked as locations, say) would read as valid.
+async function readJsonFile<T>(
   file: File,
-): Promise<{ dates: SemesterDates } | { error: UploadError }> {
+  schema: z.ZodMiniType<T>,
+  shape: string,
+  empty?: { test: (data: T) => boolean; message: string },
+): Promise<{ data: T } | { error: UploadError }> {
   let json: unknown;
   try {
     json = JSON.parse(await file.text());
   } catch {
     return { error: { file: file.name, message: m.upload_error_json() } };
   }
-  const parsed = semesterDatesSchema.safeParse(json);
+  const parsed = schema.safeParse(json);
   if (!parsed.success) {
     return {
-      error: {
-        file: file.name,
-        message: m.upload_error_dates_shape(),
-        details: issueDetails(parsed.error, json),
-      },
+      error: { file: file.name, message: shape, details: issueDetails(parsed.error, json) },
     };
   }
-  return { dates: parsed.data };
+  if (empty?.test(parsed.data)) return { error: { file: file.name, message: empty.message } };
+  return { data: parsed.data };
+}
+
+export function readDatesFile(file: File) {
+  return readJsonFile(file, semesterDatesSchema, m.upload_error_dates_shape());
+}
+
+export function readLocationsFile(file: File) {
+  return readJsonFile(file, locationsSchema, m.upload_error_locations_shape(), {
+    test: (data) => data.locations.length === 0,
+    message: m.upload_error_locations_empty(),
+  });
+}
+
+export function readAbbreviationsFile(file: File) {
+  return readJsonFile(file, abbreviationsSchema, m.upload_error_abbreviations_shape(), {
+    test: (data) => data.subjects.length === 0,
+    message: m.upload_error_abbreviations_empty(),
+  });
+}
+
+// A refused file of the Data menu: a toast with zod's details, the menu has no
+// panel to show them in.
+export function toastUploadError(error: UploadError) {
+  toast.error(`${error.file}: ${error.message}`, { description: error.details?.join(" · ") });
 }

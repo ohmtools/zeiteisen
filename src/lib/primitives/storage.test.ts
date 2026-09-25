@@ -3,10 +3,13 @@ import { profile, subject, timetable } from "./fixtures.test-util";
 import {
   getBackupFile,
   loadActive,
-  loadAutoUpdate,
+  loadCatalogMode,
+  loadCatalogUrl,
   loadBackup,
   loadCatalogCache,
   loadDates,
+  loadOwnAbbreviations,
+  loadOwnLocations,
   loadProfiles,
   loadSources,
   parseBackupFile,
@@ -14,8 +17,11 @@ import {
   saveBackup,
   saveCatalogCache,
   saveActive,
-  saveAutoUpdate,
+  saveCatalogMode,
+  saveCatalogUrl,
   saveDates,
+  saveOwnAbbreviations,
+  saveOwnLocations,
   saveProfiles,
   type KeyValueStore,
 } from "./storage";
@@ -80,21 +86,69 @@ test("unreadable storage reads as empty", () => {
   };
   expect(loadProfiles(throwing)).toEqual([]);
   expect(saveActive("P", throwing)).toBe(false);
-  expect(loadAutoUpdate(throwing)).toBe(true);
+  expect(loadCatalogMode(throwing)).toBe("auto");
 });
 
-test("active profile and auto-update", () => {
+test("active profile, catalog mode and URL", () => {
   const store = memory();
   expect(loadActive(store)).toBeNull();
   saveActive("P", store);
   expect(loadActive(store)).toBe("P");
-  expect(loadAutoUpdate(store)).toBe(true);
-  saveAutoUpdate(false, store);
-  expect(loadAutoUpdate(store)).toBe(false);
+  expect(loadCatalogMode(store)).toBe("auto");
+  saveCatalogMode("ignore", store);
+  expect(loadCatalogMode(store)).toBe("ignore");
+  store.data.set("tt.catalogmode.v1", JSON.stringify("sometimes"));
+  expect(loadCatalogMode(store)).toBe("auto");
+  expect(loadCatalogUrl(store)).toBeNull();
+  saveCatalogUrl("https://example.org/catalog/", store);
+  expect(loadCatalogUrl(store)).toBe("https://example.org/catalog/");
+  store.data.set("tt.catalogurl.v1", JSON.stringify("javascript:alert(1)"));
+  expect(loadCatalogUrl(store)).toBeNull();
+  saveCatalogUrl(null, store);
+  expect(loadCatalogUrl(store)).toBeNull();
+});
+
+test("saving null dates removes them", () => {
+  const store = memory();
+  saveDates(
+    { year: 2025, lectureStart: "2025-10-01", lectureEnd: "2026-01-31", events: [] },
+    store,
+  );
+  saveDates(null, store);
+  expect(loadDates(store)).toBeNull();
+});
+
+test("own locations and abbreviations: saved, cleared, broken reads as none", () => {
+  const store = memory();
+  expect(loadOwnLocations(store)).toBeNull();
+  expect(loadOwnAbbreviations(store)).toEqual([]);
+  const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
+  const abbreviations = [
+    { name: "a.json", data: { subjects: [{ code: "M1", de: "Mathe 1", en: "Maths 1" }] } },
+    { name: "b.json", data: { subjects: [{ code: "PH", de: "Physik", en: "Physics" }] } },
+  ];
+  expect(saveOwnLocations(locations, store)).toBe(true);
+  expect(saveOwnAbbreviations(abbreviations, store)).toBe(true);
+  expect(loadOwnLocations(store)).toEqual(locations);
+  expect(loadOwnAbbreviations(store)).toEqual(abbreviations);
+  saveOwnLocations(null, store);
+  expect(loadOwnLocations(store)).toBeNull();
+  store.data.set("tt.abbreviations.v1", JSON.stringify([abbreviations[0], abbreviations[0]]));
+  expect(loadOwnAbbreviations(store)).toEqual([]);
+  store.data.set(
+    "tt.abbreviations.v1",
+    JSON.stringify([{ name: "a.json", data: { subjects: [{}] } }]),
+  );
+  expect(loadOwnAbbreviations(store)).toEqual([]);
 });
 
 describe("backup", () => {
   const dates = { year: 2025, lectureStart: "2025-10-01", lectureEnd: "2026-01-31", events: [] };
+  const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
+  const abbreviations = [
+    { name: "a.json", data: { subjects: [{ code: "M1", de: "Mathe 1", en: "Maths 1" }] } },
+  ];
+  const url = "https://example.org/catalog/";
 
   function filled() {
     const store = memory();
@@ -106,7 +160,10 @@ describe("backup", () => {
     saveProfiles([{ ...profile("P", [t]), locked: true }, profile("Q", [])], store);
     saveActive("Q", store);
     saveDates(dates, store);
-    saveAutoUpdate(false, store);
+    saveOwnLocations(locations, store);
+    saveOwnAbbreviations(abbreviations, store);
+    saveCatalogMode("freeze", store);
+    saveCatalogUrl(url, store);
     saveCatalogCache(emptyCatalogCache, store);
     return store;
   }
@@ -123,14 +180,27 @@ describe("backup", () => {
     expect(q.name).toBe("Q");
     expect(loadActive(target)).toBe("Q");
     expect(loadDates(target)).toEqual(dates);
-    expect(loadAutoUpdate(target)).toBe(false);
+    expect(loadOwnLocations(target)).toEqual(locations);
+    expect(loadOwnAbbreviations(target)).toEqual(abbreviations);
+    expect(loadCatalogMode(target)).toBe("freeze");
+    expect(loadCatalogUrl(target)).toBe(url);
     expect(loadSources(target)).toEqual(loadSources(filled()));
   });
 
   test("leaves the catalog cache out and untouched", () => {
     const file = getBackupFile(loadBackup(filled()));
     expect(Object.keys(file).sort()).toEqual(
-      ["active", "autoUpdate", "dates", "profiles", "sources", "v"].sort(),
+      [
+        "abbreviations",
+        "active",
+        "catalogMode",
+        "catalogUrl",
+        "dates",
+        "locations",
+        "profiles",
+        "sources",
+        "v",
+      ].sort(),
     );
     const target = memory();
     target.setItem("tt.catalog.v1", "keep");
@@ -142,6 +212,22 @@ describe("backup", () => {
     const target = filled();
     saveBackup({ ...loadBackup(target), dates: null }, target);
     expect(loadDates(target)).toBeNull();
+  });
+
+  test("an older backup restores own files, catalog mode and URL as the defaults", () => {
+    const target = filled();
+    const {
+      locations: _,
+      abbreviations: __,
+      catalogMode: ___,
+      catalogUrl: ____,
+      ...older
+    } = JSON.parse(JSON.stringify(getBackupFile(loadBackup(filled()))));
+    saveBackup(parseBackupFile(older)!, target);
+    expect(loadOwnLocations(target)).toBeNull();
+    expect(loadOwnAbbreviations(target)).toEqual([]);
+    expect(loadCatalogMode(target)).toBe("auto");
+    expect(loadCatalogUrl(target)).toBeNull();
   });
 
   test("refuses a broken file whole", () => {
@@ -157,5 +243,6 @@ describe("backup", () => {
     const twice = { ...p, timetables: [p.timetables[0], p.timetables[0]] };
     expect(parseBackupFile({ ...good, profiles: [twice] })).toBeNull();
     expect(parseBackupFile({ ...good, dates: { year: "x" } })).toBeNull();
+    expect(parseBackupFile({ ...good, locations: { locations: [{ code: "" }] } })).toBeNull();
   });
 });
