@@ -40,9 +40,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   `DataMenu` with `settings`) = logo and name · note · "Data" menu · EN/DE. The Data menu holds:
   own files — dates and locations one item each ("Load own …" while the
   catalog's is in use, "Use catalog …" plus a trailing "own file" note while
-  an own file is, disabled while the catalog is ignored); abbreviations
+  an own file is, disabled while the catalog is ignored); degree information
   "Load own …" / "Add own …" (several files, trailing "n own files") plus
-  "Remove own abbreviations…", a dialog listing the files in winning order
+  "Remove own degree information…", a dialog listing the files in winning order
   (later over earlier) with a remove button each and "Remove all"; removing
   is immediate (the user still has the file), the last one closes it. One
   hidden file input outside the menu, which
@@ -73,7 +73,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`; the pickers accept only their
   own. Downloads go out as `application/octet-stream` so no browser appends
-  `.json`. Catalog files and own dates / locations / abbreviations uploads stay
+  `.json`. Catalog files and own dates / locations / degree information uploads stay
   `.json`.
 - `@/lib/ics` is only reached through `import()`, date pickers only through
   `LazyCalendar` — both stay out of the first load.

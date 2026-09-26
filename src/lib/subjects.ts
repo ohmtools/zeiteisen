@@ -9,15 +9,25 @@ import {
   type Subject,
   type Time,
 } from "@/lib/primitives/subject";
-import { getLocale, m } from "@/i18n";
-import { abbreviationOverride } from "@/lib/overrides";
+import { getLocale, localized, m } from "@/i18n";
+import type { SubjectInformation } from "@/lib/primitives/meta";
+import { subjectInfo } from "@/lib/overrides";
 
+// The catalog entry of a subject; a variant behind a slash ("TEG/B") falls back
+// to the entry of the part in front of it.
 // The full name of a subject in the active locale, or the shortcut itself when
 // no catalog knows it. The table lives in the catalog
-// (`abbreviations/*.json`), not in the app.
+// (`degreeinformation/*.json`), not in the app.
+export function subjectInfoOf(name: string): SubjectInformation | undefined {
+  const entry = subjectInfo(name);
+  if (entry) return entry;
+  const cut = name.lastIndexOf("/");
+  return cut > 0 ? subjectInfoOf(name.slice(0, cut)) : undefined;
+}
+
 export function subjectName(name: string): string {
-  const entry = abbreviationOverride(name);
-  if (entry) return getLocale() === "de" ? entry.de : entry.en;
+  const entry = subjectInfo(name);
+  if (entry) return localized(entry.name);
   // Some codes carry a variant behind a slash ("TEG/B"). The table is checked
   // for the whole code first, because keys like "CSEC1/1" contain a slash
   // themselves; only then the part in front of the last slash is spelled out

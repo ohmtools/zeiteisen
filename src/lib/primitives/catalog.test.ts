@@ -4,7 +4,7 @@ import {
   datesToInstall,
   emptyCatalogCache,
   emptySources,
-  mergeAbbreviations,
+  mergeDegreeInformation,
   refreshCache,
   timetableNameOf,
 } from "./catalog";
@@ -61,7 +61,7 @@ describe("refreshCache", () => {
   test("downloads small files only, reports changes, drops unlisted paths", async () => {
     const { catalog, fetched } = fakeCatalog({
       "locations.json": { locations: [] },
-      "abbreviations/bei.json": { subjects: [] },
+      "degreeinformation/bei.json": { subjects: [] },
       "timetables/BEI3.json": bei3,
     });
     const first = await refreshCache(
@@ -69,7 +69,7 @@ describe("refreshCache", () => {
       catalog,
     );
     expect(Object.keys(first.cache.files).sort()).toEqual([
-      "abbreviations/bei.json",
+      "degreeinformation/bei.json",
       "locations.json",
     ]);
     expect(fetched).not.toContain("timetables/BEI3.json");
@@ -86,13 +86,21 @@ describe("refreshCache", () => {
   });
 });
 
-test("mergeAbbreviations: later files win, broken ones are skipped", () => {
-  const table = mergeAbbreviations([
-    { subjects: [{ code: "m1", de: "Mathe", en: "Maths" }] },
+const info = (code: string, de: string, en: string) => ({
+  code,
+  name: { de, en },
+  sws: { lecture: 2, exercise: 1, laboratory: 0 },
+  description: { de: "d", en: "d" },
+  test: { de: "t", en: "t" },
+});
+
+test("mergeDegreeInformation: later files win, broken ones are skipped", () => {
+  const table = mergeDegreeInformation([
+    { subjects: [info("m1", "Mathe", "Maths")] },
     "broken",
-    { subjects: [{ code: "M1", de: "Mathe 1", en: "Maths 1" }] },
+    { subjects: [info("M1", "Mathe 1", "Maths 1")] },
   ]);
-  expect(table).toEqual({ M1: { de: "Mathe 1", en: "Maths 1" } });
+  expect(table).toEqual({ M1: info("M1", "Mathe 1", "Maths 1") });
 });
 
 test("datesToInstall", () => {

@@ -6,6 +6,7 @@ import { m } from "@/i18n";
 import { DayToggle } from "@/components/DayToggle";
 import { Brand } from "@/components/Brand";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import type { SubjectInformation } from "@/lib/primitives/meta";
 import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
 import { TAB_ITEM, TabBar, type Tab } from "@/components/TabBar";
 import { ViewSwitch, type View } from "@/components/ViewSwitch";
@@ -38,6 +39,7 @@ const deferred = () => import("@/components/deferred");
 const ProfileSection = lazy(() => deferred().then((d) => ({ default: d.ProfileSection })));
 const GroupTree = lazy(() => deferred().then((d) => ({ default: d.GroupTree })));
 const AppDialogs = lazy(() => deferred().then((d) => ({ default: d.AppDialogs })));
+const SubjectInfoDialog = lazy(() => deferred().then((d) => ({ default: d.SubjectInfoDialog })));
 const AppToaster = lazy(() => deferred().then((d) => ({ default: d.AppToaster })));
 const DataMenu = lazy(() => deferred().then((d) => ({ default: d.DataMenu })));
 
@@ -46,7 +48,7 @@ export default function App() {
   // Where the global dates came from, plus the footer switch.
   const sources = useCatalogSources();
   const dates = useSemesterDates(sources);
-  // The user's own locations and abbreviations, in place of the catalog's.
+  // The user's own locations and degreeInformation, in place of the catalog's.
   const own = useOwnData();
   // Current week during the lecture period, else the general grid.
   const [view, setView] = useState<View>(() => defaultView(dates.dates, new Date()));
@@ -55,7 +57,7 @@ export default function App() {
   const [day, setDay] = useState<Day>(() => dayOf(new Date()));
   // Only used to explain the catalog: nothing in the app needs the network.
   const online = useOnline();
-  // The optional static catalog: locations, abbreviations, dates and ready-made
+  // The optional static catalog: locations, degreeInformation, dates and ready-made
   // timetables fetched from `VITE_CATALOG_URL` or the user's URL. Missing or
   // offline changes nothing — the dates stay as they are and the picker
   // simply lists less. Ignored, it is not read at all.
@@ -70,7 +72,7 @@ export default function App() {
     onDates: dates.install,
     // Silent when another catalog is about to install its own dates.
     onDropDates: () => dates.removeCatalogDates({ quiet: sources.mode !== "ignore" }),
-    own: { locations: own.locations, abbreviations: own.abbreviations },
+    own: { locations: own.locations, degreeInformation: own.degreeInformation },
   });
   // Profiles own their timetables: there is no device-wide file store.
   const profiles = useProfiles();
@@ -99,6 +101,7 @@ export default function App() {
     setPickingState(mode);
   };
   // The timetable the update dialog is asking about, by name.
+  const [subjectInfo, setSubjectInfo] = useState<SubjectInformation | null>(null);
   const [updating, setUpdating] = useState<TimetableName | null>(null);
   // The link behind the share button; the global dates never go in it. The
   // opened link stays in the address bar until the import dialog closes.
@@ -148,9 +151,9 @@ export default function App() {
     ownLocations: own.locations !== null,
     onUploadLocations: (file) => void own.uploadLocations(file),
     onCatalogLocations: own.useCatalogLocations,
-    ownAbbreviations: own.abbreviations,
-    onUploadAbbreviations: (files) => void own.uploadAbbreviations(files),
-    onRemoveAbbreviations: own.removeAbbreviations,
+    ownDegreeInformation: own.degreeInformation,
+    onUploadDegreeInformation: (files) => void own.uploadDegreeInformation(files),
+    onRemoveDegreeInformation: own.removeDegreeInformation,
     profileCount: profiles.profiles.length,
   };
 
@@ -263,6 +266,7 @@ export default function App() {
               hasFiles={hasTimetables}
               highlight={highlight}
               onJump={jumpToGroup}
+              onInfo={setSubjectInfo}
               selectedDay={day}
               onSelectDay={setDay}
             />
@@ -285,6 +289,7 @@ export default function App() {
           linkPayload={linkPayload}
           onLinkPayloadChange={setLinkPayload}
         />
+        <SubjectInfoDialog info={subjectInfo} onClose={() => setSubjectInfo(null)} />
         {/* Transient feedback only (upload, import, copy, download); anything
             the user has to act on stays on the page itself. `@/lib/toast`
             holds every toast until this is mounted. */}

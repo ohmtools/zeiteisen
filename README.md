@@ -21,14 +21,14 @@ npm run schema               # every JSON schema at once
 npm run schema:timetable     # a timetable file (plain Subject[])
 npm run schema:dates         # global dates
 npm run schema:locations     # catalog locations.json
-npm run schema:abbreviations # one catalog abbreviations/*.json
+npm run schema:degreeinformation # one catalog degreeinformation/*.json
 npm run schema:catalog       # catalog index.json
 
 npm run catalog -- <dir>     # (re)write <dir>/index.json from its files
 
 npm run upload               # rsync the project (minus .gitignore'd files) to the server
 npm run publish              # build on the server (no upload), replace the served site
-npm run index-remote-catalog # rewrite the server catalog's index.json (no upload)
+npm run catalog-remote # rewrite the server catalog's index.json (no upload)
 ```
 
 The server scripts reach the server as `root` over ssh (port 2222; `npm run
@@ -42,7 +42,7 @@ server runs `npm ci` itself before building or indexing.
 ## Optional catalog
 
 The app can read a directory of static JSON files served next to it, so
-locations, subject abbreviations, semester dates and ready-made timetables do
+locations, subject information, semester dates and ready-made timetables do
 not have to be collected by hand. It stays client-only: these are static asset
 reads, there is no API and nothing is ever sent.
 
@@ -50,7 +50,7 @@ reads, there is no API and nothing is ever sent.
 srv/catalog/           # the copy in this repo, dev only
   index.json           # generated: npm run catalog -- ./srv/catalog
   locations.json       # building shortcut -> name, maps link, site link
-  abbreviations/*.json # subject shortcut -> full name (de + en)
+  degreeinformation/*.json # subject shortcut -> name, sws, description, exam (de + en)
   dates.json           # the global dates, installed by the app on its own
   timetables/**/*.json # timetables offered in the timetable picker
 ```

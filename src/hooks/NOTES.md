@@ -19,10 +19,10 @@ goes through primitives `storage.ts`.
   details (the Data menu has no panel). Only a successful write records where
   the dates came from, and only the user's own uploads ask for persistent
   storage — the catalog's first install must not trigger Firefox's prompt.
-- `useOwnData` — `tt.locations.v1` + `tt.abbreviations.v1`. Own locations
+- `useOwnData` — `tt.locations.v1` + `tt.degreeinformation.v1`. Own locations
   are used INSTEAD of the catalog's ("Use catalog locations" drops the file;
   the catalog's copy stays cached, never shown or toasted meanwhile). Own
-  abbreviations are several files merged OVER the catalog's (user decision):
+  degree information are several files merged OVER the catalog's (user decision):
   a picked file with a held name replaces it and moves last, removing goes by
   file name. Upload toasts say the catalog never touches
   own files.
@@ -38,7 +38,7 @@ goes through primitives `storage.ts`.
   one. `ignore` reads nothing and hands out `Catalog.empty`; switching to it
   or to another URL empties the cache and removes catalog-installed dates
   (user decision: `freeze` is the mode that keeps catalog data). Own files
-  always stay. A first download is no news (no toast). Locations and abbreviations
+  always stay. A first download is no news (no toast). Locations and degree information
   always read the newest copy on the device, even under an older hash: a
   failed or broken download keeps names and building links. Frozen, the copy
   on the device stays in use, however old. **Timetables are never

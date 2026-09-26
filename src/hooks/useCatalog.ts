@@ -7,7 +7,7 @@ import {
   CatalogKind,
   datesToInstall,
   emptyCatalogCache,
-  mergeAbbreviations,
+  mergeDegreeInformation,
   parseDates,
   parseLocations,
   refreshCache,
@@ -21,10 +21,10 @@ import type { Locations, SemesterDates } from "@/lib/primitives/meta";
 import {
   loadCatalogCache,
   saveCatalogCache,
-  type OwnAbbreviationsFile,
+  type OwnDegreeInformationFile,
 } from "@/lib/primitives/storage";
 import { catalogFetcher } from "@/lib/catalog";
-import { setAbbreviationOverrides, setLocationOverrides } from "@/lib/overrides";
+import { setDegreeInformationOverrides, setLocationOverrides } from "@/lib/overrides";
 
 type Options = {
   // The Data menu's "Catalog". `freeze`: the index is still read (the picker
@@ -41,9 +41,9 @@ type Options = {
   // installed go with it.
   onDropDates: () => void;
   // The user's own files (`useOwnData`). Own locations are used instead of
-  // the catalog's (still cached, never shown or announced); own abbreviations
+  // the catalog's (still cached, never shown or announced); own degreeInformation
   // are merged over the catalog's.
-  own: { locations: Locations | null; abbreviations: OwnAbbreviationsFile[] };
+  own: { locations: Locations | null; degreeInformation: OwnDegreeInformationFile[] };
 };
 
 // How often an open page asks the catalog again while it is visible, and how
@@ -54,7 +54,7 @@ const REFRESH_EVERY = 5 * 60 * 1000;
 const FRESH_FOR = 60 * 1000;
 
 // Owns `tt.catalog.v1`: the optional read-only catalog of locations, subject
-// abbreviations, global dates and ready-made timetables served as static JSON
+// degreeInformation, global dates and ready-made timetables served as static JSON
 // next to the app (or at the user's URL). Starts from the cached copy, then
 // refreshes in the background: on every page load, every few minutes while
 // the page is visible, when it becomes visible again or comes back online,
@@ -87,14 +87,14 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     [ignored, cache.index, fetchJson],
   );
 
-  // Locations and abbreviations are the tables `buildings.ts` and
+  // Locations and degreeInformation are the tables `buildings.ts` and
   // `subjects.ts` read. Derived from the cache during render, so the very
   // first render after a refresh already spells the new names out. Always the
   // newest copy the device has, even when the index now lists another hash
   // for it: the refresh replaces it once the download works, and until then
   // (a failed or broken download, freeze, the moment between the new index
   // and its files) the older copy beats no names and no links.
-  // Own locations replace the catalog's; own abbreviations go over them,
+  // Own locations replace the catalog's; own degreeInformation go over them,
   // later files winning.
   const overrides = useMemo(() => {
     const [locationsEntry] = catalog.entries(CatalogKind.Locations);
@@ -103,17 +103,17 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
       : locationsEntry
         ? parseLocations(cached(cache, locationsEntry, true))
         : {};
-    const abbreviations = mergeAbbreviations([
+    const degreeInformation = mergeDegreeInformation([
       ...catalog
-        .entries(CatalogKind.Abbreviations)
+        .entries(CatalogKind.DegreeInformation)
         .map((entry) => cached(cache, entry, true))
         .filter((data) => data !== undefined),
-      ...own.abbreviations.map((file) => file.data),
+      ...own.degreeInformation.map((file) => file.data),
     ]);
-    return { locations, abbreviations };
-  }, [cache, catalog, own.locations, own.abbreviations]);
+    return { locations, degreeInformation };
+  }, [cache, catalog, own.locations, own.degreeInformation]);
   setLocationOverrides(overrides.locations);
-  setAbbreviationOverrides(overrides.abbreviations);
+  setDegreeInformationOverrides(overrides.degreeInformation);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,8 +146,8 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
       if (updated.has(CatalogKind.Locations) && !mine.locations) {
         toast.success(m.toast_catalog_locations_updated());
       }
-      if (updated.has(CatalogKind.Abbreviations)) {
-        toast.success(m.toast_catalog_abbreviations_updated());
+      if (updated.has(CatalogKind.DegreeInformation)) {
+        toast.success(m.toast_catalog_degreeinformation_updated());
       }
 
       // The catalog's dates file is the one thing it installs by itself: when

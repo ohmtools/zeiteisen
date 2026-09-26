@@ -2,7 +2,11 @@ import * as z from "zod/mini";
 import { de, en } from "zod/locales";
 import { getLocale, m } from "@/i18n";
 import { toast } from "@/lib/toast";
-import { abbreviationsSchema, locationsSchema, semesterDatesSchema } from "@/lib/primitives/meta";
+import {
+  degreeInformationSchema,
+  locationsSchema,
+  semesterDatesSchema,
+} from "@/lib/primitives/meta";
 import { parseTimetableFile, type TimetableSource } from "@/lib/primitives/timetable";
 
 // Localized zod issue messages; `setLocale` reloads the page, so once is enough.
@@ -130,10 +134,10 @@ export function readLocationsFile(file: File) {
   });
 }
 
-export function readAbbreviationsFile(file: File) {
-  return readJsonFile(file, abbreviationsSchema, m.upload_error_abbreviations_shape(), {
+export function readDegreeInformationFile(file: File) {
+  return readJsonFile(file, degreeInformationSchema, m.upload_error_degreeinformation_shape(), {
     test: (data) => data.subjects.length === 0,
-    message: m.upload_error_abbreviations_empty(),
+    message: m.upload_error_degreeinformation_empty(),
   });
 }
 

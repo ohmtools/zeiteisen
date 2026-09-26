@@ -8,7 +8,7 @@ import {
   loadBackup,
   loadCatalogCache,
   loadDates,
-  loadOwnAbbreviations,
+  loadOwnDegreeInformation,
   loadOwnLocations,
   loadProfiles,
   loadSources,
@@ -20,7 +20,7 @@ import {
   saveCatalogMode,
   saveCatalogUrl,
   saveDates,
-  saveOwnAbbreviations,
+  saveOwnDegreeInformation,
   saveOwnLocations,
   saveProfiles,
   type KeyValueStore,
@@ -118,35 +118,77 @@ test("saving null dates removes them", () => {
   expect(loadDates(store)).toBeNull();
 });
 
-test("own locations and abbreviations: saved, cleared, broken reads as none", () => {
+test("own locations and degreeInformation: saved, cleared, broken reads as none", () => {
   const store = memory();
   expect(loadOwnLocations(store)).toBeNull();
-  expect(loadOwnAbbreviations(store)).toEqual([]);
+  expect(loadOwnDegreeInformation(store)).toEqual([]);
   const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
-  const abbreviations = [
-    { name: "a.json", data: { subjects: [{ code: "M1", de: "Mathe 1", en: "Maths 1" }] } },
-    { name: "b.json", data: { subjects: [{ code: "PH", de: "Physik", en: "Physics" }] } },
+  const degreeInformation = [
+    {
+      name: "a.json",
+      data: {
+        subjects: [
+          {
+            code: "M1",
+            name: { de: "Mathe 1", en: "Maths 1" },
+            sws: { lecture: 2, exercise: 1, laboratory: 0 },
+            description: { de: "d", en: "d" },
+            test: { de: "t", en: "t" },
+          },
+        ],
+      },
+    },
+    {
+      name: "b.json",
+      data: {
+        subjects: [
+          {
+            code: "PH",
+            name: { de: "Physik", en: "Physics" },
+            sws: { lecture: 2, exercise: 1, laboratory: 0 },
+            description: { de: "d", en: "d" },
+            test: { de: "t", en: "t" },
+          },
+        ],
+      },
+    },
   ];
   expect(saveOwnLocations(locations, store)).toBe(true);
-  expect(saveOwnAbbreviations(abbreviations, store)).toBe(true);
+  expect(saveOwnDegreeInformation(degreeInformation, store)).toBe(true);
   expect(loadOwnLocations(store)).toEqual(locations);
-  expect(loadOwnAbbreviations(store)).toEqual(abbreviations);
+  expect(loadOwnDegreeInformation(store)).toEqual(degreeInformation);
   saveOwnLocations(null, store);
   expect(loadOwnLocations(store)).toBeNull();
-  store.data.set("tt.abbreviations.v1", JSON.stringify([abbreviations[0], abbreviations[0]]));
-  expect(loadOwnAbbreviations(store)).toEqual([]);
   store.data.set(
-    "tt.abbreviations.v1",
+    "tt.degreeinformation.v1",
+    JSON.stringify([degreeInformation[0], degreeInformation[0]]),
+  );
+  expect(loadOwnDegreeInformation(store)).toEqual([]);
+  store.data.set(
+    "tt.degreeinformation.v1",
     JSON.stringify([{ name: "a.json", data: { subjects: [{}] } }]),
   );
-  expect(loadOwnAbbreviations(store)).toEqual([]);
+  expect(loadOwnDegreeInformation(store)).toEqual([]);
 });
 
 describe("backup", () => {
   const dates = { year: 2025, lectureStart: "2025-10-01", lectureEnd: "2026-01-31", events: [] };
   const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
-  const abbreviations = [
-    { name: "a.json", data: { subjects: [{ code: "M1", de: "Mathe 1", en: "Maths 1" }] } },
+  const degreeInformation = [
+    {
+      name: "a.json",
+      data: {
+        subjects: [
+          {
+            code: "M1",
+            name: { de: "Mathe 1", en: "Maths 1" },
+            sws: { lecture: 2, exercise: 1, laboratory: 0 },
+            description: { de: "d", en: "d" },
+            test: { de: "t", en: "t" },
+          },
+        ],
+      },
+    },
   ];
   const url = "https://example.org/catalog/";
 
@@ -161,7 +203,7 @@ describe("backup", () => {
     saveActive("Q", store);
     saveDates(dates, store);
     saveOwnLocations(locations, store);
-    saveOwnAbbreviations(abbreviations, store);
+    saveOwnDegreeInformation(degreeInformation, store);
     saveCatalogMode("freeze", store);
     saveCatalogUrl(url, store);
     saveCatalogCache(emptyCatalogCache, store);
@@ -181,7 +223,7 @@ describe("backup", () => {
     expect(loadActive(target)).toBe("Q");
     expect(loadDates(target)).toEqual(dates);
     expect(loadOwnLocations(target)).toEqual(locations);
-    expect(loadOwnAbbreviations(target)).toEqual(abbreviations);
+    expect(loadOwnDegreeInformation(target)).toEqual(degreeInformation);
     expect(loadCatalogMode(target)).toBe("freeze");
     expect(loadCatalogUrl(target)).toBe(url);
     expect(loadSources(target)).toEqual(loadSources(filled()));
@@ -191,7 +233,6 @@ describe("backup", () => {
     const file = getBackupFile(loadBackup(filled()));
     expect(Object.keys(file).sort()).toEqual(
       [
-        "abbreviations",
         "active",
         "catalogMode",
         "catalogUrl",
@@ -199,6 +240,7 @@ describe("backup", () => {
         "locations",
         "profiles",
         "sources",
+        "degreeInformation",
         "v",
       ].sort(),
     );
@@ -218,14 +260,14 @@ describe("backup", () => {
     const target = filled();
     const {
       locations: _,
-      abbreviations: __,
+      degreeInformation: __,
       catalogMode: ___,
       catalogUrl: ____,
       ...older
     } = JSON.parse(JSON.stringify(getBackupFile(loadBackup(filled()))));
     saveBackup(parseBackupFile(older)!, target);
     expect(loadOwnLocations(target)).toBeNull();
-    expect(loadOwnAbbreviations(target)).toEqual([]);
+    expect(loadOwnDegreeInformation(target)).toEqual([]);
     expect(loadCatalogMode(target)).toBe("auto");
     expect(loadCatalogUrl(target)).toBeNull();
   });

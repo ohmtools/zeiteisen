@@ -4,7 +4,7 @@
 Usage:
     python3 scripts/validate.py <task> <output file>
 
-<task> is one of: abbreviations, dates, locations, timetable.
+<task> is one of: degreeinformation, dates, locations, timetable.
 
 Checks, in addition to the JSON schema itself:
   * no keys that the schema does not define (at any nesting level)
@@ -27,7 +27,7 @@ except ImportError:
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 VALIDATOR_CLS = jsonschema.Draft202012Validator
-TASKS = ("abbreviations", "dates", "locations", "timetable")
+TASKS = ("degreeinformation", "dates", "locations", "timetable")
 
 
 def resolve(instance, schema):

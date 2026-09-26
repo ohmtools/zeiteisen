@@ -72,14 +72,15 @@ parameter so tests run without a browser.
   every key except the catalog cache (the catalog hands it out again) and the
   iOS hint (about this device only): profiles in their stored shape incl.
   `locked` and `rejected`, active profile, dates, own locations and
-  abbreviations, sources, catalog mode and URL. Fields an older file lacks
+  degree information, sources, catalog mode and URL. Fields an older file lacks
   (own files, mode, URL) restore as their defaults. The
   language stays with the browser. `parseBackupFile` is STRICT, unlike the
   loaders: one broken profile, a repeated profile or timetable name or a bad
   field refuses the whole file, because a restore replaces everything.
 - `tt.locations.v1` = the user's own locations file, used INSTEAD of the
-  catalog's; `null` or missing = the catalog's. `tt.abbreviations.v1` = the
-  user's own abbreviations files (`OwnAbbreviationsFile[]`, unique file names,
+  catalog's; `null` or missing = the catalog's. `tt.degreeinformation.v1` = the
+  user's own degree information files (each subject a `SubjectInformation`: name,
+  sws, code, description, test; `mergeDegreeInformation` keeps the whole entry) (`OwnDegreeInformationFile[]`, unique file names,
   upload order), MERGED OVER the catalog's, later files winning (user
   decision). Present = "own", so `CatalogSources` carries no flag for them
   (dates need `datesManual` because one key holds catalog and own dates

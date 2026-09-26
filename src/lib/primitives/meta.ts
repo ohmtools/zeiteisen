@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-// Payloads of the optional catalog's `locations.json` and `abbreviations/*.json`.
+// Payloads of the optional catalog's `locations.json` and `degreeinformation/*.json`.
 // Both are read-only lookup tables the app merges over its own defaults; the
 // zod mirrors live at the bottom of this file, the file layout in `CLAUDE.md`.
 
@@ -17,13 +17,24 @@ export type Locations = {
   locations: CatalogLocation[];
 };
 
-// Subject shortcut -> full name per locale.
-export type Abbreviation = Localized & {
+// Everything known about one subject shortcut: name, hours, description, exam.
+export type SubjectInformation = {
+  name: Localized;
+  sws: SWS;
   code: string;
+  description: Localized;
+  test: Localized;
 };
 
-export type Abbreviations = {
-  subjects: Abbreviation[];
+// Semesterwochenstunden
+export type SWS = {
+  lecture: number;
+  exercise: number;
+  laboratory: number;
+};
+
+export type DegreeInformation = {
+  subjects: SubjectInformation[];
 };
 
 // A string that ships both locales; pick one with `localized` from `@/i18n`.
@@ -91,9 +102,20 @@ export const locationsSchema: z.ZodMiniType<Locations> = z.object({
   locations: z._default(z.array(locationSchema), []),
 });
 
-export const abbreviationsSchema: z.ZodMiniType<Abbreviations> = z.object({
-  subjects: z._default(
-    z.array(z.extend(localizedSchema, { code: z.string().check(z.minLength(1)) })),
-    [],
-  ),
+const swsSchema: z.ZodMiniType<SWS> = z.object({
+  lecture: z.number().check(z.minimum(0)),
+  exercise: z.number().check(z.minimum(0)),
+  laboratory: z.number().check(z.minimum(0)),
+});
+
+const subjectInformationSchema: z.ZodMiniType<SubjectInformation> = z.object({
+  name: localizedSchema,
+  sws: swsSchema,
+  code: z.string().check(z.minLength(1)),
+  description: localizedSchema,
+  test: localizedSchema,
+});
+
+export const degreeInformationSchema: z.ZodMiniType<DegreeInformation> = z.object({
+  subjects: z._default(z.array(subjectInformationSchema), []),
 });

@@ -19,7 +19,7 @@ const usage = "usage: npm run skill [-- <out.zip>]\n";
 const name = "zeiteisen-generator";
 const root = path.join(import.meta.dirname, "..");
 const source = path.join(root, "skill", name);
-const kinds = ["timetable", "dates", "locations", "abbreviations"];
+const kinds = ["timetable", "dates", "locations", "degreeinformation"];
 
 let options;
 try {

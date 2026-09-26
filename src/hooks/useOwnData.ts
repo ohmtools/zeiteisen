@@ -5,26 +5,27 @@ import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
 import type { Locations } from "@/lib/primitives/meta";
 import {
-  ABBREVIATIONS_KEY,
-  loadOwnAbbreviations,
+  DEGREEINFORMATION_KEY,
+  loadOwnDegreeInformation,
   loadOwnLocations,
   LOCATIONS_KEY,
-  saveOwnAbbreviations,
+  saveOwnDegreeInformation,
   saveOwnLocations,
-  type OwnAbbreviationsFile,
+  type OwnDegreeInformationFile,
 } from "@/lib/primitives/storage";
 
-// Owns `tt.locations.v1` and `tt.abbreviations.v1`: the user's own locations
-// file, used INSTEAD of the catalog's, and their own abbreviations files,
+// Owns `tt.locations.v1` and `tt.degreeinformation.v1`: the user's own locations
+// file, used INSTEAD of the catalog's, and their own degreeInformation files,
 // merged OVER the catalog's (`useCatalog`). No catalog update ever reaches
 // them. The catalog's copies stay cached, so handing back is instant.
 export function useOwnData() {
   const [locations, setLocations] = useState<Locations | null>(loadOwnLocations);
-  const [abbreviations, setAbbreviations] = useState<OwnAbbreviationsFile[]>(loadOwnAbbreviations);
+  const [degreeInformation, setDegreeInformation] =
+    useState<OwnDegreeInformationFile[]>(loadOwnDegreeInformation);
   // Loaded or handed back in another tab.
-  useStorageSync([LOCATIONS_KEY, ABBREVIATIONS_KEY], () => {
+  useStorageSync([LOCATIONS_KEY, DEGREEINFORMATION_KEY], () => {
     setLocations(loadOwnLocations());
-    setAbbreviations(loadOwnAbbreviations());
+    setDegreeInformation(loadOwnDegreeInformation());
   });
 
   // `false` when the browser refused the write: the file still applies until
@@ -36,7 +37,7 @@ export function useOwnData() {
 
   return {
     locations,
-    abbreviations,
+    degreeInformation,
 
     // `@/lib/upload` (and zod's locales) load on the first upload only.
     uploadLocations: async (file: File) => {
@@ -50,22 +51,22 @@ export function useOwnData() {
     },
     // Several files at once; each is added under its file name, and one with a
     // name already held replaces it and moves last, so the newest upload wins.
-    uploadAbbreviations: async (files: File[]) => {
-      const { readAbbreviationsFile, toastUploadError } = await import("@/lib/upload");
-      const read: OwnAbbreviationsFile[] = [];
+    uploadDegreeInformation: async (files: File[]) => {
+      const { readDegreeInformationFile, toastUploadError } = await import("@/lib/upload");
+      const read: OwnDegreeInformationFile[] = [];
       for (const file of files) {
-        const result = await readAbbreviationsFile(file);
+        const result = await readDegreeInformationFile(file);
         if ("error" in result) toastUploadError(result.error);
         else read.push({ name: file.name, data: result.data });
       }
       if (read.length === 0) return;
       const names = new Set(read.map((file) => file.name));
-      const next = [...loadOwnAbbreviations().filter((file) => !names.has(file.name)), ...read];
-      setAbbreviations(next);
-      if (!saved(saveOwnAbbreviations(next))) return;
+      const next = [...loadOwnDegreeInformation().filter((file) => !names.has(file.name)), ...read];
+      setDegreeInformation(next);
+      if (!saved(saveOwnDegreeInformation(next))) return;
       requestPersistence();
-      toast.success(m.upload_abbreviations_loaded({ count: read.length }), {
-        description: m.upload_abbreviations_precedence(),
+      toast.success(m.upload_degreeinformation_loaded({ count: read.length }), {
+        description: m.upload_degreeinformation_precedence(),
       });
     },
 
@@ -73,16 +74,16 @@ export function useOwnData() {
       setLocations(null);
       if (saved(saveOwnLocations(null))) toast.success(m.toast_catalog_locations_again());
     },
-    // By file name; every file gone hands abbreviations back to the catalog
+    // By file name; every file gone hands degreeInformation back to the catalog
     // alone.
-    removeAbbreviations: (names: readonly string[]) => {
-      const next = loadOwnAbbreviations().filter((file) => !names.includes(file.name));
-      setAbbreviations(next);
-      if (!saved(saveOwnAbbreviations(next))) return;
+    removeDegreeInformation: (names: readonly string[]) => {
+      const next = loadOwnDegreeInformation().filter((file) => !names.includes(file.name));
+      setDegreeInformation(next);
+      if (!saved(saveOwnDegreeInformation(next))) return;
       toast.success(
         next.length === 0
-          ? m.toast_own_abbreviations_removed()
-          : m.toast_own_abbreviation_file_removed({ file: names.join(", ") }),
+          ? m.toast_own_degreeinformation_removed()
+          : m.toast_own_degreeinformation_file_removed({ file: names.join(", ") }),
       );
     },
   };

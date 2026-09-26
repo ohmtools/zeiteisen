@@ -85,7 +85,7 @@ Vite 8 + React 19 (React Compiler) + TypeScript + Tailwind v4. `zod/mini`
 npm run dev       # dev server
 npm run build     # messages -> tsc -b -> vite build
 npm run messages  # regenerate generated/paraglide/ after editing messages/*.json
-npm run schema    # JSON schemas (also :timetable :dates :locations :abbreviations :catalog)
+npm run schema    # JSON schemas (also :timetable :dates :locations :degreeinformation :catalog)
 npm run catalog -- <dir>   # (re)write <dir>/index.json from its files
 npm run skill     # schemas + public/zeiteisen-generator.zip, after editing skill/
 npm run lint && npm run fmt

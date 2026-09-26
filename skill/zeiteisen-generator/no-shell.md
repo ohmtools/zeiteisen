@@ -66,7 +66,7 @@ adjustments, since you can't render, crop or measure pixels:
 
 ## 3. Official abbreviation list by hand
 
-Follow `abbreviations/instructions.md`, Source A (all rules, including when
+Follow `degreeinformation/instructions.md`, Source A (all rules, including when
 to ask), reading the table from the text layer:
 
 - Skip page headers and footers: the title (`Abkürzungen`), the column header

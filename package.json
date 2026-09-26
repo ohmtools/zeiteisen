@@ -17,14 +17,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "schema:locations": "node scripts/json-schema.mjs locations",
-    "schema:abbreviations": "node scripts/json-schema.mjs abbreviations",
+    "schema:degreeinformation": "node scripts/json-schema.mjs degreeinformation",
     "schema:catalog": "node scripts/json-schema.mjs catalog",
     "catalog": "node scripts/catalog-index.mjs",
     "skill": "node scripts/skill.mjs",
     "remote": "ssh -p 2222 root@server.example.org \"sudo -i -u caddy --\"",
     "upload": "git ls-files -z | rsync -avz --delete --chown caddy:caddy --from0 --files-from=- -e 'ssh -p 2222' ./ root@[server.example.org]:/home/caddy/.config/containers/zeiteisen/",
     "publish": "npm run remote -- 'just zeiteisen publish'",
-    "index-remote-catalog": "npm run remote -- 'just zeiteisen catalog'"
+    "catalog-remote": "npm run remote -- 'just zeiteisen catalog'"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

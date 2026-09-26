@@ -51,7 +51,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { CatalogMode } from "@/lib/primitives/catalog";
-import type { Backup, OwnAbbreviationsFile } from "@/lib/primitives/storage";
+import type { Backup, OwnDegreeInformationFile } from "@/lib/primitives/storage";
 import { downloadBackup, readBackupFile, restoreBackup } from "@/lib/backup";
 import { toast } from "@/lib/toast";
 
@@ -68,10 +68,10 @@ type Props = {
   ownLocations: boolean;
   onUploadLocations: (file: File) => void;
   onCatalogLocations: () => void;
-  // The own abbreviations files, in upload order (later ones win).
-  ownAbbreviations: OwnAbbreviationsFile[];
-  onUploadAbbreviations: (files: File[]) => void;
-  onRemoveAbbreviations: (names: string[]) => void;
+  // The own degreeInformation files, in upload order (later ones win).
+  ownDegreeInformation: OwnDegreeInformationFile[];
+  onUploadDegreeInformation: (files: File[]) => void;
+  onRemoveDegreeInformation: (names: string[]) => void;
   // How many profiles a restore would replace.
   profileCount: number;
 };
@@ -87,7 +87,7 @@ type TriggerProps = {
 
 // The footer's "Data" menu, and on phones the tab bar's settings menu:
 // everything about the data on this device that is no profile's business.
-// Where dates, locations and abbreviations come from (the catalog or the
+// Where dates, locations and degreeInformation come from (the catalog or the
 // user's own files), how the catalog is used and where it is read from, and
 // the backup of it all. Lives in the deferred chunk; App shows a disabled look-alike
 // trigger until it arrives.
@@ -103,16 +103,16 @@ export function DataMenu({
   ownLocations,
   onUploadLocations,
   onCatalogLocations,
-  ownAbbreviations,
-  onUploadAbbreviations,
-  onRemoveAbbreviations,
+  ownDegreeInformation,
+  onUploadDegreeInformation,
+  onRemoveDegreeInformation,
   profileCount,
   trigger,
   children,
   settings = false,
 }: Props & TriggerProps) {
   // One file input for every own file; `picking` says which kind it is for
-  // (abbreviations take several files at once). It sits outside the menu,
+  // (degreeInformation take several files at once). It sits outside the menu,
   // which unmounts its content on closing.
   const ownInput = useRef<HTMLInputElement>(null);
   const picking = useRef<(files: File[]) => void>(() => {});
@@ -125,12 +125,12 @@ export function DataMenu({
   };
   const pickOne = (onFile: (file: File) => void) => pickOwn(([file]) => onFile(file));
   const [editingUrl, setEditingUrl] = useState(false);
-  const [removingAbbreviations, setRemovingAbbreviations] = useState(false);
+  const [removingDegreeInformation, setRemovingDegreeInformation] = useState(false);
   const [skillOpen, setSkillOpen] = useState(false);
-  const ownCount = ownAbbreviations.length;
+  const ownCount = ownDegreeInformation.length;
   // The last file removed closes the dialog for good, not until the next
   // upload.
-  if (removingAbbreviations && ownCount === 0) setRemovingAbbreviations(false);
+  if (removingDegreeInformation && ownCount === 0) setRemovingDegreeInformation(false);
   const ignored = catalogMode === "ignore";
   const anyOwn = datesManual || ownLocations || ownCount > 0;
   const backupInput = useRef<HTMLInputElement>(null);
@@ -192,11 +192,11 @@ export function DataMenu({
               onLoad={() => pickOne(onUploadLocations)}
               onBack={onCatalogLocations}
             />
-            {/* Own abbreviations merge over the catalog's, so there is always
+            {/* Own degreeInformation merge over the catalog's, so there is always
                 room for one more file. */}
-            <DropdownMenuItem onClick={() => pickOwn(onUploadAbbreviations, true)}>
+            <DropdownMenuItem onClick={() => pickOwn(onUploadDegreeInformation, true)}>
               <BookA data-icon="inline-start" />
-              {ownCount > 0 ? m.abbreviations_add() : m.abbreviations_manual()}
+              {ownCount > 0 ? m.degreeinformation_add() : m.degreeinformation_manual()}
               {ownCount > 0 && (
                 <Note>
                   {ownCount === 1 ? m.data_own_file() : m.data_own_files({ count: ownCount })}
@@ -204,9 +204,9 @@ export function DataMenu({
               )}
             </DropdownMenuItem>
             {ownCount > 0 && (
-              <DropdownMenuItem onClick={() => setRemovingAbbreviations(true)}>
+              <DropdownMenuItem onClick={() => setRemovingDegreeInformation(true)}>
                 <BookX data-icon="inline-start" />
-                {m.abbreviations_manage()}
+                {m.degreeinformation_manage()}
               </DropdownMenuItem>
             )}
             {/* Always there, even with the catalog ignored: the way to own
@@ -257,11 +257,11 @@ export function DataMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <OwnAbbreviationsDialog
-        open={removingAbbreviations}
-        onOpenChange={setRemovingAbbreviations}
-        files={ownAbbreviations}
-        onRemove={onRemoveAbbreviations}
+      <OwnDegreeInformationDialog
+        open={removingDegreeInformation}
+        onOpenChange={setRemovingDegreeInformation}
+        files={ownDegreeInformation}
+        onRemove={onRemoveDegreeInformation}
       />
 
       <SkillDialog open={skillOpen} onOpenChange={setSkillOpen} />
@@ -374,10 +374,10 @@ function ModeIcon({ mode }: { mode: CatalogMode }) {
   return <RefreshCw data-icon="inline-start" />;
 }
 
-// The own abbreviations files in the order they win (later over earlier),
+// The own degreeInformation files in the order they win (later over earlier),
 // each removable on its own; the dialog closes once none is left. Removing is
 // at once, no confirmation: the user still has the file.
-function OwnAbbreviationsDialog({
+function OwnDegreeInformationDialog({
   open,
   onOpenChange,
   files,
@@ -385,15 +385,15 @@ function OwnAbbreviationsDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  files: OwnAbbreviationsFile[];
+  files: OwnDegreeInformationFile[];
   onRemove: (names: string[]) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{m.abbreviations_manage_title()}</DialogTitle>
-          <DialogDescription>{m.abbreviations_manage_text()}</DialogDescription>
+          <DialogTitle>{m.degreeinformation_manage_title()}</DialogTitle>
+          <DialogDescription>{m.degreeinformation_manage_text()}</DialogDescription>
         </DialogHeader>
         <ul className="flex max-h-72 flex-col divide-y overflow-y-auto">
           {files.map((file) => (
@@ -401,14 +401,14 @@ function OwnAbbreviationsDialog({
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm">{file.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {m.abbreviations_file_count({ count: file.data.subjects.length })}
+                  {m.degreeinformation_file_count({ count: file.data.subjects.length })}
                 </span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                title={m.abbreviations_remove_file({ file: file.name })}
-                aria-label={m.abbreviations_remove_file({ file: file.name })}
+                title={m.degreeinformation_remove_file({ file: file.name })}
+                aria-label={m.degreeinformation_remove_file({ file: file.name })}
                 onClick={() => onRemove([file.name])}
               >
                 <Trash2 />
@@ -422,7 +422,7 @@ function OwnAbbreviationsDialog({
             className="sm:mr-auto"
             onClick={() => onRemove(files.map((file) => file.name))}
           >
-            {m.abbreviations_remove_all()}
+            {m.degreeinformation_remove_all()}
           </Button>
           <Button onClick={() => onOpenChange(false)}>{m.close()}</Button>
         </DialogFooter>

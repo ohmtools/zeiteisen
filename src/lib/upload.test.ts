@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { subject } from "@/lib/primitives/fixtures.test-util";
 import {
-  readAbbreviationsFile,
+  readDegreeInformationFile,
   readDatesFile,
   readLocationsFile,
   readTimetableFiles,
@@ -39,16 +39,26 @@ it("reads a dates file", async () => {
   expect("error" in (await readDatesFile(file("dates.json", { year: 1 })))).toBe(true);
 });
 
-it("reads locations and abbreviations, refusing a file that lists none", async () => {
+it("reads locations and degreeInformation, refusing a file that lists none", async () => {
   const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
   expect(await readLocationsFile(file("l.json", locations))).toEqual({ data: locations });
-  const abbreviations = { subjects: [{ code: "M1", de: "Mathe 1", en: "Maths 1" }] };
-  expect(await readAbbreviationsFile(file("a.json", abbreviations))).toEqual({
-    data: abbreviations,
+  const degreeInformation = {
+    subjects: [
+      {
+        code: "M1",
+        name: { de: "Mathe 1", en: "Maths 1" },
+        sws: { lecture: 2, exercise: 1, laboratory: 0 },
+        description: { de: "d", en: "d" },
+        test: { de: "t", en: "t" },
+      },
+    ],
+  };
+  expect(await readDegreeInformationFile(file("a.json", degreeInformation))).toEqual({
+    data: degreeInformation,
   });
   // A dates file picked by mistake parses as an empty list otherwise.
   const dates = { year: 2025, lectureStart: "2025-10-01", lectureEnd: "2026-01-31" };
   expect("error" in (await readLocationsFile(file("dates.json", dates)))).toBe(true);
-  expect("error" in (await readAbbreviationsFile(file("dates.json", dates)))).toBe(true);
+  expect("error" in (await readDegreeInformationFile(file("dates.json", dates)))).toBe(true);
   expect("error" in (await readLocationsFile(file("l.json", { locations: [{}] })))).toBe(true);
 });

@@ -1,11 +1,11 @@
 // Prints the JSON schema of the upload formats to stdout.
 //
-// Usage: node scripts/json-schema.mjs [timetable|dates|locations|abbreviations|catalog]
+// Usage: node scripts/json-schema.mjs [timetable|dates|locations|degreeinformation|catalog]
 //   no argument   -> every schema in one object
 //   timetable     -> a timetable file (plain Subject[]) alone
 //   dates         -> the SemesterDates schema alone
 //   locations     -> the catalog's locations.json
-//   abbreviations -> one file of the catalog's abbreviations/
+//   degreeinformation -> one file of the catalog's degreeinformation/
 //   catalog       -> the catalog's index.json
 //
 // The schemas themselves live in schemas.mjs, shared with skill.mjs.

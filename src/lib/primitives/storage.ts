@@ -9,9 +9,9 @@ import {
   type CatalogMode,
   type CatalogSources,
 } from "./catalog";
-import type { Abbreviations, Locations, SemesterDates } from "./meta";
+import type { DegreeInformation, Locations, SemesterDates } from "./meta";
 import type { Profile, ProfileName } from "./profile";
-import { abbreviationsSchema, locationsSchema, semesterDatesSchema } from "./meta";
+import { degreeInformationSchema, locationsSchema, semesterDatesSchema } from "./meta";
 import { timetableFromJSON, timetableJSONSchema, type Timetable } from "./timetable";
 
 // localStorage is the only persistence: the app never talks to a server.
@@ -30,8 +30,8 @@ export const DATES_KEY = "tt.dates.v1";
 // The user's own locations file, used instead of the catalog's; `null` (or
 // missing) = the catalog's.
 export const LOCATIONS_KEY = "tt.locations.v1";
-// The user's own abbreviations files, merged over the catalog's.
-export const ABBREVIATIONS_KEY = "tt.abbreviations.v1";
+// The user's own degreeInformation files, merged over the catalog's.
+export const DEGREEINFORMATION_KEY = "tt.degreeinformation.v1";
 // Last catalog index plus the small files downloaded from it.
 export const CATALOG_KEY = "tt.catalog.v1";
 // Where the installed dates came from.
@@ -152,7 +152,7 @@ export function saveDates(dates: SemesterDates | null, store = defaultStore()): 
   return writeJson(DATES_KEY, dates, store);
 }
 
-// --- own locations and abbreviations ---
+// --- own locations and degreeInformation ---
 
 // Stored as uploaded; `null` hands locations back to the catalog.
 export function loadOwnLocations(store = defaultStore()): Locations | null {
@@ -163,12 +163,12 @@ export function saveOwnLocations(locations: Locations | null, store = defaultSto
   return writeJson(LOCATIONS_KEY, locations, store);
 }
 
-// One uploaded abbreviations file, named after it. Names are unique: the same
+// One uploaded degreeInformation file, named after it. Names are unique: the same
 // name again replaces the file. In upload order; later files win on a code.
-export type OwnAbbreviationsFile = { name: string; data: Abbreviations };
+export type OwnDegreeInformationFile = { name: string; data: DegreeInformation };
 
-const ownAbbreviationsSchema: z.ZodMiniType<OwnAbbreviationsFile[]> = z
-  .array(z.object({ name: z.string().check(z.minLength(1)), data: abbreviationsSchema }))
+const ownDegreeInformationSchema: z.ZodMiniType<OwnDegreeInformationFile[]> = z
+  .array(z.object({ name: z.string().check(z.minLength(1)), data: degreeInformationSchema }))
   .check(
     z.refine((files) => new Set(files.map((file) => file.name)).size === files.length, {
       message: "file names are unique",
@@ -176,15 +176,15 @@ const ownAbbreviationsSchema: z.ZodMiniType<OwnAbbreviationsFile[]> = z
   );
 
 // `[]` = none, the catalog's alone.
-export function loadOwnAbbreviations(store = defaultStore()): OwnAbbreviationsFile[] {
-  return read(ABBREVIATIONS_KEY, ownAbbreviationsSchema, [], store);
+export function loadOwnDegreeInformation(store = defaultStore()): OwnDegreeInformationFile[] {
+  return read(DEGREEINFORMATION_KEY, ownDegreeInformationSchema, [], store);
 }
 
-export function saveOwnAbbreviations(
-  files: readonly OwnAbbreviationsFile[],
+export function saveOwnDegreeInformation(
+  files: readonly OwnDegreeInformationFile[],
   store = defaultStore(),
 ): boolean {
-  return writeJson(ABBREVIATIONS_KEY, files, store);
+  return writeJson(DEGREEINFORMATION_KEY, files, store);
 }
 
 // --- catalog ---
@@ -261,7 +261,7 @@ export type Backup = {
   active: ProfileName | null;
   dates: SemesterDates | null;
   locations: Locations | null;
-  abbreviations: OwnAbbreviationsFile[];
+  degreeInformation: OwnDegreeInformationFile[];
   sources: CatalogSources;
   catalogMode: CatalogMode;
   catalogUrl: string | null;
@@ -273,7 +273,7 @@ export function loadBackup(store = defaultStore()): Backup {
     active: loadActive(store),
     dates: loadDates(store),
     locations: loadOwnLocations(store),
-    abbreviations: loadOwnAbbreviations(store),
+    degreeInformation: loadOwnDegreeInformation(store),
     sources: loadSources(store),
     catalogMode: loadCatalogMode(store),
     catalogUrl: loadCatalogUrl(store),
@@ -292,7 +292,7 @@ export const backupFileSchema = z.object({
   active: z.nullable(z.string().check(z.minLength(1))),
   dates: z.nullable(semesterDatesSchema),
   locations: z._default(z.nullable(locationsSchema), null),
-  abbreviations: z._default(ownAbbreviationsSchema, []),
+  degreeInformation: z._default(ownDegreeInformationSchema, []),
   sources: catalogSourcesSchema,
   catalogMode: z._default(catalogModeSchema, "auto"),
   catalogUrl: z._default(catalogUrlSchema, null),
@@ -307,7 +307,7 @@ export function getBackupFile(backup: Backup): BackupFile {
     active: backup.active,
     dates: backup.dates,
     locations: backup.locations,
-    abbreviations: backup.abbreviations,
+    degreeInformation: backup.degreeInformation,
     sources: backup.sources,
     catalogMode: backup.catalogMode,
     catalogUrl: backup.catalogUrl,
@@ -325,8 +325,18 @@ export function parseBackupFile(json: unknown): Backup | null {
     (profile, i) => profile.timetables.length !== parsed.data.profiles[i].timetables.length,
   );
   if (repeated) return null;
-  const { active, dates, locations, abbreviations, sources, catalogMode, catalogUrl } = parsed.data;
-  return { profiles, active, dates, locations, abbreviations, sources, catalogMode, catalogUrl };
+  const { active, dates, locations, degreeInformation, sources, catalogMode, catalogUrl } =
+    parsed.data;
+  return {
+    profiles,
+    active,
+    dates,
+    locations,
+    degreeInformation,
+    sources,
+    catalogMode,
+    catalogUrl,
+  };
 }
 
 // Replaces every key a backup holds; the catalog cache stays. `false` when
@@ -337,7 +347,7 @@ export function saveBackup(backup: Backup, store = defaultStore()): boolean {
     writeJson(ACTIVE_KEY, backup.active, store),
     saveDates(backup.dates, store),
     saveOwnLocations(backup.locations, store),
-    saveOwnAbbreviations(backup.abbreviations, store),
+    saveOwnDegreeInformation(backup.degreeInformation, store),
     saveSources(backup.sources, store),
     saveCatalogMode(backup.catalogMode, store),
     saveCatalogUrl(backup.catalogUrl, store),

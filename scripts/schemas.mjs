@@ -9,7 +9,7 @@ import { z } from "zod";
 const jiti = createJiti(import.meta.url);
 
 const { subjectsFileSchema } = await jiti.import("../src/lib/primitives/subject.ts");
-const { semesterDatesSchema, locationsSchema, abbreviationsSchema } = await jiti.import(
+const { semesterDatesSchema, locationsSchema, degreeInformationSchema } = await jiti.import(
   "../src/lib/primitives/meta.ts",
 );
 const { catalogIndexSchema } = await jiti.import("../src/lib/primitives/catalog.ts");
@@ -22,7 +22,7 @@ export const schemas = {
   timetable: ["Timetable", subjectsFileSchema],
   dates: ["SemesterDates", semesterDatesSchema],
   locations: ["Locations", locationsSchema],
-  abbreviations: ["Abbreviations", abbreviationsSchema],
+  degreeinformation: ["DegreeInformation", degreeInformationSchema],
   catalog: ["CatalogIndex", catalogIndexSchema],
 };
 

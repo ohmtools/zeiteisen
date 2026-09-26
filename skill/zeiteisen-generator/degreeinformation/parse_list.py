@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Draft abbreviations from an official faculty abbreviation list
+"""Draft degree information from an official faculty abbreviation list
 ("Abkürzungen" / Abkürzungsverzeichnis: columns Fachkürzel | Typ | Fach).
 
 Usage:
-    python3 abbreviations/parse_list.py <list.pdf> [--outdir DIR]
+    python3 degreeinformation/parse_list.py <list.pdf> [--outdir DIR]
 
 What it does (rules: instructions.md in this folder, "Source A"):
   1. Reads word positions (pdftotext -bbox) and finds the three columns from
@@ -15,7 +15,7 @@ What it does (rules: instructions.md in this folder, "Source A"):
      repetition of the code, drops trailing course-type words such as
      "Praktikum" / "Übung"), and picks one German name per code.
   4. Prints the rows per code, the chosen name, and ISSUES; writes
-     <outdir>/abbreviations_<faculty>_draft.json with "en" left empty.
+     <outdir>/degreeinformation_<faculty>_draft.json with "en" left empty.
 
 The English names must be filled in afterwards (translation), so the draft
 deliberately fails validation until then. Exit code 0 = no issues, 2 = issues
@@ -161,16 +161,22 @@ def main():
             if first != chosen and first != code and first.lower().startswith(code.lower()[:3]) \
                     and re.search(r"\d", first):
                 issues.append(f"{code}: name starts with a different code {first!r}: {chosen!r}")
-        subjects.append({"de": chosen or "", "en": "", "code": code})
+        subjects.append({
+            "name": {"de": chosen or "", "en": ""},
+            "sws": {"lecture": 0, "exercise": 0, "laboratory": 0},
+            "code": code,
+            "description": {"de": "", "en": ""},
+            "test": {"de": "", "en": ""},
+        })
         print(f"{code:14} {chosen!r:60} <- " + " | ".join(f"{r['type']}: {r['raw']}" for r in rs))
 
     fac = meta.get("faculty", "faculty")
     out = Path(args.outdir)
     out.mkdir(parents=True, exist_ok=True)
-    path = out / f"abbreviations_{fac}_draft.json"
+    path = out / f"degreeinformation_{fac}_draft.json"
     path.write_text(json.dumps({"subjects": subjects}, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n{len(rows)} rows, {len(subjects)} codes; faculty {fac!r}, semester {meta.get('semester')!r}")
-    print(f"wrote {path} (fill in every 'en' before validating)")
+    print(f"wrote {path} (fill in every 'name.en', sws, description and test before validating)")
     real = [i for i in issues if not i.startswith("INFO ")]
     if issues:
         print("\nISSUES:")

@@ -1,3 +1,4 @@
+import type { SubjectInformation } from "@/lib/primitives/meta";
 import { useRef } from "react";
 import { cn } from "cn";
 import { localized, m } from "@/i18n";
@@ -46,6 +47,8 @@ type Props = {
   highlight?: Highlight | null;
   // A block's popup asks to show its group cell in the tree.
   onJump?: (subject: SubjectRef) => void;
+  // A block's popup asks for the subject's catalog info.
+  onInfo?: (info: SubjectInformation) => void;
   // The one day shown below `md`; a swipe moves it.
   selectedDay: Day;
   onSelectDay: (day: Day) => void;
@@ -57,6 +60,7 @@ export function TimetableGrid({
   hasFiles,
   highlight = null,
   onJump,
+  onInfo,
   selectedDay,
   onSelectDay,
 }: Props) {
@@ -171,6 +175,7 @@ export function TimetableGrid({
                     lane={{ lane, lanes }}
                     unclear={unclear(entry)}
                     dimmed={dimmed(entry)}
+                    onInfo={onInfo}
                     onJump={() =>
                       onJump?.({ timetableName: entry.timetableName, index: entry.index })
                     }
@@ -218,6 +223,7 @@ export function TimetableGrid({
                 lane={null}
                 unclear={unclear(entry)}
                 dimmed={dimmed(entry)}
+                onInfo={onInfo}
                 onJump={() => onJump?.({ timetableName: entry.timetableName, index: entry.index })}
               />
             ))}

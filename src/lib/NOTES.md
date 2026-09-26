@@ -10,11 +10,11 @@ re-implements primitive logic.
   `SubjectID` is not unique). Hours fixed 8–20, Mon–Fri columns; `other` is a
   list, not a column (user decision). Listed dates with the same slot merge
   into one block in the general view.
-- `subjects.ts` — words for subjects. Unknown abbreviations fall back to
+- `subjects.ts` — words for subjects (`subjectInfoOf` = catalog entry, shown by the popup's "More info"). Unknown degree information fall back to
   themselves, `/` variants to their base.
 - `warnings.ts` — wording of the primitives' warning data only.
 - `upload.ts` — reads files and words failures; dates, locations and
-  abbreviations go through one `readJsonFile`, and the latter two refuse a
+  degree information go through one `readJsonFile`, and the latter two refuse a
   file listing nothing (every list defaults to empty, so a dates file would
   otherwise pass as locations). `toastUploadError` = the Data menu's error
   toast (zod details capped at 5 +
@@ -63,7 +63,7 @@ re-implements primitive logic.
   (user decision); only lightness + chroma step down so `--primary-foreground`
   keeps contrast. Colour is never the only cue.
 - `overrides.ts` — module-level tables the catalog (or the user's own file
-  of that kind, instead of it) fills (locations, abbreviations): lookups sit
+  of that kind, instead of it) fills (locations, degree information): lookups sit
   deep in render helpers. Building links and full names live only in the
   catalog or the user's own file, never in the app.
 - `backup.ts` — footer "Data" menu backup: `zeiteisen-<date>.backup`; a restore

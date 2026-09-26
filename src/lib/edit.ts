@@ -12,7 +12,7 @@ import {
   type Time,
 } from "@/lib/primitives/subject";
 import type { Timetable } from "@/lib/primitives/timetable";
-import { abbreviationCodes } from "@/lib/overrides";
+import { degreeInformationCodes } from "@/lib/overrides";
 import { timeLabel } from "@/lib/subjects";
 
 // The subject editor's form: everything as the inputs hold it (times "HH:MM",
@@ -189,7 +189,7 @@ export function withDates(draft: SubjectDraft, picked: readonly Date[]): DatedDr
 }
 
 // What the editor suggests, learnt from every timetable on the device and the
-// catalog's abbreviations. Most used first; professors and rooms that the same
+// catalog's degreeInformation. Most used first; professors and rooms that the same
 // subject already uses come before all others.
 export type Suggestions = {
   names: string[];
@@ -264,7 +264,7 @@ export function suggestionsFor(
       }
     }
   }
-  for (const code of abbreviationCodes()) if (!names.has(code)) names.set(code, 0);
+  for (const code of degreeInformationCodes()) if (!names.has(code)) names.set(code, 0);
 
   return {
     names: byUse(names),

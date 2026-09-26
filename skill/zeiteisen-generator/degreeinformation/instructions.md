@@ -25,16 +25,18 @@ identified with confidence, ask.
    described in `no-shell.md`, section 3, in the skill's root folder):
 
    ```
-   python3 <skill-dir>/abbreviations/parse_list.py <list.pdf> --outdir <drafts-dir>
+   python3 <skill-dir>/degreeinformation/parse_list.py <list.pdf> --outdir <drafts-dir>
    ```
 
    It rebuilds the rows (including names wrapped onto a second line), groups
    them by code, applies the rules below, prints each code with its chosen
    name and source rows, and lists ISSUES (exit code 2 = something needs a
    decision; `INFO` lines are already decided). It writes
-   `abbreviations_<faculty>_draft.json` with empty `en` fields. Spot-check
-   the output against the PDF, then fill in `en` (see Languages) and save
-   the final file as `abbreviations_<faculty>.json`.
+   `degreeinformation_<faculty>_draft.json` with empty `name.en`, zero `sws` and empty `description` / `test`
+   (the schema needs them non-empty in both languages: use `–` when the
+   source has nothing). Spot-check the output against the PDF, then fill in
+   `name.en` (see Languages) and save
+   the final file as `degreeinformation_<faculty>.json`.
 2. One file per faculty list. Two lists of the same faculty (e.g. different
    semesters or `Stand` dates): ask which to use. Mention the list's
    semester and `Stand` in the chat summary.
@@ -172,5 +174,5 @@ Ask the user (see SKILL.md) when:
 ## Cross-check with timetables
 
 If the same request includes timetables, check that every timetable `name`
-has a matching `code` in the abbreviations and list any that don't in the
+has a matching `code` in the degree information and list any that don't in the
 chat summary (don't invent entries for them).

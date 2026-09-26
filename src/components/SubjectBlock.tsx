@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
-import { Clock, MapPin, User } from "lucide-react";
+import { Clock, Hand, Info, MapPin, StickyNote, User } from "lucide-react";
 import { cn } from "cn";
+import type { SubjectInformation } from "@/lib/primitives/meta";
 import { groupName } from "@/lib/primitives/group";
 import { Day, kindLabel, minutesOf } from "@/lib/primitives/subject";
 import { m } from "@/i18n";
@@ -14,6 +15,7 @@ import {
   kindNames,
   repeatName,
   slotLabel,
+  subjectInfoOf,
   subjectName,
   timeRangeLabel,
 } from "@/lib/subjects";
@@ -31,12 +33,21 @@ type Props = {
   dimmed?: boolean;
   // Shows the block's group cell in the tree.
   onJump?: () => void;
+  // "More info" in the popup: the dialog lives in the deferred chunk.
+  onInfo?: (info: SubjectInformation) => void;
 };
 
 // A tap that moved this far is a swipe (day change), not a click on the block.
 const TAP_MAX_PX = 10;
 
-export function SubjectBlock({ entry, lane, unclear = false, dimmed = false, onJump }: Props) {
+export function SubjectBlock({
+  entry,
+  lane,
+  unclear = false,
+  dimmed = false,
+  onJump,
+  onInfo,
+}: Props) {
   const { subject, meeting, dates } = entry;
   // The grid mixes timetables, so every block carries its timetable's hue of
   // `--primary`.
@@ -68,6 +79,7 @@ export function SubjectBlock({ entry, lane, unclear = false, dimmed = false, onJ
   // The popup spells both out: "I2" -> "Computer Science 2", "Pr" ->
   // "Laboratory". An unknown shortcut stays as it is stored in the subject.
   const fullName = subjectName(subject.name);
+  const info = subjectInfoOf(subject.name);
   const fullKinds = kindNames(subject.kind);
   // "WE.105" carries the building shortcut; unknown rooms have no links.
   const links = buildingLinks(meeting.location);
@@ -154,89 +166,118 @@ export function SubjectBlock({ entry, lane, unclear = false, dimmed = false, onJ
       </PopoverTrigger>
 
       <PopoverContent anchor={anchor} align="start" side="right" sideOffset={8} className="w-64">
-        <div className="flex flex-col gap-1" style={tint}>
-          <span className="flex items-center gap-2 font-medium">
-            <span className="h-4 w-1 shrink-0 bg-(--tint)" />
-            <span className="min-w-0">{fullName}</span>
-          </span>
-          {/* The group is the way back to the tree: it shows the cell this
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">{fullName}</span>
+            {/* The group is the way back to the tree: it shows the cell this
               block belongs to. */}
-          <span className="text-muted-foreground">
-            {fullKinds} ·{" "}
-            <button
-              type="button"
-              className={cn(buttonVariants({ variant: "link", size: "xs" }), "h-auto px-0! py-0")}
-              title={m.block_show_group()}
-              onClick={() => {
-                setOpen(false);
-                onJump?.();
-              }}
-            >
-              {group ? m.subject_group({ group }) : m.tree_no_group()}
-            </button>
-          </span>
-          <span className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="size-3.5 shrink-0" />
-            <span className="flex flex-col">
-              {dates.length > 0 ? (
-                <>
-                  <span className="tabular-nums">{timeRangeLabel(meeting)}</span>
-                  <span className="tabular-nums">{dates.map(dateLabel).join(", ")}</span>
-                </>
-              ) : (
-                <span className="tabular-nums">{slotLabel(meeting)}</span>
-              )}
-              {repeat && <span>{repeat}</span>}
+            <span className="text-muted-foreground">
+              {fullKinds} ·{" "}
+              <button
+                type="button"
+                className={cn(buttonVariants({ variant: "link", size: "xs" }), "h-auto px-0! py-0")}
+                title={m.block_show_group()}
+                onClick={() => {
+                  setOpen(false);
+                  onJump?.();
+                }}
+              >
+                {group ? m.subject_group({ group }) : m.tree_no_group()}
+              </button>
             </span>
-          </span>
-          {meeting.professor && (
-            <span className="flex items-center gap-2 text-muted-foreground">
-              <User className="size-3.5 shrink-0" />
-              <span>{meeting.professor}</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-start gap-2 text-muted-foreground">
+              <Clock className="h-lh w-3.5 shrink-0" />
+              <span className="flex flex-col">
+                {dates.length > 0 ? (
+                  <>
+                    <span className="tabular-nums">{timeRangeLabel(meeting)}</span>
+                    <span className="tabular-nums">{dates.map(dateLabel).join(", ")}</span>
+                  </>
+                ) : (
+                  <span className="tabular-nums">{slotLabel(meeting)}</span>
+                )}
+                {repeat && <span>{repeat}</span>}
+              </span>
             </span>
-          )}
-          {meeting.location && (
-            <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
-              <MapPin className="size-3.5 shrink-0" />
-              <span>{meeting.location}</span>
-              {links?.name && <span>{links.name}</span>}
-              {links?.mapsUrl && (
-                <a
-                  href={links.mapsUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
+            {meeting.professor && (
+              <span className="flex items-start gap-2 text-muted-foreground">
+                <User className="h-lh w-3.5 shrink-0" />
+                <span>{meeting.professor}</span>
+              </span>
+            )}
+            {meeting.location && (
+              <span className="flex items-start gap-2 text-muted-foreground">
+                <MapPin className="h-lh w-3.5 shrink-0" />
+                <span className="flex flex-wrap gap-x-2">
+                  <span>{meeting.location}</span>
+                  {links?.name && <span>{links.name}</span>}
+                  {links?.mapsUrl && (
+                    <a
+                      href={links.mapsUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className={cn(
+                        buttonVariants({ variant: "link", size: "xs" }),
+                        "h-auto px-0! py-0",
+                      )}
+                    >
+                      {m.location_maps()}
+                    </a>
+                  )}
+                  {links?.siteUrl && (
+                    <a
+                      href={links.siteUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className={cn(
+                        buttonVariants({ variant: "link", size: "xs" }),
+                        "h-auto px-0! py-0",
+                      )}
+                    >
+                      {m.location_site()}
+                    </a>
+                  )}
+                </span>
+              </span>
+            )}
+            {subject.onDemand && (
+              <span className="flex items-start gap-2 text-muted-foreground">
+                <Hand className="h-lh w-3.5 shrink-0" />
+                <span>{m.subject_on_demand()}</span>
+              </span>
+            )}
+            {subject.note && (
+              <span className="flex items-start gap-2 text-muted-foreground">
+                <StickyNote className="h-lh w-3.5 shrink-0" />
+                <span className="min-w-0">{subject.note}</span>
+              </span>
+            )}
+            {info && onInfo && (
+              <span className="flex items-start gap-2 text-muted-foreground">
+                <Info className="h-lh w-3.5 shrink-0" />
+                <button
+                  type="button"
                   className={cn(
                     buttonVariants({ variant: "link", size: "xs" }),
                     "h-auto px-0! py-0",
                   )}
+                  onClick={() => {
+                    setOpen(false);
+                    onInfo(info);
+                  }}
                 >
-                  {m.location_maps()}
-                </a>
-              )}
-              {links?.siteUrl && (
-                <a
-                  href={links.siteUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className={cn(
-                    buttonVariants({ variant: "link", size: "xs" }),
-                    "h-auto px-0! py-0",
-                  )}
-                >
-                  {m.location_site()}
-                </a>
-              )}
-            </span>
-          )}
-          {subject.onDemand && (
-            <span className="text-muted-foreground">{m.subject_on_demand()}</span>
-          )}
-          {subject.note && <span className="text-muted-foreground">{subject.note}</span>}
-          {unclear && (
-            <Badge variant="destructive" className="max-w-full">
-              {m.badge_sh_unclear()}
-            </Badge>
-          )}
+                  {m.subject_more_info()}
+                </button>
+              </span>
+            )}
+            {unclear && (
+              <Badge variant="destructive" className="max-w-full">
+                {m.badge_sh_unclear()}
+              </Badge>
+            )}
+          </div>
         </div>
       </PopoverContent>
     </Popover>

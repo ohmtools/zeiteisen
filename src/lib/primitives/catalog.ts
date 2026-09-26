@@ -1,10 +1,10 @@
 import * as z from "zod/mini";
 import {
-  abbreviationsSchema,
+  degreeInformationSchema,
   locationsSchema,
   semesterDatesSchema,
   type CatalogLocation,
-  type Localized,
+  type SubjectInformation,
   type SemesterDates,
 } from "./meta";
 import {
@@ -27,12 +27,12 @@ import type { TimetableName } from "./timetable";
 //     index.json            generated, lists every file below
 //     locations.json
 //     dates.json
-//     abbreviations/*.json
+//     degreeinformation/*.json
 //     timetables/**/*.{json,timetable}  plain Subject[], named after the file
 
 export const CatalogKind = {
   Locations: "locations",
-  Abbreviations: "abbreviations",
+  DegreeInformation: "degreeinformation",
   Dates: "dates",
   Timetables: "timetables",
 } as const;
@@ -174,7 +174,7 @@ export class Catalog {
   }
 }
 
-// --- offline cache of the small files (locations, abbreviations, dates) ---
+// --- offline cache of the small files (locations, degreeInformation, dates) ---
 
 // The last index plus the payload of every small file downloaded, keyed by path
 // with the hash it had. Timetables are not cached: a picked one is copied into
@@ -244,15 +244,15 @@ export function parseLocations(payload: unknown): Record<string, CatalogLocation
   );
 }
 
-// Every abbreviations file merged into one table, subject code (upper case) ->
-// full name. Later files win, so a program-specific file can override a
+// Every degreeInformation file merged into one table, subject code (upper case) ->
+// its whole entry. Later files win, so a program-specific file can override a
 // general one. Broken files are skipped.
-export function mergeAbbreviations(payloads: unknown[]): Record<string, Localized> {
-  const table: Record<string, Localized> = {};
+export function mergeDegreeInformation(payloads: unknown[]): Record<string, SubjectInformation> {
+  const table: Record<string, SubjectInformation> = {};
   for (const payload of payloads) {
-    const parsed = abbreviationsSchema.safeParse(payload);
+    const parsed = degreeInformationSchema.safeParse(payload);
     if (!parsed.success) continue;
-    for (const { code, de, en } of parsed.data.subjects) table[code.toUpperCase()] = { de, en };
+    for (const info of parsed.data.subjects) table[info.code.toUpperCase()] = info;
   }
   return table;
 }
@@ -264,7 +264,7 @@ export function parseDates(payload: unknown): SemesterDates | null {
 
 // --- how the app uses the catalog ---
 
-// `auto` reads the catalog and keeps dates, locations and abbreviations
+// `auto` reads the catalog and keeps dates, locations and degreeInformation
 // current; `freeze` still reads the index (the picker lists it) but keeps what
 // the device has, downloading only what it has no copy of; `ignore` reads
 // nothing at all and uses none of the catalog's data.

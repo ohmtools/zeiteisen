@@ -4,6 +4,7 @@
 // the first render and the grid paints without waiting for it.
 export { AppDialogs } from "@/components/AppDialogs";
 export { AppToaster } from "@/components/AppToaster";
+export { SubjectInfoDialog } from "@/components/SubjectInfoDialog";
 export { GroupTree } from "@/components/GroupTree";
 export { ProfileSection } from "@/components/ProfileSection";
 export { DataMenu } from "@/components/DataMenu";

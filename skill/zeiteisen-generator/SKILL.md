@@ -1,6 +1,6 @@
 ---
 name: "zeiteisen-generator"
-description: "Extract structured JSON data (timetables as .timetable files) for a university timetable app (TH Nürnberg / Ohm) from four kinds of sources: timetable PDFs (Stundenplan of any programme or faculty, e.g. codes like BEI3, BW2, AR5), official faculty abbreviation lists (Abkürzungen / Abkürzungsverzeichnis: Fachkürzel, Typ, Fach) and module handbooks (Modulhandbuch / module handbook), both for subject abbreviations with German and English names, the semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days) and the campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list or module handbook PDF, even without any text, or asks for subject abbreviations of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
+description: "Extract structured JSON data (timetables as .timetable files) for a university timetable app (TH Nürnberg / Ohm) from four kinds of sources: timetable PDFs (Stundenplan of any programme or faculty, e.g. codes like BEI3, BW2, AR5), official faculty abbreviation lists (Abkürzungen / Abkürzungsverzeichnis: Fachkürzel, Typ, Fach) and module handbooks (Modulhandbuch / module handbook), both for subject degree information with German and English names, the semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days) and the campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list or module handbook PDF, even without any text, or asks for subject degree information of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
 ---
 
 # Zeiteisen Generator
@@ -10,7 +10,7 @@ This skill produces JSON data files for a timetable app. Timetables are saved wi
 | Folder | Input | Output |
 |---|---|---|
 | `timetable/` | Timetable PDF (Stundenplan) | Array of subjects, each with a `repeat` block (weekly day/time or individual dates, plus professor and room), group, kind and notes |
-| `abbreviations/` | Official abbreviation list PDF (preferred), else module handbook PDF or the major's name | Subject codes with German and English names |
+| `degreeinformation/` | Official abbreviation list PDF (preferred), else module handbook PDF or the major's name | Subject codes with German and English names |
 | `dates/` | Semester dates webpage, or nothing | Year, lecture period and events |
 | `locations/` | Campus locations webpage, or nothing | Building codes with street, Maps URL and site URL |
 
@@ -22,7 +22,7 @@ Each folder contains:
 Scripts:
 
 - `timetable/parse.py` drafts a `.timetable` from a timetable PDF and lists anything that needs a decision (see `timetable/instructions.md`, step 0).
-- `abbreviations/parse_list.py` drafts abbreviations from an official abbreviation list PDF (see `abbreviations/instructions.md`, Source A).
+- `degreeinformation/parse_list.py` drafts degree information from an official abbreviation list PDF (see `degreeinformation/instructions.md`, Source A).
 - `scripts/validate.py` checks an output file against a task's schema. It needs `jsonschema` (`pip install jsonschema --break-system-packages` if it reports it missing).
 
 **No shell or Python?** If you can't run commands (no bash / code-execution tool, or Python fails), read `no-shell.md` before starting. It covers reading PDFs without rendering, manual count checks, checking output against the schema by hand, and delivering files in chat. Everything else in this skill still applies.
@@ -51,11 +51,11 @@ Nothing in this skill is tied to one study programme; codes, names and rooms in 
 
 1. **Identify the tasks.** Look at what the user attached and asked for:
    - A PDF with a weekday grid, time rows and a header like `Winter26/27 … <code>` is a **timetable**. Layouts can differ between faculties; `timetable/instructions.md` says how to handle a layout that doesn't match the reference.
-   - A PDF titled `Abkürzungen` with a table `Fachkürzel | Typ | Fach` is an **official abbreviation list** (→ `abbreviations`, preferred source).
-   - A PDF titled `Modulhandbuch` / `Module handbook` with module descriptions is a **module handbook** (→ `abbreviations`, used when no official list is provided).
+   - A PDF titled `Abkürzungen` with a table `Fachkürzel | Typ | Fach` is an **official abbreviation list** (→ `degree information`, preferred source).
+   - A PDF titled `Modulhandbuch` / `Module handbook` with module descriptions is a **module handbook** (→ `degree information`, used when no official list is provided).
    - "dates", "Termine", "semester schedule", or a link under `…/termine-im-ueberblick/` or `…/semester-schedule/` is a **dates** task.
    - "locations", "buildings", "Standorte", or a link under `…/anfahrt/` or `…/directions/` is a **locations** task.
-   - "abbreviations / subjects / modules for major X" with no PDF is an **abbreviations** task via the website.
+   - "degree information / subjects / modules for major X" with no PDF is a **degree information** task via the website.
    
    If the user asks for a timetable but attached none, say so and stop that task. There is no fallback for timetables.
    
@@ -73,7 +73,7 @@ Nothing in this skill is tied to one study programme; codes, names and rooms in 
 - Everything meant for the user (summaries, questions, warnings) goes in the chat, never into the JSON.
 - File names:
   - `timetable_<code>_<half><year>.timetable`, e.g. `timetable_ABC3_winter2026.timetable`. `<code>`, `<half>` and `<year>` come from the PDF header (see `timetable/instructions.md`, rule 1). Use one file per timetable PDF. Never use `.json` for a timetable.
-  - From an official abbreviation list: `abbreviations_<faculty>.json` (faculty as printed in the list's footer, e.g. `abbreviations_xyz.json`), one file per list.
-  - From a module handbook: `abbreviations_<major>.json`, e.g. `abbreviations_B-ABC.json`. Use the major's short code from the handbook, or a short slug of its name. Use one file per major.
+  - From an official abbreviation list: `degreeinformation_<faculty>.json` (faculty as printed in the list's footer, e.g. `degreeinformation_xyz.json`), one file per list.
+  - From a module handbook: `degreeinformation_<major>.json`, e.g. `degreeinformation_B-ABC.json`. Use the major's short code from the handbook, or a short slug of its name. Use one file per major.
   - `dates.json`.
   - `locations.json`.
