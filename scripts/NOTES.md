@@ -30,10 +30,10 @@
 - `scripts/schemas.mjs` hold the `schemas` map and `z.toJSONSchema` options,
   shared by `json-schema.mjs` and `skill.mjs`, so both write the same bytes.
 - `scripts/skill.mjs` (`npm run skill`, part of `npm run build`) write the four
-  `skill/timetable-generator/<kind>/schema.json` (timetable, dates, locations,
+  `skill/zeiteisen-generator/<kind>/schema.json` (timetable, dates, locations,
   abbreviations; git-ignored, identical to `npm run schema:<kind>`), then zip
-  `skill/timetable-generator/` with `fflate` to `public/timetable-generator.zip`
-  (git-ignored, precached by the PWA). One top-level `timetable-generator/`
+  `skill/zeiteisen-generator/` with `fflate` to `public/zeiteisen-generator.zip`
+  (git-ignored, precached by the PWA). One top-level `zeiteisen-generator/`
   folder in the zip, as Claude's skill upload expects; dotfiles and
   `__pycache__` skipped; a fixed entry date, so an unchanged skill gives the
   same zip. Optional positional = other output path; `parseArgs` strict, `-h`.

@@ -76,7 +76,7 @@ function shareCard(): Plugin {
         "og:image": `${site}/og-share.png`,
       };
       for (const [key, content] of Object.entries(swaps)) {
-        const tag = new RegExp(`(<meta (?:property|name)="${key}" content=")[^"]*(")`);
+        const tag = new RegExp(`(<meta\\s+(?:property|name)="${key}"\\s+content=")[^"]*(")`);
         if (!tag.test(html)) return this.error(`og-share: no <meta ${key}> in index.html`);
         html = html.replace(tag, (_, open: string, close: string) => open + content + close);
       }

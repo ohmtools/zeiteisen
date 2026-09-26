@@ -50,7 +50,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   with the catalog ignored): "Create own files with AI…" opens `SkillDialog`
   — what the AI skill makes, how to get it into Claude / other skill apps /
   a chat, a check-the-results hint, and a download of the shipped
-  `timetable-generator.zip` (root-based `BASE_URL` href, never relative:
+  `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative:
   share links open the app on `/s/`). While any own file is in use a muted line
   says how they combine with the catalog and that it never updates them.
   Then the catalog — "Catalog" cycles ignore → auto-update → freeze on click

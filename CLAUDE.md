@@ -73,7 +73,7 @@ directory-specific knowledge there, not here.
 - `src/components/NOTES.md` — shell, tab bar, grid, tree ↔ grid, group tree.
 - `src/components/ui/NOTES.md` — shadcn rules and hand-edits.
 - `scripts/NOTES.md` — schema, catalog index and AI skill zip generators.
-- `skill/timetable-generator/` — the downloadable AI skill (Data menu).
+- `skill/zeiteisen-generator/` — the downloadable AI skill (Data menu).
 
 ## Stack / tooling
 
@@ -87,7 +87,7 @@ npm run build     # messages -> tsc -b -> vite build
 npm run messages  # regenerate generated/paraglide/ after editing messages/*.json
 npm run schema    # JSON schemas (also :timetable :dates :locations :abbreviations :catalog)
 npm run catalog -- <dir>   # (re)write <dir>/index.json from its files
-npm run skill     # schemas + public/timetable-generator.zip, after editing skill/
+npm run skill     # schemas + public/zeiteisen-generator.zip, after editing skill/
 npm run lint && npm run fmt
 npm test          # vitest, `src/**/*.test.ts`, pure logic only
 ```

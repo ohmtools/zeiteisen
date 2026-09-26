@@ -1,12 +1,12 @@
-// Packs the AI skill in skill/timetable-generator/ into the zip the app offers
+// Packs the AI skill in skill/zeiteisen-generator/ into the zip the app offers
 // for download (Data menu, timetable picker).
 //
-// Usage: npm run skill [-- <out.zip>]   default public/timetable-generator.zip
+// Usage: npm run skill [-- <out.zip>]   default public/zeiteisen-generator.zip
 //
 // First writes <kind>/schema.json for the four upload formats, generated from
 // the primitives exactly like `npm run schema:<kind>`, so the skill never
 // describes a format the app no longer accepts. Then zips the folder with
-// `timetable-generator/` as the one top-level entry, the shape Claude's skill
+// `zeiteisen-generator/` as the one top-level entry, the shape Claude's skill
 // upload expects. Every entry gets the same fixed date, so an unchanged skill
 // gives a byte-identical zip.
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
@@ -16,7 +16,7 @@ import { zipSync } from "fflate";
 import { schemaText } from "./schemas.mjs";
 
 const usage = "usage: npm run skill [-- <out.zip>]\n";
-const name = "timetable-generator";
+const name = "zeiteisen-generator";
 const root = path.join(import.meta.dirname, "..");
 const source = path.join(root, "skill", name);
 const kinds = ["timetable", "dates", "locations", "abbreviations"];

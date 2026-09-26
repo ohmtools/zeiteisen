@@ -1,9 +1,9 @@
 ---
-name: "timetable-generator"
+name: "zeiteisen-generator"
 description: "Extract structured JSON data (timetables as .timetable files) for a university timetable app (TH Nürnberg / Ohm) from four kinds of sources: timetable PDFs (Stundenplan of any programme or faculty, e.g. codes like BEI3, BW2, AR5), official faculty abbreviation lists (Abkürzungen / Abkürzungsverzeichnis: Fachkürzel, Typ, Fach) and module handbooks (Modulhandbuch / module handbook), both for subject abbreviations with German and English names, the semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days) and the campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list or module handbook PDF, even without any text, or asks for subject abbreviations of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
 ---
 
-# Timetable generator
+# Zeiteisen Generator
 
 This skill produces JSON data files for a timetable app. Timetables are saved with the extension `.timetable` (the content is still plain JSON); all other outputs are `.json` files. There are four tasks, each in its own folder:
 

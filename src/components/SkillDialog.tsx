@@ -13,7 +13,7 @@ import {
 // Root-based, never relative: share links open the app on `/s/`, where a
 // relative href would miss the file. Built by `npm run skill`, shipped with
 // the app and precached, so the download works offline too.
-const SKILL_ZIP = import.meta.env.BASE_URL + "timetable-generator.zip";
+const SKILL_ZIP = import.meta.env.BASE_URL + "zeiteisen-generator.zip";
 
 // The AI skill that turns the university's PDFs and pages into the app's own
 // files, and how to get it into an AI app. Opened from the Data menu and from

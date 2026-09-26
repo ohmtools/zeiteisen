@@ -36,8 +36,8 @@ public/_de.html
 .claude/settings.local.json
 
 # the AI skill: schemas generated from the primitives, zip built by `npm run skill`
-skill/timetable-generator/*/schema.json
-public/timetable-generator.zip
+skill/zeiteisen-generator/*/schema.json
+public/zeiteisen-generator.zip
 
 # local env (not deployed via upload)
 .env
