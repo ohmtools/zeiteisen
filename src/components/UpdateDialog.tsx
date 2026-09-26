@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
 import {
@@ -43,18 +43,31 @@ type Props = {
 export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onReplace }: Props) {
   const [next, setNext] = useState<Timetable | null>(null);
   const entry = timetable ? catalogUpdate(timetable, catalog) : null;
+  // The offered file identifies the download, not the `Catalog` object: every
+  // background refresh builds a new one, which must not download the same
+  // version again and reset the diff shown.
+  const offered = entry ? entry.path + "\n" + entry.hash : null;
+  const latest = useRef({ catalog, onOpenChange });
+  useEffect(() => {
+    latest.current = { catalog, onOpenChange };
+  });
 
   useEffect(() => {
+    if (!timetable) {
+      setNext(null);
+      return;
+    }
+    // Offline (or the offer withdrawn) after the diff arrived: it stays on
+    // screen, only refusing needs the catalog.
+    if (offered === null && next !== null) return;
     setNext(null);
-    if (!timetable) return;
     let cancelled = false;
-    void update(timetable, catalog).then((updated) => {
+    void update(timetable, latest.current.catalog).then((updated) => {
       if (cancelled) return;
       // No update after all, or the download failed: nothing left to show.
       if (!updated) {
-        const file = catalogUpdate(timetable, catalog)?.path ?? timetable.name;
-        toast.error(m.catalog_error_fetch({ file }));
-        onOpenChange(false);
+        toast.error(m.catalog_error_fetch({ file: entry?.path ?? timetable.name }));
+        latest.current.onOpenChange(false);
         return;
       }
       setNext(updated);
@@ -62,9 +75,9 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
     return () => {
       cancelled = true;
     };
-    // The timetable and the catalog identify the download.
+    // The timetable and the offered file identify the download.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timetable, catalog]);
+  }, [timetable, offered]);
 
   const diff =
     timetable && next
@@ -104,7 +117,7 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
           <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
           <Button
             variant="outline"
-            disabled={locked || diff === null}
+            disabled={locked || diff === null || entry === null}
             onClick={() => {
               if (timetable) onReplace(timetable.name, rejectUpdate(timetable, catalog));
               onOpenChange(false);

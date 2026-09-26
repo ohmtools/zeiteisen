@@ -18,7 +18,8 @@
   and jump, and which of its three dialogs is open (picker, update, import).
   Dialogs sit outside the sidebar because they belong to no section, and the
   import one must work before a profile holds anything. A link opened
-  directly is read on the first render, before `useShareLink` strips the URL;
+  directly is read on the first render; `useShareLink` strips the URL when
+  the import dialog closes (import or cancel), so a reload keeps the link;
   a link some profile already shares exactly opens no dialog.
 - Toasts only through `@/lib/toast`, never `sonner` directly.
 - `src/index.css` is shadcn's generated CSS plus the `desktop` variant,
@@ -37,3 +38,15 @@
   first), the vite plugin with `localStorage` first: restart a running dev
   server after the CLI, or the `PARAGLIDE_LOCALE` trick for German
   screenshots does nothing.
+- Link preview card (WhatsApp, Discord): static Open Graph tags in
+  `index.html`, image `public/og.png` (German only: one card per URL, so it
+  can't follow the viewer's language — user decision). Share links open on
+  `/s/#…`, whose `dist/s/index.html` the `og-share` plugin in
+  `vite.config.ts` writes at build time with the "Stundenplan geteilt" card
+  (`public/og-share.png`). A card showing the _shared_ timetable is
+  impossible: the state is in the fragment, which no server or crawler ever
+  sees, and rendering per link would need a backend. Absolute URLs come from
+  `VITE_SITE_URL` (`.env`); empty = no preview image, the build warns. The
+  PNGs are marketing, own colours allowed; source `scripts/og/`. They are
+  kept out of the service worker precache. The dev server needs nothing for
+  `/s/`: Vite's SPA fallback serves `index.html`.

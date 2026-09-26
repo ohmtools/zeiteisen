@@ -34,3 +34,10 @@ public/_de.html
 # claude code: worktrees + personal settings
 .claude/worktrees
 .claude/settings.local.json
+
+# the AI skill: schemas generated from the primitives, zip built by `npm run skill`
+skill/timetable-generator/*/schema.json
+public/timetable-generator.zip
+
+# local env (not deployed via upload)
+.env

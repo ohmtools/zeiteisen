@@ -44,10 +44,52 @@ function devCatalog(): Plugin {
   };
 }
 
+// Share links open on `/s/#…` (`shareUrl`): `dist/s/index.html` is the built
+// page with the "timetable shared" link preview card instead of the main one.
+// The state stays in the fragment, which no crawler sees, so this card is as
+// specific as a static file can get. Replaces the `index.html` tags by name;
+// the build fails if one of them goes missing.
+const SHARE_CARD: Record<string, string> = {
+  "og:title": "Stundenplan geteilt · Zeiteisen",
+  "og:description": "Öffnen, um die Gruppen anzusehen",
+  "og:image:alt": "Zeiteisen: ein geteilter Stundenplan",
+  description: "Öffnen, um die Gruppen anzusehen",
+};
+
+function shareCard(): Plugin {
+  let site = "";
+  return {
+    name: "og-share",
+    apply: "build",
+    enforce: "post",
+    configResolved(config) {
+      site = config.env.VITE_SITE_URL ?? "";
+      if (!site) config.logger.warn("VITE_SITE_URL is empty: link previews get no image.");
+    },
+    generateBundle(_, bundle) {
+      const page = bundle["index.html"];
+      if (page?.type !== "asset") return this.error("og-share: no index.html in the bundle");
+      let html = String(page.source);
+      const swaps = {
+        ...SHARE_CARD,
+        "og:url": `${site}/s/`,
+        "og:image": `${site}/og-share.png`,
+      };
+      for (const [key, content] of Object.entries(swaps)) {
+        const tag = new RegExp(`(<meta (?:property|name)="${key}" content=")[^"]*(")`);
+        if (!tag.test(html)) return this.error(`og-share: no <meta ${key}> in index.html`);
+        html = html.replace(tag, (_, open: string, close: string) => open + content + close);
+      }
+      this.emitFile({ type: "asset", fileName: "s/index.html", source: html });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     devCatalog(),
+    shareCard(),
     react(),
     tailwindcss(),
     babel({ presets: [reactCompilerPreset()] }),
@@ -64,10 +106,15 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2,zip}"],
         // Inter's other scripts: German and English never hit their
         // `unicode-range`, so the browser never asks for them either.
-        globIgnores: ["**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2"],
+        // The link preview cards are for crawlers only, never shown in the app.
+        globIgnores: [
+          "**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2",
+          "og.png",
+          "og-share.png",
+        ],
         // The catalog is served next to the app but is not part of the build,
         // so it cannot be precached. Network first keeps it fresh online and
         // still answers offline from the last response. The app also keeps its
@@ -116,9 +163,7 @@ export default defineConfig({
         // that back into the first load. Every chunk still lands in `dist/`
         // and is precached by the service worker above, so offline is the same.
         codeSplitting: {
-          groups: [
-            { name: "react", test: /node_modules[/\\](react|react-dom|scheduler)[/\\]/ },
-          ],
+          groups: [{ name: "react", test: /node_modules[/\\](react|react-dom|scheduler)[/\\]/ }],
         },
       },
     },

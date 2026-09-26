@@ -280,5 +280,15 @@
   "abbreviations_remove_file": "Remove {file}",
   "abbreviations_remove_all": "Remove all",
   "close": "Close",
-  "toast_own_abbreviation_file_removed": "{file} removed."
+  "toast_own_abbreviation_file_removed": "{file} removed.",
+  "skill_menu": "Create own files with AI…",
+  "skill_title": "Create own files with AI",
+  "skill_text": "This AI skill turns the university's documents into files for this app: a timetable PDF into a .timetable file, abbreviation lists and module handbooks into abbreviations, the semester dates page into dates and the locations page into locations. Upload a .timetable file under “Add timetables”, everything else in the Data menu.",
+  "skill_steps_claude": "Claude: Settings → Capabilities → Skills, upload the zip.",
+  "skill_steps_other": "Other AI apps with skill support: import the zip.",
+  "skill_steps_chat": "Otherwise: attach the zip to a chat together with your document.",
+  "skill_check": "AI can make mistakes. The skill asks instead of guessing, but check its results before you rely on them.",
+  "skill_download": "Download skill",
+  "picker_skill_hint": "No file?",
+  "picker_skill_link": "Let an AI create one from the timetable PDF."
 }

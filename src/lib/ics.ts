@@ -10,7 +10,7 @@ import {
 } from "@/lib/primitives/occurrence";
 import { getSubjectID, kindLabel, shortHash, type Subject } from "@/lib/primitives/subject";
 import { enabledSubjects, type Timetable } from "@/lib/primitives/timetable";
-import { semesterBegin, type Meeting } from "@/lib/primitives/week";
+import type { Meeting } from "@/lib/primitives/week";
 import { safeFilename } from "@/lib/download";
 import { repeatName } from "@/lib/subjects";
 
@@ -88,15 +88,14 @@ export type IcsFile = { filename: string; text: string; count: number };
 
 // One file per profile, `{profileName}.ics`, calendar name = profile name,
 // holding the enabled subjects of every timetable. `file` is null when
-// nothing occurs in the range. Weeks count from the semester begin nearest
-// the dates, or the last one before the range starts.
+// nothing occurs in the range. Each week counts in its own semester, as in
+// the week view.
 export function icsFile(
   timetables: readonly Timetable[],
   dates: SemesterDates | null,
   range: DateRange,
   profileName: string,
 ): { file: IcsFile | null; error: string | null } {
-  const begin = semesterBegin(dates, range.start);
   // Two occurrences may still name the same lecture (the same subject listed
   // twice with another room): the later one gets a counter.
   const used = new Map<string, number>();
@@ -104,7 +103,7 @@ export function icsFile(
 
   for (const timetable of timetables) {
     const enabled = enabledSubjects(timetable).map(({ subject }) => subject);
-    for (const occurrence of occurrencesOf(enabled, range, dates, begin)) {
+    for (const occurrence of occurrencesOf(enabled, range, dates)) {
       const uid = uidOf(profileName, timetable.name, occurrence);
       const seen = used.get(uid) ?? 0;
       used.set(uid, seen + 1);

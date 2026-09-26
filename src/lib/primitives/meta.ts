@@ -75,11 +75,16 @@ export const semesterDatesSchema: z.ZodMiniType<SemesterDates> = z.object({
   events: z._default(z.array(globalEventSchema), []),
 });
 
+// Both links end up as `<a href>` in the subject popup, and the file may come
+// from any catalog URL the user set or from an upload: web links only, no
+// `data:`, `file:` or app schemes.
+const webUrl = z.url({ protocol: /^https?$/ });
+
 const locationSchema: z.ZodMiniType<CatalogLocation> = z.object({
   code: z.string().check(z.minLength(1)),
   name: z.optional(z.string()),
-  mapsUrl: z.optional(z.url()),
-  siteUrl: z.optional(z.url()),
+  mapsUrl: z.optional(webUrl),
+  siteUrl: z.optional(webUrl),
 });
 
 export const locationsSchema: z.ZodMiniType<Locations> = z.object({

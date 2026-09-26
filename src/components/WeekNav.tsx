@@ -33,9 +33,8 @@ type WeekNavProps = {
   // Monday of the shown week.
   value: Date;
   onChange: (weekStart: Date) => void;
-  // Semester week of `value`; null when no semester is loaded or the week lies
-  // before week 1.
-  semesterWeek: number | null;
+  // Semester week of `value`, from 1 up.
+  semesterWeek: number;
 };
 
 export function WeekNav({ value, onChange, semesterWeek }: WeekNavProps) {
@@ -91,11 +90,9 @@ export function WeekNav({ value, onChange, semesterWeek }: WeekNavProps) {
         </PopoverContent>
       </Popover>
 
-      {semesterWeek !== null && (
-        <Badge variant="secondary" className="shrink-0">
-          {m.week_label({ number: semesterWeek })}
-        </Badge>
-      )}
+      <Badge variant="secondary" className="shrink-0">
+        {m.week_label({ number: semesterWeek })}
+      </Badge>
     </div>
   );
 }

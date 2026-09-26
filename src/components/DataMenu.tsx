@@ -11,6 +11,7 @@ import {
   MapPin,
   RefreshCw,
   Snowflake,
+  Sparkles,
   Upload,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Brand } from "@/components/Brand";
+import { SkillDialog } from "@/components/SkillDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -124,6 +126,7 @@ export function DataMenu({
   const pickOne = (onFile: (file: File) => void) => pickOwn(([file]) => onFile(file));
   const [editingUrl, setEditingUrl] = useState(false);
   const [removingAbbreviations, setRemovingAbbreviations] = useState(false);
+  const [skillOpen, setSkillOpen] = useState(false);
   const ownCount = ownAbbreviations.length;
   // The last file removed closes the dialog for good, not until the next
   // upload.
@@ -206,6 +209,12 @@ export function DataMenu({
                 {m.abbreviations_manage()}
               </DropdownMenuItem>
             )}
+            {/* Always there, even with the catalog ignored: the way to own
+                files when there is none yet. */}
+            <DropdownMenuItem onClick={() => setSkillOpen(true)}>
+              <Sparkles data-icon="inline-start" />
+              {m.skill_menu()}
+            </DropdownMenuItem>
             {anyOwn && (
               <DropdownMenuLabel className="max-w-64 font-normal">
                 {m.data_own_hint()}
@@ -254,6 +263,8 @@ export function DataMenu({
         files={ownAbbreviations}
         onRemove={onRemoveAbbreviations}
       />
+
+      <SkillDialog open={skillOpen} onOpenChange={setSkillOpen} />
 
       <CatalogUrlDialog
         open={editingUrl}

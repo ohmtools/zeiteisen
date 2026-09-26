@@ -177,8 +177,16 @@ function SubjectEditor({
             multiple
             className="flex-wrap"
             value={draft.kinds}
+            // The kinds keep their file order ("Ue,SU" stays): it is part of
+            // the subject's key, which ties its classes together. A new kind
+            // goes last.
             onValueChange={(values) =>
-              change({ kinds: KINDS.filter((kind) => values.includes(kind)) })
+              change({
+                kinds: [
+                  ...draft.kinds.filter((kind) => values.includes(kind)),
+                  ...KINDS.filter((kind) => values.includes(kind) && !draft.kinds.includes(kind)),
+                ],
+              })
             }
           >
             {KINDS.map((kind) => (
@@ -541,9 +549,9 @@ function SlotChips({
   );
 }
 
-// Listed dates, each with its own time and room (no slot chips per date: the
-// time inputs list the usual slots). "A week later" repeats the last one; the calendar picks many at once, each new one taking the
-// time and room of the last.
+// Listed dates, each with its own time and room, and the usual slots as chips
+// like the weekly slot has. "A week later" repeats the last one; the calendar
+// picks many at once, each new one taking the time and room of the last.
 function DatesEditor({
   draft,
   suggestions,
@@ -595,6 +603,11 @@ function DatesEditor({
                 slot={dated}
                 suggestions={suggestions}
                 invalid={problems.has("time")}
+                onChange={(slot) => setRow(i, slot)}
+              />
+              <SlotChips
+                slot={dated}
+                suggestions={suggestions}
                 onChange={(slot) => setRow(i, slot)}
               />
               <PlaceInputs

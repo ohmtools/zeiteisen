@@ -46,7 +46,12 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (later over earlier) with a remove button each and "Remove all"; removing
   is immediate (the user still has the file), the last one closes it. One
   hidden file input outside the menu, which
-  unmounts its content on closing. While any own file is in use a muted line
+  unmounts its content on closing. Last in the group, always enabled (also
+  with the catalog ignored): "Create own files with AI…" opens `SkillDialog`
+  — what the AI skill makes, how to get it into Claude / other skill apps /
+  a chat, a check-the-results hint, and a download of the shipped
+  `timetable-generator.zip` (root-based `BASE_URL` href, never relative:
+  share links open the app on `/s/`). While any own file is in use a muted line
   says how they combine with the catalog and that it never updates them.
   Then the catalog — "Catalog" cycles ignore → auto-update → freeze on click
   WITHOUT closing the menu (`closeOnClick={false}`), the mode as trailing
@@ -131,6 +136,8 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   timetable is created only if still checked on confirm. Every way out of a
   dialog resets it. A confirm or upload still waiting on a download
   when the dialog closes (or goes back) is dropped, never applied late.
+  Below the add-empty / upload buttons, a muted line "No file? Let an AI
+  create one…" opens the same `SkillDialog`, nested in the picker.
 - `ImportDialog` always creates a NEW profile: a profile file imports at once;
   a link asks for the name and shows per timetable where its content is found
   (a local copy, the catalog, or missing — upload it right there).

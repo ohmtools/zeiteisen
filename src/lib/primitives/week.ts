@@ -5,7 +5,6 @@ import {
   isAfter,
   isWithinInterval,
   parseISO,
-  startOfDay,
   startOfISOWeek,
 } from "date-fns";
 import type { GlobalEvent, SemesterDates } from "./meta";
@@ -19,27 +18,22 @@ function beginsIn(year: number): Date[] {
   return [new Date(year, 2, 15), new Date(year, 9, 1)];
 }
 
-// Where the semester begins. With dates: the begin nearest to `lectureStart`,
-// since lectures may start a few days before or after it. Without: the last
-// begin on or before `today`.
-export function semesterBegin(dates: SemesterDates | null, today: Date): Date {
-  if (dates) {
-    const start = parseISO(dates.lectureStart);
-    const year = start.getFullYear();
-    const distance = (d: Date) => Math.abs(d.getTime() - start.getTime());
-    return [year - 1, year, year + 1]
-      .flatMap(beginsIn)
-      .reduce((best, d) => (distance(d) < distance(best) ? d : best));
-  }
-  const day = startOfDay(today);
-  const past = [today.getFullYear() - 1, today.getFullYear()]
+// The begin of the semester the Mon-Sun week of `weekStart` belongs to: the
+// last one on or before its Sunday, so a week containing a begin is already
+// week 1 of the new semester (user decision). Only the calendar decides: not
+// the dates file, not today.
+export function semesterBegin(weekStart: Date): Date {
+  const sunday = addDays(startOfISOWeek(weekStart), 6);
+  const past = [sunday.getFullYear() - 1, sunday.getFullYear()]
     .flatMap(beginsIn)
-    .filter((d) => !isAfter(d, day));
+    .filter((d) => !isAfter(d, sunday));
   return past[past.length - 1];
 }
 
-// Week 1 is the Mon-Sun week containing the semester's begin.
-export function semesterWeek(weekStart: Date, begin: Date): number {
+// Week 1 is the Mon-Sun week containing its semester's begin, so every week
+// has a number from 1 up.
+export function semesterWeek(weekStart: Date): number {
+  const begin = semesterBegin(weekStart);
   return differenceInCalendarWeeks(weekStart, startOfISOWeek(begin), { weekStartsOn: 1 }) + 1;
 }
 

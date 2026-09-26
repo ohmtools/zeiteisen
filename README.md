@@ -68,6 +68,11 @@ A different origin has to send `Access-Control-Allow-Origin`. Re-run
 `npm run catalog -- <dir>` after every change: the hashes in `index.json` are
 what tells a client its cached copy is stale.
 
+Link previews (WhatsApp, Discord, …) need the deployed origin for their
+absolute image URL: set `VITE_SITE_URL` in `.env` (or on the command line)
+before `npm run build`. Share links open on `/s/`, a static copy of the page
+with its own preview card; nothing to configure on the server.
+
 Everything about the catalog is optional. No catalog, a partial one, a broken
 file or no network at all: the app keeps working from its own cache
 (`tt.catalog.v1`) and from files uploaded by hand.

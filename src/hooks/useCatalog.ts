@@ -162,14 +162,16 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     };
 
     // `force` skips the "just refreshed" check, `restart` also the
-    // one-at-a-time one. Nothing is read while the catalog is ignored.
+    // one-at-a-time one. Nothing is read while the catalog is ignored. A
+    // restart drops the running refresh even when switching to `ignore`:
+    // its result would bring back the cache and the dates just dropped.
     const start = ({ force = false, restart = false } = {}) => {
-      if (cancelled || optionsRef.current.mode === "ignore") return;
+      if (cancelled) return;
       if (restart) {
         generation++;
         running = false;
       }
-      if (running) return;
+      if (optionsRef.current.mode === "ignore" || running) return;
       if (!force && !restart && Date.now() - last < FRESH_FOR) return;
       running = true;
       last = Date.now();

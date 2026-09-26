@@ -27,3 +27,20 @@
   through `node:util` `parseArgs` (strict: unknown flag or not exactly one dir
   is an error, `-h` usage). `npm run index-remote-catalog` run it on the server
   against `/home/caddy/.config/containers/srv/zeiteisen/catalog`.
+- `scripts/schemas.mjs` hold the `schemas` map and `z.toJSONSchema` options,
+  shared by `json-schema.mjs` and `skill.mjs`, so both write the same bytes.
+- `scripts/skill.mjs` (`npm run skill`, part of `npm run build`) write the four
+  `skill/timetable-generator/<kind>/schema.json` (timetable, dates, locations,
+  abbreviations; git-ignored, identical to `npm run schema:<kind>`), then zip
+  `skill/timetable-generator/` with `fflate` to `public/timetable-generator.zip`
+  (git-ignored, precached by the PWA). One top-level `timetable-generator/`
+  folder in the zip, as Claude's skill upload expects; dotfiles and
+  `__pycache__` skipped; a fixed entry date, so an unchanged skill gives the
+  same zip. Optional positional = other output path; `parseArgs` strict, `-h`.
+  The skill's own texts live in `skill/`; edit them there and re-run.
+- `scripts/og/card.mjs` (`node scripts/og/card.mjs`, by hand) write the link
+  preview cards `og.svg` / `og-share.svg` from one template (favicon watch,
+  mini Mo–Fr grid in the favicon's and timetable tints' reds, Inter from
+  `node_modules`) and render them with `web-shot` to `public/og.png` /
+  `public/og-share.png`, 1200×630, both committed. PNG because WhatsApp
+  refuses SVG; keep each under 300 KB (WhatsApp's limit).

@@ -176,13 +176,15 @@ export function nextDate(draft: SubjectDraft, today: Date): DatedDraft {
 }
 
 // The dates picked in a calendar, each keeping its own time and room; a new
-// one takes those of the last date (or the weekly slot).
+// one takes those of the last date (or the weekly slot). A date listed with
+// several slots (a block course: 08:00 and 09:45 on one day) keeps them all:
+// the calendar only knows the date.
 export function withDates(draft: SubjectDraft, picked: readonly Date[]): DatedDraft[] {
   const wanted = [...new Set(picked.map((date) => format(date, "yyyy-MM-dd")))].sort();
   const template = draft.dates[draft.dates.length - 1] ?? draft.slot;
-  return wanted.map((date) => {
-    const held = draft.dates.find((dated) => dated.date === date);
-    return held ?? { ...template, date };
+  return wanted.flatMap((date) => {
+    const held = draft.dates.filter((dated) => dated.date === date);
+    return held.length > 0 ? held : [{ ...template, date }];
   });
 }
 

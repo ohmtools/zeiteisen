@@ -1,14 +1,15 @@
 import { parseQuery, parseURL, withQuery } from "ufo";
 import * as z from "zod/mini";
+import { appRoot } from "@/lib/catalog";
 import { getProfileFile, getSharedTimetables, type Profile } from "@/lib/primitives/profile";
 import { sharedTimetableSchema, type SharedTimetable } from "@/lib/primitives/timetable";
 
 // The share link carries a profile as `SharedTimetable[]` (per timetable its
 // content hash and the `enabled` bits), no names — not even the profile's,
 // the receiver is asked for one. It is query syntax in the fragment, which
-// never reaches the server (no logs, no SPA fallback needed):
+// never reaches the server (no logs; `/s/` is a static copy of the page):
 //
-//   https://host/#v=1&t=1D3m7bpm._________g&t=Cfwjq5pk.__-A
+//   https://host/s/#v=1&t=1D3m7bpm._________g&t=Cfwjq5pk.__-A
 //
 // `v` is the version, one `t` per timetable = `<hash>.<bits>` (both
 // base64url, so `.` never appears inside either and nothing gets
@@ -68,9 +69,10 @@ export function payloadFromLocation(): SharedTimetable[] | null {
   return query ? decodeShare(query) : null;
 }
 
+// On `/s/`, not the app root: `dist/s/index.html` is the same page with the
+// "timetable shared" link preview card (see `vite.config.ts`).
 export function shareUrl(query: string): string {
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}#${query}`;
+  return `${appRoot()}s/#${query}`;
 }
 
 // The downloaded profile `.json`: its full timetables, so it imports on a

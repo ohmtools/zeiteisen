@@ -24,13 +24,13 @@ export type Occurrence = { subject: Subject; index: number; meeting: Meeting; da
 
 // Every date inside `range` (both ends included) each subject is taught on.
 // A weekly `Day.other` has no weekday and therefore no date: it never occurs;
-// listed dates on a weekend do.
-// `begin` is the semester begin week numbers count from (`semesterBegin`).
+// listed dates on a weekend do. Each week counts in its own semester
+// (`semesterWeek`), so a range across a semester begin switches the rhythm
+// there, like the week view does.
 export function occurrencesOf(
   subjects: readonly Subject[],
   range: DateRange,
   dates: SemesterDates | null,
-  begin: Date,
 ): Occurrence[] {
   const occurrences: Occurrence[] = [];
   const from = startOfDay(range.start);
@@ -41,7 +41,7 @@ export function occurrencesOf(
     !isAfter(weekStart, to);
     weekStart = addWeeks(weekStart, 1)
   ) {
-    const week = semesterWeek(weekStart, begin);
+    const week = semesterWeek(weekStart);
     const events = eventsForWeek(dates, weekStart);
     subjects.forEach((subject, index) => {
       for (const meeting of meetingsInWeek(subject.repeat, week, weekStart, events)) {

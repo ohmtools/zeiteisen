@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <style>
+      @font-face { font-family: Inter; src: url("../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+      text { font-family: Inter, sans-serif; letter-spacing: -0.01em; }
+      .day { font-size: 22px; font-weight: 600; fill: #D6D3CE; }
+      .subject { font-size: 24px; font-weight: 700; }
+      .kind { font-size: 20px; font-weight: 500; }
+    </style>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#1E232D"/>
+      <stop offset="100%" stop-color="#101216"/>
+    </linearGradient>
+    <radialGradient id="face" cx="42%" cy="32%" r="75%">
+      <stop offset="0%" stop-color="#262B35"/>
+      <stop offset="100%" stop-color="#12151A"/>
+    </radialGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F5F5F4"/>
+      <stop offset="45%" stop-color="#D6D3CE"/>
+      <stop offset="100%" stop-color="#8C8884"/>
+    </linearGradient>
+    <linearGradient id="scarlet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E23A46"/>
+      <stop offset="100%" stop-color="#9E0711"/>
+    </linearGradient>
+    <linearGradient id="maroon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9E0711"/>
+      <stop offset="100%" stop-color="#5C040A"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#C10007"/>
+  <svg x="64" y="76" width="104" height="104" viewBox="64 64 384 384">
+  <rect x="244" y="112" width="24" height="30" rx="7" fill="url(#bezel)"/>
+  <circle cx="256" cy="100" r="20" fill="none" stroke="url(#bezel)" stroke-width="18"/>
+  <circle cx="256" cy="288" r="144" fill="url(#face)" stroke="url(#bezel)" stroke-width="22"/>
+  <rect x="174" y="202" width="70" height="80" rx="12" fill="url(#scarlet)"/>
+  <rect x="174" y="294" width="70" height="80" rx="12" fill="#FFFFFF"/>
+  <rect x="258" y="202" width="80" height="172" rx="12" fill="url(#maroon)"/>
+  </svg>
+  <text x="184" y="148" font-size="60" font-weight="700" fill="#FFFFFF">Zeiteisen</text>
+  <text x="72" y="340" font-size="52" font-weight="700" fill="#FFFFFF">Stundenplan</text>
+  <text x="72" y="404" font-size="52" font-weight="700" fill="#FFFFFF">geteilt</text>
+  <text x="72" y="480" font-size="28" font-weight="500" fill="#D6D3CE">Öffnen, um die</text>
+  <text x="72" y="520" font-size="28" font-weight="500" fill="#D6D3CE">Gruppen anzusehen</text>
+  <text x="674.8" y="118" text-anchor="middle" class="day">Mo</text>
+  <text x="776.4" y="118" text-anchor="middle" class="day">Di</text>
+  <text x="878" y="118" text-anchor="middle" class="day">Mi</text>
+  <text x="979.5999999999999" y="118" text-anchor="middle" class="day">Do</text>
+  <text x="1081.2" y="118" text-anchor="middle" class="day">Fr</text>
+  <line x1="628" x2="1128" y1="136" y2="136" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="203" y2="203" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="270" y2="270" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="337" y2="337" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="404" y2="404" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="471" y2="471" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="538" y2="538" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+  <rect x="628" y="140" width="93.6" height="126" rx="12" fill="#9E0711"/>
+  <text x="642" y="172" class="subject" fill="#FFFFFF">I2</text>
+  <text x="642" y="198" class="kind" fill="#FFFFFF" fill-opacity="0.8">Pr</text>
+  <rect x="628" y="341" width="93.6" height="126" rx="12" fill="#E23A46"/>
+  <text x="642" y="373" class="subject" fill="#FFFFFF">M1</text>
+  <text x="642" y="399" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
+  <rect x="729.6" y="207" width="93.6" height="126" rx="12" fill="#C10007"/>
+  <text x="743.6" y="239" class="subject" fill="#FFFFFF">EM</text>
+  <text x="743.6" y="265" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
+  <rect x="729.6" y="408" width="93.6" height="126" rx="12" fill="#FFFFFF"/>
+  <text x="743.6" y="440" class="subject" fill="#12151A">M1</text>
+  <text x="743.6" y="466" class="kind" fill="#12151A" fill-opacity="0.8">Ue</text>
+  <rect x="831.2" y="140" width="93.6" height="126" rx="12" fill="#6E050C"/>
+  <text x="845.2" y="172" class="subject" fill="#FFFFFF">ELK1</text>
+  <text x="845.2" y="198" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
+  <rect x="831.2" y="274" width="93.6" height="126" rx="12" fill="#E23A46"/>
+  <text x="845.2" y="306" class="subject" fill="#FFFFFF">EM</text>
+  <text x="845.2" y="332" class="kind" fill="#FFFFFF" fill-opacity="0.8">Tu</text>
+  <rect x="932.8" y="274" width="93.6" height="193" rx="12" fill="#9E0711"/>
+  <text x="946.8" y="306" class="subject" fill="#FFFFFF">SDS</text>
+  <text x="946.8" y="332" class="kind" fill="#FFFFFF" fill-opacity="0.8">S</text>
+  <rect x="1034.4" y="140" width="93.6" height="126" rx="12" fill="#C10007"/>
+  <text x="1048.4" y="172" class="subject" fill="#FFFFFF">ELK1</text>
+  <text x="1048.4" y="198" class="kind" fill="#FFFFFF" fill-opacity="0.8">Pr</text>
+  <rect x="1034.4" y="341" width="93.6" height="126" rx="12" fill="#6E050C"/>
+  <text x="1048.4" y="373" class="subject" fill="#FFFFFF">I2</text>
+  <text x="1048.4" y="399" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
+</svg>

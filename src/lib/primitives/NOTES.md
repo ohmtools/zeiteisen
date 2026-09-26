@@ -47,9 +47,11 @@ parameter so tests run without a browser.
   the catalog, no other is tried); the profile name is asked from the user.
 - The profile file is a plain array of timetables without `rejected`, no
   profile name (the file's name is it), no `locked`.
-- No semesters: week counting comes from `SemesterDates` or today
-  (`semesterBegin`: the 01.10. / 15.03. nearest the lecture start, without
-  dates the last one before today).
+- No semesters: week counting comes from the calendar alone, never from
+  `SemesterDates` or today. A week belongs to the semester of the last
+  01.10. / 15.03. on or before its Sunday (`semesterBegin`): a week containing
+  a begin is already week 1 of the new semester (user decision). An export
+  across a begin switches the rhythm there.
 - `Repeat` is a union on `type` (not `kind`, which means SU/Pr): weekly
   rhythms carry `day` + one slot, `I` carries dated slots (the university's
   `N` is `I` with one date). Codes are bare strings, no named constants (user

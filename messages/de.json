@@ -280,5 +280,15 @@
   "abbreviations_remove_file": "{file} entfernen",
   "abbreviations_remove_all": "Alle entfernen",
   "close": "Schließen",
-  "toast_own_abbreviation_file_removed": "{file} entfernt."
+  "toast_own_abbreviation_file_removed": "{file} entfernt.",
+  "skill_menu": "Eigene Dateien mit KI erstellen…",
+  "skill_title": "Eigene Dateien mit KI erstellen",
+  "skill_text": "Dieser KI-Skill macht aus den Unterlagen der Hochschule Dateien für diese App: aus einem Stundenplan-PDF eine .timetable-Datei, aus Abkürzungslisten und Modulhandbüchern Abkürzungen, aus der Terminseite des Semesters Termine und aus der Standortseite Standorte. Eine .timetable-Datei lädst du unter „Stundenpläne hinzufügen“ hoch, alles andere im Menü „Daten“.",
+  "skill_steps_claude": "Claude: Einstellungen → Funktionen → Skills, die Zip-Datei hochladen.",
+  "skill_steps_other": "Andere KI-Apps mit Skill-Unterstützung: die Zip-Datei importieren.",
+  "skill_steps_chat": "Sonst: die Zip-Datei zusammen mit deinem Dokument an einen Chat anhängen.",
+  "skill_check": "KI kann Fehler machen. Der Skill fragt nach, statt zu raten, aber prüfe die Ergebnisse, bevor du dich darauf verlässt.",
+  "skill_download": "Skill herunterladen",
+  "picker_skill_hint": "Keine Datei?",
+  "picker_skill_link": "Lass eine KI sie aus dem Stundenplan-PDF erstellen."
 }

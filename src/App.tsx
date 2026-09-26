@@ -23,7 +23,7 @@ import { Catalog } from "@/lib/primitives/catalog";
 import { isKnownSharedProfile } from "@/lib/primitives/profile";
 import type { Day } from "@/lib/primitives/subject";
 import type { TimetableName } from "@/lib/primitives/timetable";
-import { dayOf, eventsForWeek, semesterBegin, semesterWeek } from "@/lib/primitives/week";
+import { dayOf, eventsForWeek, semesterWeek } from "@/lib/primitives/week";
 import { generalEntries, weekEntries } from "@/lib/layout";
 import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
@@ -76,9 +76,9 @@ export default function App() {
   const profiles = useProfiles();
   useInstallHint();
   // A link opened directly is an import like any other: read it on the first
-  // render, before `useShareLink` strips the URL, and let the dialog ask for a
-  // name and which timetables to take instead of creating a profile behind
-  // the user's back. Reopening a link this device already holds (the same
+  // render (`useShareLink` strips the URL once the dialog closes), and let
+  // the dialog ask for a name and which timetables to take instead of
+  // creating a profile behind the user's back. Reopening a link this device already holds (the same
   // timetables with the same selection) opens no dialog.
   const [linkPayload, setLinkPayload] = useState(() => {
     const link = payloadFromLocation();
@@ -100,8 +100,9 @@ export default function App() {
   };
   // The timetable the update dialog is asking about, by name.
   const [updating, setUpdating] = useState<TimetableName | null>(null);
-  // The link behind the share button; the global dates never go in it.
-  const share = useShareLink(profiles.active);
+  // The link behind the share button; the global dates never go in it. The
+  // opened link stays in the address bar until the import dialog closes.
+  const share = useShareLink(profiles.active, importing);
   const timetables = profiles.timetables;
   const hasTimetables = timetables.length > 0;
   // Phones show one column at a time (`TabBar`). An empty profile starts on
@@ -153,10 +154,10 @@ export default function App() {
     profileCount: profiles.profiles.length,
   };
 
-  // Weeks count from the semester begin: the one nearest the dates' lecture
-  // start, without dates the last one before today.
+  // The week's number in its own semester (`semesterWeek`): the calendar
+  // alone decides, not the dates file and not today.
   const now = new Date();
-  const weekNumber = semesterWeek(weekStart, semesterBegin(dates.dates, now));
+  const weekNumber = semesterWeek(weekStart);
 
   let week: WeekView | null = null;
   // Visible = the enabled subjects of this profile's timetables.
@@ -247,11 +248,7 @@ export default function App() {
             {/* Stays in the general view, empty, so the grid keeps its height. */}
             <div className="flex h-8 items-center desktop:order-last">
               {view === "week" && (
-                <WeekNav
-                  value={weekStart}
-                  onChange={setWeekStart}
-                  semesterWeek={weekNumber >= 1 ? weekNumber : null}
-                />
+                <WeekNav value={weekStart} onChange={setWeekStart} semesterWeek={weekNumber} />
               )}
             </div>
             <DayToggle value={day} onChange={setDay} className="md:hidden" />

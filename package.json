@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run messages && tsc -b && vite build",
+    "build": "npm run messages && tsc -b && npm run skill && vite build",
     "messages": "paraglide-js compile --project ./project.inlang --outdir ./generated/paraglide --emit-ts-declarations",
     "prepare": "npm run messages",
     "lint": "oxlint",
@@ -20,7 +20,8 @@
     "schema:abbreviations": "node scripts/json-schema.mjs abbreviations",
     "schema:catalog": "node scripts/json-schema.mjs catalog",
     "catalog": "node scripts/catalog-index.mjs",
-    "remote": "ssh -p 2222 root@server.example.org \"sudo -i -u targetuser --\"",
+    "skill": "node scripts/skill.mjs",
+    "remote": "ssh -p 2222 root@server.example.org \"sudo -i -u caddy --\"",
     "upload": "git ls-files -z | rsync -avz --delete --chown caddy:caddy --from0 --files-from=- -e 'ssh -p 2222' ./ root@[server.example.org]:/home/caddy/.config/containers/zeiteisen/",
     "publish": "npm run remote -- 'just zeiteisen publish'",
     "index-remote-catalog": "npm run remote -- 'just zeiteisen catalog'"
@@ -55,6 +56,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "babel-plugin-react-compiler": "^1.0.0",
+    "fflate": "^0.8.3",
     "jiti": "^2.7.0",
     "oxfmt": "^0.66.0",
     "oxlint": "^1.79.0",

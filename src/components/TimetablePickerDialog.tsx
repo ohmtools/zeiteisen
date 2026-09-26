@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SkillDialog } from "@/components/SkillDialog";
 import type { Catalog } from "@/lib/primitives/catalog";
 import { uniqueName } from "@/lib/primitives/name";
 import { nameTaken, type Profile } from "@/lib/primitives/profile";
@@ -65,6 +66,7 @@ export function TimetablePickerDialog({
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<UploadError[]>([]);
   const [busy, setBusy] = useState(false);
+  const [skillOpen, setSkillOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   // Bumped by every reset: an upload or confirm still awaiting a file or a
   // download when the dialog closes finds it changed and does nothing.
@@ -264,6 +266,19 @@ export function TimetablePickerDialog({
                 </Button>
               )}
             </div>
+            {/* Quiet on purpose: most timetables come from the catalog. */}
+            <p className="text-sm text-muted-foreground">
+              {m.picker_skill_hint()}{" "}
+              {/* Not a `Button`: its inline-flex and nowrap would overflow at
+                  360px in German. Classes of the link variant. */}
+              <button
+                type="button"
+                className="text-left text-primary underline underline-offset-4"
+                onClick={() => setSkillOpen(true)}
+              >
+                {m.picker_skill_link()}
+              </button>
+            </p>
             {errors.length > 0 && (
               <ul className="flex flex-col gap-1 text-sm text-destructive">
                 {errors.map((error) => (
@@ -297,6 +312,7 @@ export function TimetablePickerDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <SkillDialog open={skillOpen} onOpenChange={setSkillOpen} />
     </Dialog>
   );
 }

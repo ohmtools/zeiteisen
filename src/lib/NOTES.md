@@ -36,8 +36,13 @@ re-implements primitive logic.
   arrive all enabled. Picking a row blocks every row with the same hash, held
   rows claim first (a profile never holds the same content twice, user
   decision).
-- `share.ts` — the link `#v=1&t=<hash>.<bits>&t=…` in the fragment (never
-  reaches a server), read and written with `ufo`, validated with zod.
+- `share.ts` — the link `/s/#v=1&t=<hash>.<bits>&t=…` in the fragment (never
+  reaches a server), read and written with `ufo`, validated with zod. `/s/`
+  only carries the "shared" link preview card (`src/NOTES.md`);
+  `useShareLink` strips the URL back to the app root when the import
+  dialog closes. Anything relative the
+  app fetches must resolve against `appRoot()` (`catalog.ts`), not the page:
+  on `/s/` the built-in `catalog/` would miss.
   `MAX_SHARE_LENGTH` 1500; four real-size timetables stay far below.
 - `download.ts` — Blob URL downloads. The URL is revoked after 10s: revoking
   right after `click()` cancels the download in Chromium.
@@ -63,7 +68,8 @@ re-implements primitive logic.
   catalog or the user's own file, never in the app.
 - `backup.ts` — footer "Data" menu backup: `zeiteisen-<date>.backup`; a restore
   writes storage and reloads the page, because every hook read its state on
-  the first render.
+  the first render. A backup reading another catalog URL (or `ignore`)
+  empties the catalog cache too, as the Data menu's switch does.
 - `persist.ts` — `navigator.storage.persist()` once per page load, after the
   first real write (not the load-time rewrite: Firefox prompts).
 - `duplicate.ts` — "Duplicate" copies the whole profile (timetables,

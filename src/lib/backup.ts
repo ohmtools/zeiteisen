@@ -1,8 +1,11 @@
+import { emptyCatalogCache } from "@/lib/primitives/catalog";
 import {
   getBackupFile,
   loadBackup,
+  loadCatalogUrl,
   parseBackupFile,
   saveBackup,
+  saveCatalogCache,
   type Backup,
 } from "@/lib/primitives/storage";
 import { downloadText } from "@/lib/download";
@@ -28,9 +31,14 @@ export async function readBackupFile(file: File): Promise<Backup | null> {
 
 // A restore replaces everything, and every hook read its state on the first
 // render: write, then start the app again on the new data. `false` when the
-// browser refused the write (the page stays as it is).
+// browser refused the write (the page stays as it is). A backup reading
+// another catalog, or none, drops the cached one, like switching the URL or
+// to `ignore` in the Data menu does: its timetables, names and links would
+// otherwise stay until the new catalog answers.
 export function restoreBackup(backup: Backup): boolean {
+  const otherCatalog = backup.catalogUrl !== loadCatalogUrl() || backup.catalogMode === "ignore";
   if (!saveBackup(backup)) return false;
+  if (otherCatalog) saveCatalogCache(emptyCatalogCache);
   location.reload();
   return true;
 }

@@ -72,6 +72,19 @@ describe("dates", () => {
       ["2026-10-19", "10:00"],
     ]);
   });
+
+  it("keeps every slot of a date listed twice", () => {
+    const block = {
+      ...base,
+      dates: [base.dates[0], { ...base.dates[0], start: "10:00", end: "11:30" }],
+    };
+    const dates = withDates(block, [new Date(2026, 9, 5), new Date(2026, 9, 12)]);
+    expect(dates.map((one) => [one.date, one.start])).toEqual([
+      ["2026-10-05", "08:00"],
+      ["2026-10-05", "10:00"],
+      ["2026-10-12", "10:00"],
+    ]);
+  });
 });
 
 describe("suggestionsFor", () => {

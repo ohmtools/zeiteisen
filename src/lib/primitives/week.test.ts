@@ -23,26 +23,29 @@ const dates = (patch: Partial<SemesterDates> = {}): SemesterDates => ({
 });
 
 describe("semesterBegin", () => {
-  test("with dates: the begin nearest to the lecture start", () => {
-    expect(semesterBegin(dates(), day("2000-01-01"))).toEqual(day("2025-10-01"));
-    // Summer lectures starting before 15.03. still belong to that summer.
-    const summer = dates({ lectureStart: "2026-03-09", lectureEnd: "2026-07-10" });
-    expect(semesterBegin(summer, day("2000-01-01"))).toEqual(day("2026-03-15"));
+  test("the last begin on or before the week's Sunday", () => {
+    expect(semesterBegin(day("2026-02-09"))).toEqual(day("2025-10-01"));
+    expect(semesterBegin(day("2026-09-21"))).toEqual(day("2026-03-15"));
   });
 
-  test("without dates: the last begin on or before today", () => {
-    expect(semesterBegin(null, day("2026-02-10"))).toEqual(day("2025-10-01"));
-    expect(semesterBegin(null, day("2026-03-15"))).toEqual(day("2026-03-15"));
-    expect(semesterBegin(null, day("2026-09-30"))).toEqual(day("2026-03-15"));
+  test("a week containing a begin already belongs to the new semester", () => {
+    // 01.10.2026 is a Thursday: its Monday 28.09. is in the winter semester.
+    expect(semesterBegin(day("2026-09-28"))).toEqual(day("2026-10-01"));
+    // 15.03.2026 is a Sunday, the last day of its week.
+    expect(semesterBegin(day("2026-03-09"))).toEqual(day("2026-03-15"));
+    // Any day of the week gives the same semester.
+    expect(semesterBegin(day("2026-10-04"))).toEqual(day("2026-10-01"));
   });
 });
 
-test("semesterWeek counts from the week containing the begin", () => {
+test("semesterWeek counts from the week containing its own begin", () => {
   // 01.10.2025 is a Wednesday, so week 1 starts on 29.09.2025.
-  const begin = day("2025-10-01");
-  expect(semesterWeek(day("2025-09-29"), begin)).toBe(1);
-  expect(semesterWeek(day("2026-01-05"), begin)).toBe(15);
-  expect(semesterWeek(day("2025-09-22"), begin)).toBe(0);
+  expect(semesterWeek(day("2025-09-29"))).toBe(1);
+  expect(semesterWeek(day("2026-01-05"))).toBe(15);
+  // The week before belongs to the summer semester (begin 15.03.2025).
+  expect(semesterWeek(day("2025-09-22"))).toBe(29);
+  // Whatever today is: the week after 01.10.2026 is week 2.
+  expect(semesterWeek(day("2026-10-05"))).toBe(2);
 });
 
 test("repeatMatches keeps its rhythm, week 1 odd", () => {
@@ -97,8 +100,6 @@ test("generalColumn sends SH1/SH2, dates and weekends to `other`", () => {
 });
 
 describe("occurrencesOf", () => {
-  const begin = day("2025-10-01");
-
   test("one date per matching week, inside the period, never for a weekly `other`", () => {
     const range = lectureRange(dates({ lectureEnd: "2025-10-19" }))!;
     const subjects = [
@@ -108,13 +109,21 @@ describe("occurrencesOf", () => {
       // The Saturday is listed, the date after the range is not exported.
       subject("D", { repeat: dated("2025-10-11", "2025-10-20") }),
     ];
-    const got = occurrencesOf(subjects, range, dates({ lectureEnd: "2025-10-19" }), begin);
+    const got = occurrencesOf(subjects, range, dates({ lectureEnd: "2025-10-19" }));
     expect(got.map((o) => [o.subject.name, o.index, o.date])).toEqual([
       ["W", 0, day("2025-10-06")],
       ["G", 1, day("2025-10-08")],
       ["D", 3, day("2025-10-11")],
       ["W", 0, day("2025-10-13")],
     ]);
+  });
+
+  test("a range across a semester begin switches the rhythm there", () => {
+    // Summer 2026: 14.09. is week 28 (even), 21.09. week 29. Winter: 28.09.
+    // is week 1, 05.10. week 2 (even).
+    const range = { start: day("2026-09-14"), end: day("2026-10-11") };
+    const got = occurrencesOf([subject("G", { repeat: weekly(Day.Monday, "G") })], range, null);
+    expect(got.map((o) => o.date)).toEqual([day("2026-09-14"), day("2026-10-05")]);
   });
 
   test("lectureRange is null without dates or with an inverted period", () => {
