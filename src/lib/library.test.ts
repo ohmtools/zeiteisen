@@ -18,7 +18,7 @@ describe("libraryRows", () => {
       timetable("BEI3", bei3, { origin: { kind: "catalog", path: "BEI3.json" } }),
     ]);
     const rows = libraryRows({ profiles: [anna], catalog, uploaded: [] });
-    expect(keysOf(rows)).toEqual(["c:timetables/BEI3.json", "p:Anna/BEI3"]);
+    expect(keysOf(rows)).toEqual(["c:timetables/BEI3.json", 'p:["Anna","BEI3"]']);
     expect(rows[0].hash).toBe(rows[1].hash);
     expect(rows[0].source.origin).toEqual({ kind: "catalog", path: "BEI3.json" });
   });
@@ -34,7 +34,24 @@ describe("libraryRows", () => {
       catalog,
       uploaded: [upload],
     });
-    expect(keysOf(rows)).toEqual(["p:Anna/BEI9", "p:Zoe/BEI9", "u:0", "c:timetables/BEI10.json"]);
+    expect(keysOf(rows)).toEqual([
+      'p:["Anna","BEI9"]',
+      'p:["Zoe","BEI9"]',
+      "u:0",
+      "c:timetables/BEI10.json",
+    ]);
+  });
+
+  it("keeps profile rows apart when names contain a slash", () => {
+    const rows = libraryRows({
+      profiles: [
+        profile("WS 24/25", [timetable("BEI3", bei3)]),
+        profile("WS 24", [timetable("25/BEI3", other)]),
+      ],
+      catalog: fakeCatalog({}).catalog,
+      uploaded: [],
+    });
+    expect(new Set(keysOf(rows)).size).toBe(2);
   });
 
   it("marks the target's own copies as held", () => {
@@ -45,7 +62,7 @@ describe("libraryRows", () => {
       uploaded: [],
       target: simon,
     });
-    expect(rows.filter((row) => row.held).map((row) => row.key)).toEqual(["p:Simon/BEI3"]);
+    expect(rows.filter((row) => row.held).map((row) => row.key)).toEqual(['p:["Simon","BEI3"]']);
   });
 
   it("loads a catalog row by downloading and re-checking it", async () => {
@@ -96,7 +113,7 @@ describe("empty timetables", () => {
       empties: [empty("New"), empty("New")],
       target: simon,
     });
-    expect(keysOf(rows)).toEqual(["e:0", "e:1", "p:Simon/Leer"]);
+    expect(keysOf(rows)).toEqual(["e:0", "e:1", 'p:["Simon","Leer"]']);
     expect(blockedRows(rows, new Set(["e:0", "e:1"]))).toEqual(new Set());
     expect(finalNames(rows, new Set(["e:0", "e:1"]), ["Leer"])).toEqual(
       new Map([
@@ -116,13 +133,15 @@ describe("blockedRows", () => {
   });
 
   it("blocks every row with the same hash as a picked one, whatever its name", () => {
-    expect([...blockedRows(rows, new Set(["c:timetables/BEI3.json"]))]).toEqual(["p:Anna/Renamed"]);
+    expect([...blockedRows(rows, new Set(["c:timetables/BEI3.json"]))]).toEqual([
+      'p:["Anna","Renamed"]',
+    ]);
     expect(blockedRows(rows, new Set(["u:0"])).size).toBe(0);
   });
 
   it("of two identical picks blocks only the later one", () => {
-    const picked = new Set(["p:Anna/Renamed", "c:timetables/BEI3.json"]);
-    expect([...blockedRows(rows, picked)]).toEqual(["p:Anna/Renamed"]);
+    const picked = new Set(['p:["Anna","Renamed"]', "c:timetables/BEI3.json"]);
+    expect([...blockedRows(rows, picked)]).toEqual(['p:["Anna","Renamed"]']);
   });
 
   it("lets a held row claim its content first", () => {
@@ -144,7 +163,7 @@ it("finalNames: held names first, then Name 2 in list order", () => {
   const names = finalNames(rows, new Set(keysOf(rows)), ["BEI3"]);
   expect(Object.fromEntries(names)).toEqual({
     "c:timetables/BEI3.json": "BEI3 2",
-    "p:Anna/BEI3": "BEI3 3",
+    'p:["Anna","BEI3"]': "BEI3 3",
     "u:0": "BEI3 4",
   });
   expect(finalNames(rows, new Set(["u:0"]), []).get("u:0")).toBe("BEI3");

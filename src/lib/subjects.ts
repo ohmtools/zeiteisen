@@ -11,22 +11,24 @@ import {
 } from "@/lib/primitives/subject";
 import { getLocale, localized, m } from "@/i18n";
 import type { SubjectInformation } from "@/lib/primitives/meta";
-import { subjectInfo } from "@/lib/overrides";
+import type { Overrides } from "@/lib/overrides";
+
+type Table = Overrides["degreeInformation"];
 
 // The catalog entry of a subject; a variant behind a slash ("TEG/B") falls back
 // to the entry of the part in front of it.
 // The full name of a subject in the active locale, or the shortcut itself when
 // no catalog knows it. The table lives in the catalog
 // (`degreeinformation/*.json`), not in the app.
-export function subjectInfoOf(name: string): SubjectInformation | undefined {
-  const entry = subjectInfo(name);
+export function subjectInfoOf(name: string, table: Table): SubjectInformation | undefined {
+  const entry = table[name.toUpperCase()];
   if (entry) return entry;
   const cut = name.lastIndexOf("/");
-  return cut > 0 ? subjectInfoOf(name.slice(0, cut)) : undefined;
+  return cut > 0 ? subjectInfoOf(name.slice(0, cut), table) : undefined;
 }
 
-export function subjectName(name: string): string {
-  const entry = subjectInfo(name);
+export function subjectName(name: string, table: Table): string {
+  const entry = table[name.toUpperCase()];
   if (entry) return localized(entry.name);
   // Some codes carry a variant behind a slash ("TEG/B"). The table is checked
   // for the whole code first, because keys like "CSEC1/1" contain a slash
@@ -34,7 +36,7 @@ export function subjectName(name: string): string {
   // and the variant kept as it is.
   const cut = name.lastIndexOf("/");
   if (cut > 0 && cut < name.length - 1) {
-    const head = subjectName(name.slice(0, cut));
+    const head = subjectName(name.slice(0, cut), table);
     return `${head} / ${name.slice(cut + 1)}`;
   }
   return name;

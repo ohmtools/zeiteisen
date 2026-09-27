@@ -14,7 +14,8 @@ type Props = {
   locked?: boolean;
   // A grid block asked to be shown here: scroll to the cell and flash it.
   flashing?: boolean;
-  // Focus lights up the cell's blocks in the grid (hover is the row's job).
+  // Keyboard focus lights up the cell's blocks in the grid (hover is the
+  // row's job).
   onHighlight?: (on: boolean) => void;
   onSetAll: (selected: boolean) => void;
 };
@@ -68,7 +69,11 @@ export function GroupCell({
       aria-label={name}
       title={name}
       onClick={() => onSetAll(state !== "all")}
-      onFocus={() => onHighlight?.(true)}
+      // Keyboard focus only: a tap focuses the button too (iPad Safari), and
+      // would dim the grid until the focus moves on.
+      onFocus={(event) => {
+        if (event.currentTarget.matches(":focus-visible")) onHighlight?.(true);
+      }}
       onBlur={() => onHighlight?.(false)}
     >
       <span className="truncate">{group.group ? group.group.index : name}</span>

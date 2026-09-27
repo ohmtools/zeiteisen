@@ -8,7 +8,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Full width, no max-width container. No header (user decision): logo and
   name (`Brand`) sit in the desktop footer and the phone's Settings menu; an
   `sr-only` h1 keeps the page titled.
-- **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 700px) is exactly
+- **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 600px) is exactly
   one viewport tall, the page never scrolls.** Left column 24rem:
   `ProfileSection` (constant height) and `GroupTree` (takes the rest; only its
   trees scroll, the "Add timetables" button stays in view). Right column:
@@ -25,7 +25,8 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   persisted. The page keeps bottom padding for the bar, toasts sit above it.
 - The Timetable tab is exactly one viewport tall on phones, no page scroll
   (user decision; Groups keeps page scroll). Top to bottom: grid (the hour
-  rows share the leftover height, floor 36px like a button; below that the
+  rows share the leftover height, floor 24px so common phones need no
+  scroll (user decision, was 36px); below that the
   grid scrolls inside itself), week nav (an empty row of the same height in
   General, so the grid keeps its height), day toggle, view
   switch, tab bar (user decision). The dock is the same element as the
@@ -36,45 +37,46 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   is shadcn's `Card` minus background, shadow and ring. One spacing unit
   (24px) around every divider — change the paddings together so edges stay
   aligned.
-- Footer (desktop only; phones: the tab bar's Settings menu, same
-  `DataMenu` with `settings`) = logo and name · note · "Data" menu · EN/DE. The Data menu holds:
-  own files — dates and locations one item each ("Load own …" while the
-  catalog's is in use, "Use catalog …" plus a trailing "own file" note while
-  an own file is, disabled while the catalog is ignored); degree information
-  "Load own …" / "Add own …" (several files, trailing "n own files") plus
-  "Remove own degree information…", a dialog listing the files in winning order
-  (later over earlier) with a remove button each and "Remove all"; removing
-  is immediate (the user still has the file), the last one closes it. One
-  hidden file input outside the menu, which
-  unmounts its content on closing. Last in the group, always enabled (also
-  with the catalog ignored): "Create own files with AI…" opens `SkillDialog`
-  — what the AI skill makes, how to get it into Claude / other skill apps /
-  a chat, a check-the-results hint, and a download of the shipped
-  `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative:
+- Footer (desktop only; phones: the tab bar's Settings menu, same `DataMenu`
+  with `settings`) = logo and name · note · "Data" menu · EN/DE. The Data menu
+  holds: own files — dates and locations one item each ("Load own …" while the
+  catalog's is in use, "Use catalog …" plus a trailing "own file" note while an
+  own file is, disabled while the catalog is ignored); degree information "Load
+  own …" / "Add own …" (several files, trailing "n own files") plus "Remove own
+  degree information…", a dialog listing the files in winning order (later over
+  earlier) with a remove button each and "Remove all"; removing is immediate
+  (the user still has the file), the last one closes it. One hidden file input
+  outside the menu, which unmounts its content on closing. Last in the group,
+  always enabled (also with the catalog ignored): "Create own files with AI…"
+  opens `SkillDialog` — what the AI skill makes, how to get it into Claude /
+  other skill apps / a chat, a check-the-results hint, and a download of the
+  shipped `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative:
   share links open the app on `/s/`). While any own file is in use a muted line
-  says how they combine with the catalog and that it never updates them.
-  Then the catalog — "Catalog" cycles ignore → auto-update → freeze on click
-  WITHOUT closing the menu (`closeOnClick={false}`), the mode as trailing
-  note and its explanation as a muted line below (phones have no tooltips);
-  "Catalog URL…" opens a dialog (empty or "Use default" = built-in, absolute
-  http(s) only, trailing "custom" note when set). Then Save backup, Load
-  backup. Load
-  validates first (broken → error toast, nothing touched), then confirms
-  ("Profiles now: N, in the backup: M") with "Save current backup first" in
-  the dialog; restoring replaces everything but the catalog cache.
-- Exports (ICS | Link | profile file) live in `ProfileSection` and work while locked.
-  **Never in the header** (user decision): up there they would imply global
-  state like the dates, which never leave the device. Link warns first when a
-  timetable is outside the catalog (the receiver needs its file); past
-  `MAX_SHARE_LENGTH` it is disabled and the profile file becomes the obvious fallback.
-  ICS without dates asks for the range.
+  says how they combine with the catalog and that it never updates them. Then
+  the catalog — "Catalog" cycles ignore → auto-update → freeze on click WITHOUT
+  closing the menu (`closeOnClick={false}`), the mode as trailing note and its
+  explanation as a muted line below (phones have no tooltips). The cycle is only
+  a pending choice: the mode shown when the menu closes is applied then (user
+  decision), so passing through ignore (freeze → auto) never drops the catalog
+  cache and its dates; "Catalog URL…" opens a dialog (empty or "Use default" =
+  built-in, absolute http(s) only, trailing "custom" note when set). Then Save
+  backup, Load backup. Load validates first (broken → error toast, nothing
+  touched), then confirms ("Profiles now: N, in the backup: M") with "Save
+  current backup first" in the dialog; restoring replaces everything but the
+  catalog cache.
+- Exports (ICS | Link | profile file) live in `ProfileSection` and work while
+  locked. **Never in the header** (user decision): up there they would imply
+  global state like the dates, which never leave the device. Link warns first
+  when a timetable is outside the catalog (the receiver needs its file); past
+  `MAX_SHARE_LENGTH` it is disabled and the profile file becomes the obvious
+  fallback. ICS without dates asks for the range.
 - Transient feedback is a toast, never a panel. Copying the link toasts too
   (user decision), on top of the button's inline "Copied".
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`; the pickers accept only their
   own. Downloads go out as `application/octet-stream` so no browser appends
-  `.json`. Catalog files and own dates / locations / degree information uploads stay
-  `.json`.
+  `.json`. Catalog files and own dates / locations / degree information uploads
+  stay `.json`.
 - `@/lib/ics` is only reached through `import()`, date pickers only through
   `LazyCalendar` — both stay out of the first load.
 
@@ -85,23 +87,31 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   classes, SH1/SH2 and dates in the general view, and anything outside the
   hours.
 - Below `md` one day at a time (`DayToggle` in the dock, defaults to today; App
-  owns the day), other columns hidden with CSS; horizontal touch swipe changes the day. The overlay is
-  `pointer-events-none` so swipes work; a pointer that moved > 10px is a
-  swipe, not a click.
+  owns the day), other columns hidden with CSS; horizontal touch swipe changes
+  the day. The overlay is `pointer-events-none` so swipes work; a pointer that
+  moved > 10px is a swipe, not a click.
 - The all-day row (Current week) has a fixed height (48px phones, 64px from
-  `md`), more events scroll inside their cell; General leaves the same space
-  on top, so switching views never moves the hours (user decision).
+  `md`), more events scroll inside their cell. General leaves NO space for
+  it (user decision, replacing "the hours never move"): no empty gap between
+  toolbar and grid, the hours shift when switching views.
 - Opens on Current week inside the lecture period, General otherwise (user
   decision).
 - Block popup spells out subject, kinds and repeat; the letter badge is hidden
   for weekly `A`. The popup names NO timetable (user decision; the tint does);
-  the grid's calendar entries do.
+  the grid's calendar entries do. It opens where the pointer clicked; opened
+  with Enter / Space (a click with `detail` 0 and no coordinates) it opens
+  beside the block. A swipe stops it with `preventBaseUIHandler()` — Base UI
+  ignores `preventDefault()`.
 - **Tree ↔ grid** (user decision): on desktop, hovering (mouse, read off the
-  ruler by position so it works on locked, disabled cells too) or focusing a
-  group cell keeps its blocks and dims all others — a class toggle, no
+  ruler by position so it works on locked, disabled cells too) or keyboard
+  focus (`:focus-visible`; a tap focuses the button too on iPad and must not
+  dim the grid) on a group cell keeps its blocks and dims all others — a class toggle, no
   re-layout. On every screen the popup names the block's group as a control;
   it jumps to the tree cell (phones switch to Groups), unfolds its timetable,
   scrolls to the cell and flashes it.
+- Hovering a block with the mouse gives every block of the same subject name
+  (across timetables) a faint ring (user decision: subtle, nothing dimmed).
+  Mouse only, so a tap leaves nothing behind.
 
 ## Group tree
 
@@ -144,6 +154,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 
 ## Checking
 
-Phones at 360px in German (longest labels) and 400px, English too; desktop 1440. Screenshots cannot swipe or hover: flip a `useState` default
-temporarily, or drive pointer events from a throwaway `public/_*.html` that
-iframes `/`, and delete it after.
+Phones at 360px in German (longest labels) and 400px, English too; desktop 1440.
+Screenshots cannot swipe or hover: flip a `useState` default temporarily, or
+drive pointer events from a throwaway `public/_*.html` that iframes `/`, and
+delete it after.

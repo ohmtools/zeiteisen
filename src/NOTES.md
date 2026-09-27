@@ -4,16 +4,25 @@
   permission). Everything else is glue: hooks own state, components render,
   `src/lib/*` words and wires. No second model — import types from
   primitives.
-- **First paint = the grid.** `App.tsx` statically imports only the shell
-  (view switch, week nav, day toggle, grid, footer, tab bar), the state hooks and
-  what they need. Sidebar, dialogs, toaster and the footer's "Data" menu come
-  from ONE deferred chunk: `components/deferred.ts` re-exports them and App
-  `lazy()`s each through the same `import()`. Anything new that is not the
-  grid goes behind that import. Fallbacks never shift the layout (sidebar:
-  `null`, fixed column; Data menu and the tab bar's Settings slot: a disabled
-  look-alike button).
-  `vite.config.ts` names only a `react` chunk group, no catch-all `vendor`, so
-  `ics`, `react-day-picker` and base-ui dialogs stay next to their only user.
+- **First paint = the grid.** `App.tsx` statically imports only the shell (view
+  switch, week nav, day toggle, grid, footer, tab bar), the state hooks and what
+  they need. Sidebar, dialogs, toaster and the footer's "Data" menu come from
+  ONE deferred chunk: `components/deferred.ts` re-exports them and App `lazy()`s
+  each through the same `import()`. Anything new that is not the grid goes
+  behind that import. Fallbacks never shift the layout (sidebar: `null`, fixed
+  column; Data menu and the tab bar's Settings slot: a disabled look-alike
+  button). `vite.config.ts` names only a `react` chunk group, no catch-all
+  `vendor`, so `ics`, `react-day-picker` and base-ui dialogs stay next to their
+  only user.
+- A tab left open across a deploy asks for chunk names that no longer exist
+  (`autoUpdate`: the new service worker takes over and drops the old
+  precache). `main.tsx` reloads on `vite:preloadError` (at most once a
+  minute), and `ErrorBoundary` around App shows a reload button instead of a
+  blank page if that is not enough.
+- "Now" is `useNow()` (state, ticks every minute), never `new Date()` in
+  render: the React Compiler caches that forever. No function called during
+  render may be named `use…` unless it is a hook: the compiler then skips the
+  whole component, silently (App was, over `useCatalogDates`).
 - `App.tsx` holds shell state: view, week, phone tab, tree ↔ grid highlight
   and jump, and which of its three dialogs is open (picker, update, import).
   Dialogs sit outside the sidebar because they belong to no section, and the
@@ -30,6 +39,9 @@
 - `src/i18n.ts` is the ONLY importer of paraglide; components do
   `import { m } from "@/i18n"`. `localized()` picks a `{ de, en }` value from
   catalog / dates files, never a message.
+- A profile or timetable name inside a sentence is quoted in the message
+  itself (en “…”, de „…“); not in titles, button labels or file names
+  (`update_title`, `share_warning_download`) — user decision.
 - `generated/paraglide/` is generated and gitignored, outside `src/` because
   `src/` is TypeScript only; `.d.ts` are emitted so `allowJs` stays off. The
   `@paraglide/*` alias lives in `tsconfig.app.json`, `vite.config.ts` and

@@ -26,6 +26,7 @@ table against it. Exit code 0 = no issues found; 2 = issues found (resolve
 them, usually by asking the user, before delivering); 1 = could not parse.
 Needs: poppler-utils, pillow, numpy, scipy.
 """
+
 import argparse
 import json
 import re
@@ -41,13 +42,27 @@ from scipy import ndimage
 
 DPI = 300
 SCALE = DPI / 72
-DAYS = {"montag": "monday", "monday": "monday", "mo": "monday",
-        "dienstag": "tuesday", "tuesday": "tuesday", "di": "tuesday",
-        "mittwoch": "wednesday", "wednesday": "wednesday", "mi": "wednesday",
-        "donnerstag": "thursday", "thursday": "thursday", "do": "thursday",
-        "freitag": "friday", "friday": "friday", "fr": "friday"}
+DAYS = {
+    "montag": "monday",
+    "monday": "monday",
+    "mo": "monday",
+    "dienstag": "tuesday",
+    "tuesday": "tuesday",
+    "di": "tuesday",
+    "mittwoch": "wednesday",
+    "wednesday": "wednesday",
+    "mi": "wednesday",
+    "donnerstag": "thursday",
+    "thursday": "thursday",
+    "do": "thursday",
+    "freitag": "friday",
+    "friday": "friday",
+    "fr": "friday",
+}
 OTHER_DAY = re.compile(r"samstag|saturday|block|n\.\s*v\.", re.I)
 DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "other"]
+
+
 def _schema_enums():
     """Allowed kinds and weekly repeat types come from timetable/schema.json, so
     a schema update is picked up without editing this script."""
@@ -64,7 +79,9 @@ def _schema_enums():
 
 KINDS, PREFIXES = _schema_enums()
 ROOM = re.compile(r"\b[A-Z]{2,3}\.\d{2,4}[a-z]?\b")
-TIME_LABEL = re.compile(r"^(\d{1,2})[:.](\d{2})\s*(?:-|–|bis)\s*(\d{1,2})[:.](\d{2})(?:\s*Uhr)?$")
+TIME_LABEL = re.compile(
+    r"^(\d{1,2})[:.](\d{2})\s*(?:-|–|bis)\s*(\d{1,2})[:.](\d{2})(?:\s*Uhr)?$"
+)
 # A bracket hint with a trailing programme code (another timetable), e.g. "MOD:SU XYZ4".
 PROGRAMME_SUFFIX = re.compile(r"^(\S+)\s+(\S+)$")
 
@@ -80,7 +97,10 @@ def day_of(label):
 
 def render(pdf, workdir):
     stem = Path(workdir) / "page"
-    subprocess.run(["pdftoppm", "-r", str(DPI), "-png", "-f", "1", "-l", "1", str(pdf), str(stem)], check=True)
+    subprocess.run(
+        ["pdftoppm", "-r", str(DPI), "-png", "-f", "1", "-l", "1", str(pdf), str(stem)],
+        check=True,
+    )
     png = sorted(Path(workdir).glob("page*.png"))[0]
     return png, np.array(Image.open(png).convert("RGB")).astype(int)
 
@@ -105,8 +125,12 @@ def find_boxes(img):
 
 
 def text_lines(pdf):
-    xml = subprocess.run(["pdftotext", "-bbox-layout", "-f", "1", "-l", "1", str(pdf), "-"],
-                         capture_output=True, text=True, check=True).stdout
+    xml = subprocess.run(
+        ["pdftotext", "-bbox-layout", "-f", "1", "-l", "1", str(pdf), "-"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
     root = ET.fromstring(re.sub(r'xmlns="[^"]+"', "", xml))
     lines = []
     for ln in root.iter("line"):
@@ -115,8 +139,15 @@ def text_lines(pdf):
             continue
         xs = [float(w.get(k)) * SCALE for w in ws for k in ("xMin", "xMax")]
         ys = [float(w.get(k)) * SCALE for w in ws for k in ("yMin", "yMax")]
-        lines.append({"text": " ".join(w.text for w in ws), "x0": min(xs), "y0": min(ys),
-                      "x1": max(xs), "y1": max(ys)})
+        lines.append(
+            {
+                "text": " ".join(w.text for w in ws),
+                "x0": min(xs),
+                "y0": min(ys),
+                "x1": max(xs),
+                "y1": max(ys),
+            }
+        )
     return lines
 
 
@@ -138,7 +169,9 @@ def edge_to_time(y, rows, tol=8):
             v = s + (yy - top) / (bot - top) * (e - s)
             break
     else:  # in a break between rows: snap to the nearer boundary
-        cands = [(abs(y - top), s) for top, _, s, _ in rows] + [(abs(y - bot), e) for _, bot, _, e in rows]
+        cands = [(abs(y - top), s) for top, _, s, _ in rows] + [
+            (abs(y - bot), e) for _, bot, _, e in rows
+        ]
         v = min(cands)[1]
     v = int(round(v / 15) * 15)
     return {"hour": v // 60, "minute": v % 60}
@@ -177,19 +210,30 @@ def parse_box(line_texts, issues, where, prefixes=PREFIXES, kinds=KINDS, room=RO
             title = toks.pop(0)
         if toks:
             profs.append(" ".join(toks))
-    if title is None and rtype == "A" and profs and re.fullmatch(r"[A-Z]{1,3}\d?", profs[0].split()[0]):
-        issues.append(f"{where}: unknown leading marker {profs[0].split()[0]!r} (not in repeat-type enum?)")
+    if (
+        title is None
+        and rtype == "A"
+        and profs
+        and re.fullmatch(r"[A-Z]{1,3}\d?", profs[0].split()[0])
+    ):
+        issues.append(
+            f"{where}: unknown leading marker {profs[0].split()[0]!r} (not in repeat-type enum?)"
+        )
     if title is None:  # bracket-only cell
         own = [b for b in brackets if not PROGRAMME_SUFFIX.match(b)]
         if len(own) == 1:
             src = own[0]
             if brackets and brackets[0] != own[0]:
-                issues.append(f"{where}: INFO bracket-only cell; used own-programme bracket [{own[0]}] "
-                              f"instead of first bracket [{brackets[0]}] (see instructions rule 8)")
+                issues.append(
+                    f"{where}: INFO bracket-only cell; used own-programme bracket [{own[0]}] "
+                    f"instead of first bracket [{brackets[0]}] (see instructions rule 8)"
+                )
         elif brackets:
             src = brackets[0].split()[0]
-            issues.append(f"{where}: bracket-only cell without exactly one own-programme bracket {brackets}; "
-                          f"took {src!r} from the first one - confirm with the user")
+            issues.append(
+                f"{where}: bracket-only cell without exactly one own-programme bracket {brackets}; "
+                f"took {src!r} from the first one - confirm with the user"
+            )
         else:
             issues.append(f"{where}: no NAME:KIND title found: {full!r}")
             return None
@@ -202,16 +246,32 @@ def parse_box(line_texts, issues, where, prefixes=PREFIXES, kinds=KINDS, room=RO
     bad = [k for k in entry["kind"] if k not in kinds]
     if bad:
         issues.append(f"{where}: kind {bad} not allowed by the schema ({src!r})")
-    return rtype, entry, ", ".join(profs), (rooms[0] if rooms else ""), on_demand, brackets
+    return (
+        rtype,
+        entry,
+        ", ".join(profs),
+        (rooms[0] if rooms else ""),
+        on_demand,
+        brackets,
+    )
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("pdf")
     ap.add_argument("--outdir", default=".")
-    ap.add_argument("--prefixes", help="comma-separated repeat markers (default: %s)" % ",".join(PREFIXES))
-    ap.add_argument("--kinds", help="comma-separated allowed kinds (default from schema.json: %s)" % ",".join(KINDS))
-    ap.add_argument("--room-regex", help="regex for room codes (default: %s)" % ROOM.pattern)
+    ap.add_argument(
+        "--prefixes",
+        help="comma-separated repeat markers (default: %s)" % ",".join(PREFIXES),
+    )
+    ap.add_argument(
+        "--kinds",
+        help="comma-separated allowed kinds (default from schema.json: %s)"
+        % ",".join(KINDS),
+    )
+    ap.add_argument(
+        "--room-regex", help="regex for room codes (default: %s)" % ROOM.pattern
+    )
     ap.add_argument("--code", help="timetable code, if the header cannot be parsed")
     args = ap.parse_args()
     prefixes = tuple(args.prefixes.split(",")) if args.prefixes else PREFIXES
@@ -226,24 +286,33 @@ def main():
         boxes = find_boxes(img)
         lines = text_lines(args.pdf)
         if not boxes:
-            print("No outlined boxes found; the layout differs from the reference. Work by hand.")
+            print(
+                "No outlined boxes found; the layout differs from the reference. Work by hand."
+            )
             return 1
 
         # Header: code, half, year
-        head = sorted((l for l in lines if l["y1"] < min(b[1] for b in boxes)), key=lambda l: l["x0"])
+        head = sorted(
+            (l for l in lines if l["y1"] < min(b[1] for b in boxes)),
+            key=lambda l: l["x0"],
+        )
         header = " ".join(l["text"] for l in head)
         m = re.search(r"(Winter|Sommer|Summer)\s*(\d{2})(?:/\d{2})?", header)
         # the code is printed at the right end of the header, after "Fakultät <faculty>"
         code_m = re.search(r"Fakultät\s+\S+\s+([A-Z][A-Za-z0-9-]*)\s*$", header)
         if not m:
-            print(f"No Winter/Sommer semester in header {header!r}; read it from the image or ask.")
+            print(
+                f"No Winter/Sommer semester in header {header!r}; read it from the image or ask."
+            )
             return 1
         half = "winter" if m.group(1) == "Winter" else "summer"
         year = 2000 + int(m.group(2))
         code = args.code or (code_m.group(1) if code_m else None)
         if not code:
-            print(f"Could not find the timetable code in header {header!r}; read it from the image "
-                  f"and rerun with --code (ask the user if it is not printed).")
+            print(
+                f"Could not find the timetable code in header {header!r}; read it from the image "
+                f"and rerun with --code (ask the user if it is not printed)."
+            )
             return 1
 
         # Classify boxes: time labels, day headers, subjects
@@ -252,7 +321,9 @@ def main():
             txt = " ".join(l["text"] for l in lines if inside(l, b)).strip()
             tm = TIME_LABEL.match(txt)
             if tm:
-                rows.append((b[1], b[3], to_min(*tm.group(1, 2)), to_min(*tm.group(3, 4))))
+                rows.append(
+                    (b[1], b[3], to_min(*tm.group(1, 2)), to_min(*tm.group(3, 4)))
+                )
             elif day_of(txt):
                 days.append((b[0], b[2], day_of(txt)))
             else:
@@ -260,15 +331,19 @@ def main():
         rows.sort()
         dnames = [d for _, _, d in days]
         if len(rows) < 2 or len(days) < 5 or len(set(dnames)) != len(dnames):
-            print(f"Grid not recognised (day columns={dnames}, time rows={len(rows)}); "
-                  f"the layout differs from the reference. Work by hand; ask the user where unsure.")
+            print(
+                f"Grid not recognised (day columns={dnames}, time rows={len(rows)}); "
+                f"the layout differs from the reference. Work by hand; ask the user where unsure."
+            )
             return 1
         if len(days) != 6:
             issues.append(f"INFO {len(days)} day columns found: {dnames}")
 
         r, g, bl = img[..., 0], img[..., 1], img[..., 2]
         red = (r > 200) & (g < 80) & (bl < 80)
-        border = 5  # px of the box outline below the content, compensates label vs box edge
+        border = (
+            5  # px of the box outline below the content, compensates label vs box edge
+        )
         result = []
         for b, _ in subjects:
             x0, y0, x1, y1 = b
@@ -277,23 +352,35 @@ def main():
             if len(col) != 1:
                 issues.append(f"{where}: cannot assign to one day column")
                 continue
-            box_lines = sorted((l for l in lines if inside(l, b)), key=lambda l: (l["y0"], l["x0"]))
+            box_lines = sorted(
+                (l for l in lines if inside(l, b)), key=lambda l: (l["y0"], l["x0"])
+            )
             # rotated boxes: pdftotext reports each rotated line as its own column; order by x instead
-            if box_lines and all(l["y1"] - l["y0"] > l["x1"] - l["x0"] for l in box_lines):
+            if box_lines and all(
+                l["y1"] - l["y0"] > l["x1"] - l["x0"] for l in box_lines
+            ):
                 box_lines.sort(key=lambda l: l["x0"])
             texts = [l["text"] for l in box_lines]
-            parsed = parse_box(texts, issues, f"{col[0]} {where}", prefixes, kinds, room_re)
+            parsed = parse_box(
+                texts, issues, f"{col[0]} {where}", prefixes, kinds, room_re
+            )
             if parsed is None:
                 continue
             rtype, entry, prof, room, od, brackets = parsed
             # repeat markers are red in the reference layout; skip if the outlines themselves are red
-            has_red = red[y0 + 6:y1 - 6, x0 + 6:x1 - 6].sum() > 50
+            has_red = red[y0 + 6 : y1 - 6, x0 + 6 : x1 - 6].sum() > 50
             if has_red != (rtype != "A"):
-                issues.append(f"{col[0]} {where}: red pixels={has_red} but prefix={rtype}; check the image")
+                issues.append(
+                    f"{col[0]} {where}: red pixels={has_red} but prefix={rtype}; check the image"
+                )
             start, end = edge_to_time(y0, rows), edge_to_time(y1 - border, rows)
-            dur = to_min(end["hour"], end["minute"]) - to_min(start["hour"], start["minute"])
+            dur = to_min(end["hour"], end["minute"]) - to_min(
+                start["hour"], start["minute"]
+            )
             if dur not in (90, 195):
-                issues.append(f"{col[0]} {where}: INFO unusual duration {dur} min ({entry['name']}); re-check edges")
+                issues.append(
+                    f"{col[0]} {where}: INFO unusual duration {dur} min ({entry['name']}); re-check edges"
+                )
             rep = {"type": rtype, "day": col[0]}
             if prof:
                 rep["professor"] = prof
@@ -308,16 +395,24 @@ def main():
         Image.open(png).save(outdir / f"{code}_page.png")
 
     order = DAY_ORDER
-    result.sort(key=lambda e: (order.index(e["repeat"]["day"]),
-                               to_min(e["repeat"]["startTime"]["hour"], e["repeat"]["startTime"]["minute"])))
+    result.sort(
+        key=lambda e: (
+            order.index(e["repeat"]["day"]),
+            to_min(
+                e["repeat"]["startTime"]["hour"], e["repeat"]["startTime"]["minute"]
+            ),
+        )
+    )
     print(f"{code}, {half} {year}: {len(result)} subjects\n")
     for e in result:
         rp = e["repeat"]
         grp = f"{e['group']['category']}.{e['group']['index']}" if "group" in e else "-"
-        print(f"{rp['type']:3} {rp['day'][:3]} {rp['startTime']['hour']:02}:{rp['startTime']['minute']:02}-"
-              f"{rp['endTime']['hour']:02}:{rp['endTime']['minute']:02}  {e['name']}:{'/'.join(e['kind'])}:{grp}"
-              f"  | {rp.get('professor', '')} | {rp.get('location', '')}"
-              f"{' | onDemand' if e['onDemand'] else ''}{' | note: ' + e['note'] if 'note' in e else ''}")
+        print(
+            f"{rp['type']:3} {rp['day'][:3]} {rp['startTime']['hour']:02}:{rp['startTime']['minute']:02}-"
+            f"{rp['endTime']['hour']:02}:{rp['endTime']['minute']:02}  {e['name']}:{'/'.join(e['kind'])}:{grp}"
+            f"  | {rp.get('professor', '')} | {rp.get('location', '')}"
+            f"{' | onDemand' if e['onDemand'] else ''}{' | note: ' + e['note'] if 'note' in e else ''}"
+        )
     out = outdir / f"timetable_{code}_{half}{year}.timetable"
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\nwrote {out}")

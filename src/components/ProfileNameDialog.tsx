@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { nameProblemText } from "@/lib/names";
+import { normalizeName } from "@/lib/primitives/name";
 
 type Props = {
   open: boolean;
@@ -36,12 +38,15 @@ export function ProfileNameDialog({ open, mode, initial, taken, onOpenChange, on
     if (open) setName(initial);
   }
 
-  const clash = taken(name.trim());
-  const invalid = !name.trim() || clash;
+  const wanted = normalizeName(name);
+  const clash = taken(wanted);
+  // It becomes the file name of every download.
+  const problem = nameProblemText(wanted);
+  const invalid = !wanted || clash || problem !== null;
 
   const submit = () => {
     if (invalid) return;
-    onSubmit(name.trim());
+    onSubmit(wanted);
     onOpenChange(false);
   };
 
@@ -62,13 +67,14 @@ export function ProfileNameDialog({ open, mode, initial, taken, onOpenChange, on
             id="profile-name"
             value={name}
             autoFocus
-            aria-invalid={clash || undefined}
+            aria-invalid={clash || problem !== null || undefined}
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") submit();
             }}
           />
           {clash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+          {problem && <p className="text-sm text-destructive">{problem}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

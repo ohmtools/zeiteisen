@@ -34,7 +34,7 @@ work.
 
 A site page names its buildings and their street addresses, e.g.
 
-```
+```text
 Wassertorstraße - 90489 Nürnberg
 …
 Wassertorstraße 10 - Gebäude: WA, WB, WD, WE, WG
@@ -47,8 +47,8 @@ Create one entry per building code:
 - `name`: the street and house number of that building only, without postal
   code and city, exactly as written on the page: `"Wassertorstraße 10"`,
   `"Bahnhofstraße 90"`, `"Innere Cramer-Klett-Straße 4-8"`.
-- `mapsUrl`: a Google Maps search URL for that building's full address
-  (street, house number, postal code, city), percent-encoded:
+- `mapsUrl`: a Google Maps search URL for that building's full address (street,
+  house number, postal code, city), percent-encoded:
 
   ```python
   from urllib.parse import quote_plus

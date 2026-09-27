@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { use, useMemo, useRef, useState } from "react";
 import { Clock, Hand, Info, MapPin, StickyNote, User } from "lucide-react";
 import { cn } from "cn";
 import type { SubjectInformation } from "@/lib/primitives/meta";
@@ -20,6 +20,7 @@ import {
   timeRangeLabel,
 } from "@/lib/subjects";
 import { buildingLinks } from "@/lib/buildings";
+import { OverridesContext } from "@/components/OverridesContext";
 import { tintStyleOf } from "@/lib/tint";
 
 type Props = {
@@ -31,6 +32,10 @@ type Props = {
   unclear?: boolean;
   // Another group cell is hovered in the tree (desktop): this block steps back.
   dimmed?: boolean;
+  // A block of the same subject is hovered in the grid: a faint ring.
+  related?: boolean;
+  // Mouse enters (the subject's name) or leaves (null) the block.
+  onHover?: (name: string | null) => void;
   // Shows the block's group cell in the tree.
   onJump?: () => void;
   // "More info" in the popup: the dialog lives in the deferred chunk.
@@ -45,6 +50,8 @@ export function SubjectBlock({
   lane,
   unclear = false,
   dimmed = false,
+  related = false,
+  onHover,
   onJump,
   onInfo,
 }: Props) {
@@ -78,11 +85,12 @@ export function SubjectBlock({
   const kinds = kindLabel(subject.kind);
   // The popup spells both out: "I2" -> "Computer Science 2", "Pr" ->
   // "Laboratory". An unknown shortcut stays as it is stored in the subject.
-  const fullName = subjectName(subject.name);
-  const info = subjectInfoOf(subject.name);
+  const overrides = use(OverridesContext);
+  const fullName = subjectName(subject.name, overrides.degreeInformation);
+  const info = subjectInfoOf(subject.name, overrides.degreeInformation);
   const fullKinds = kindNames(subject.kind);
   // "WE.105" carries the building shortcut; unknown rooms have no links.
-  const links = buildingLinks(meeting.location);
+  const links = buildingLinks(meeting.location, overrides.locations);
 
   // The details popup opens where the pointer was, not centred on the block.
   const [open, setOpen] = useState(false);
@@ -119,6 +127,13 @@ export function SubjectBlock({
             />
           )
         }
+        // Mouse only: a tap would leave the highlight behind.
+        onPointerEnter={(event) => {
+          if (event.pointerType === "mouse") onHover?.(subject.name);
+        }}
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") onHover?.(null);
+        }}
         onPointerDown={(event) => {
           down.current = { x: event.clientX, y: event.clientY };
         }}
@@ -126,19 +141,32 @@ export function SubjectBlock({
           const from = down.current;
           down.current = null;
           // Swiping across a block changes the day; do not open the popup then.
+          // Base UI ignores `preventDefault` here, only this stops its handler.
           if (
             from &&
             (Math.abs(event.clientX - from.x) > TAP_MAX_PX ||
               Math.abs(event.clientY - from.y) > TAP_MAX_PX)
           ) {
-            event.preventDefault();
+            event.preventBaseUIHandler();
             return;
           }
-          setPoint({ x: event.clientX, y: event.clientY });
+          // Enter / Space arrive as a click without a pointer (`detail` 0,
+          // no coordinates): the popup then opens beside the block itself.
+          if (event.detail === 0) {
+            const box = event.currentTarget.getBoundingClientRect();
+            setPoint({ x: box.right, y: box.top });
+          } else {
+            setPoint({ x: event.clientX, y: event.clientY });
+          }
         }}
       >
         <div
-          className="flex h-full flex-col overflow-hidden border bg-(--tint) px-1 py-0.5 text-xs leading-tight text-primary-foreground"
+          className={cn(
+            "flex h-full flex-col overflow-hidden border bg-(--tint) px-1 py-0.5 text-xs leading-tight text-primary-foreground",
+            // 1px: exactly the wrapper's `p-px`, so rings of touching blocks
+            // never overlap into a darker line.
+            related && "ring-1 ring-foreground/40",
+          )}
           style={tint}
         >
           <span className="truncate font-medium">{subject.name}</span>

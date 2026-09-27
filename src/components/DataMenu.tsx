@@ -131,6 +131,11 @@ export function DataMenu({
   // The last file removed closes the dialog for good, not until the next
   // upload.
   if (removingDegreeInformation && ownCount === 0) setRemovingDegreeInformation(false);
+  // "Catalog" cycles a pending mode while the menu is open; it is applied when
+  // the menu closes. Applied on every click, getting from freeze back to auto
+  // would pass through ignore, which drops the cached catalog and its dates.
+  const [pendingMode, setPendingMode] = useState<CatalogMode | null>(null);
+  const shownMode = pendingMode ?? catalogMode;
   const ignored = catalogMode === "ignore";
   const anyOwn = datesManual || ownLocations || ownCount > 0;
   const backupInput = useRef<HTMLInputElement>(null);
@@ -167,7 +172,13 @@ export function DataMenu({
           if (file) void pickBackup(file);
         }}
       />
-      <DropdownMenu>
+      <DropdownMenu
+        onOpenChange={(open) => {
+          if (open || pendingMode === null) return;
+          if (pendingMode !== catalogMode) onCatalogMode(pendingMode);
+          setPendingMode(null);
+        }}
+      >
         <DropdownMenuTrigger render={trigger}>{children}</DropdownMenuTrigger>
         <DropdownMenuContent align="end" side={settings ? "top" : "bottom"} className="w-auto">
           <DropdownMenuGroup>
@@ -224,17 +235,18 @@ export function DataMenu({
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             {/* Cycles ignore → auto-update → freeze and stays open, so the
-                line below explains each mode as it comes up. */}
+                line below explains each mode as it comes up; the mode shown
+                when the menu closes is the one applied. */}
             <DropdownMenuItem
               closeOnClick={false}
-              onClick={() => onCatalogMode(NEXT_MODE[catalogMode])}
+              onClick={() => setPendingMode(NEXT_MODE[shownMode])}
             >
-              <ModeIcon mode={catalogMode} />
+              <ModeIcon mode={shownMode} />
               {m.catalog_mode()}
-              <Note>{MODE_NAME[catalogMode]()}</Note>
+              <Note>{MODE_NAME[shownMode]()}</Note>
             </DropdownMenuItem>
             <DropdownMenuLabel className="max-w-64 font-normal">
-              {MODE_TEXT[catalogMode]()}
+              {MODE_TEXT[shownMode]()}
             </DropdownMenuLabel>
             <DropdownMenuItem onClick={() => setEditingUrl(true)}>
               <Globe data-icon="inline-start" />

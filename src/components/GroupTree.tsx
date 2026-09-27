@@ -38,7 +38,7 @@ import { ClassPicker } from "@/components/ClassPicker";
 import { GroupCell } from "@/components/GroupCell";
 import { SubjectDialog, type SubjectTarget } from "@/components/SubjectDialog";
 import type { Catalog } from "@/lib/primitives/catalog";
-import type { Subjects } from "@/lib/primitives/subject";
+import { sameSubject, type Subject, type Subjects } from "@/lib/primitives/subject";
 import {
   timetableHasUpdate,
   type Timetable,
@@ -51,6 +51,8 @@ import { downloadTimetable } from "@/lib/download";
 import type { Highlight, SubjectRef } from "@/lib/link";
 import { tintStyleOf, tintSteps } from "@/lib/tint";
 import { warningKey, warningText } from "@/lib/warnings";
+import { nameProblemText } from "@/lib/names";
+import { normalizeName, sameName } from "@/lib/primitives/name";
 
 type Props = {
   className?: string;
@@ -117,20 +119,32 @@ export function GroupTree({
   flash = null,
 }: Props) {
   const tree = buildTree(timetables);
-  const held = new Set(timetables.map((timetable) => timetable.name));
   const tints = tintSteps(timetables.map((timetable) => timetable.name));
   // The timetable the confirm dialog is asking about; removal is not undoable,
   // so it never happens on the first click.
   const [removing, setRemoving] = useState<TimetableName | null>(null);
   // The subject the editor is open for, by timetable name and index (`null`
-  // adds one). Read against the current timetables, so the editor closes when
-  // its timetable goes away.
-  const [editing, setEditing] = useState<{ name: TimetableName; index: number | null } | null>(
-    null,
-  );
-  const editTimetable = editing && timetables.find((one) => one.name === editing.name);
+  // adds one), plus the subject as it was when opened. Read against the
+  // current timetables: the editor closes when its timetable goes away, or
+  // when another tab changed what sits at that index (a removal shifts the
+  // indexes, and saving would overwrite another subject).
+  const [editing, setEditing] = useState<{
+    name: TimetableName;
+    index: number | null;
+    subject: Subject | null;
+  } | null>(null);
+  const editTimetable = editing ? timetables.find((one) => one.name === editing.name) : undefined;
+  const stillThere =
+    editing !== null &&
+    editTimetable !== undefined &&
+    (editing.index === null ||
+      (editing.subject !== null &&
+        editing.index < editTimetable.subjects.length &&
+        sameSubject(editTimetable.subjects.getSubject(editing.index), editing.subject)));
   const editTarget: SubjectTarget | null =
-    editing && editTimetable && !locked ? { timetable: editTimetable, index: editing.index } : null;
+    editing && editTimetable && stillThere && !locked
+      ? { timetable: editTimetable, index: editing.index }
+      : null;
 
   return (
     <Section className={cn("min-h-0 desktop:flex-1", className)}>
@@ -152,14 +166,24 @@ export function GroupTree({
               tint={tints.get(node.timetable.name) ?? 0}
               locked={locked}
               status={catalogStatus(node.timetable, catalog, online)}
-              taken={(name) => name !== node.timetable.name && held.has(name)}
+              taken={(name) =>
+                timetables.some(
+                  (other) => other.name !== node.timetable.name && sameName(other.name, name),
+                )
+              }
               onSetEnabled={(indexes, enabled) =>
                 onSetEnabled(node.timetable.name, indexes, enabled)
               }
               onUpdate={() => onUpdate(node.timetable.name)}
               onRename={(to) => onRename(node.timetable.name, to)}
               onRemove={() => setRemoving(node.timetable.name)}
-              onEdit={(index) => setEditing({ name: node.timetable.name, index })}
+              onEdit={(index) =>
+                setEditing({
+                  name: node.timetable.name,
+                  index,
+                  subject: index === null ? null : node.timetable.subjects.getSubject(index),
+                })
+              }
               flash={flash?.timetableName === node.timetable.name ? flash : null}
               onHighlight={(indexes) =>
                 onHighlight?.(indexes ? { timetableName: node.timetable.name, indexes } : null)
@@ -266,7 +290,7 @@ function TimetableTree({
   }
   // The name being typed while renaming; `null` while not renaming.
   const [draft, setDraft] = useState<string | null>(null);
-  const trimmed = draft?.trim() ?? "";
+  const trimmed = draft === null ? "" : normalizeName(draft);
   const problem =
     draft === null
       ? null
@@ -274,7 +298,7 @@ function TimetableTree({
         ? m.tree_rename_empty()
         : taken(trimmed)
           ? m.tree_rename_taken()
-          : null;
+          : nameProblemText(trimmed);
 
   // Enter and blur commit; an invalid name on blur simply reverts.
   const commit = () => {

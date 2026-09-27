@@ -41,42 +41,48 @@ type Props = {
 // from the catalog alone; the new version is downloaded when the dialog opens:
 // only then is the diff known at all.
 export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onReplace }: Props) {
-  const [next, setNext] = useState<Timetable | null>(null);
   const entry = timetable ? catalogUpdate(timetable, catalog) : null;
   // The offered file identifies the download, not the `Catalog` object: every
   // background refresh builds a new one, which must not download the same
   // version again and reset the diff shown.
   const offered = entry ? entry.path + "\n" + entry.hash : null;
-  const latest = useRef({ catalog, onOpenChange });
+  // A downloaded version, tagged with the timetable and offer it was fetched
+  // for: it only shows for those, so another timetable or a newer offer starts
+  // from "loading" again. Offline (or the offer withdrawn) after the diff
+  // arrived, it stays on screen: only refusing needs the catalog.
+  const [result, setResult] = useState<{
+    timetable: Timetable;
+    offered: string | null;
+    next: Timetable;
+  } | null>(null);
+  const next =
+    result && result.timetable === timetable && (result.offered === offered || offered === null)
+      ? result.next
+      : null;
+  // What the download effect reads without restarting on it: the timetable
+  // and the offered file alone identify a download.
+  const latest = useRef({ catalog, onOpenChange, next, entry });
   useEffect(() => {
-    latest.current = { catalog, onOpenChange };
+    latest.current = { catalog, onOpenChange, next, entry };
   });
 
   useEffect(() => {
-    if (!timetable) {
-      setNext(null);
-      return;
-    }
-    // Offline (or the offer withdrawn) after the diff arrived: it stays on
-    // screen, only refusing needs the catalog.
-    if (offered === null && next !== null) return;
-    setNext(null);
+    if (!timetable || (offered === null && latest.current.next !== null)) return;
     let cancelled = false;
+    const file = latest.current.entry?.path ?? timetable.name;
     void update(timetable, latest.current.catalog).then((updated) => {
       if (cancelled) return;
       // No update after all, or the download failed: nothing left to show.
       if (!updated) {
-        toast.error(m.catalog_error_fetch({ file: entry?.path ?? timetable.name }));
+        toast.error(m.catalog_error_fetch({ file }));
         latest.current.onOpenChange(false);
         return;
       }
-      setNext(updated);
+      setResult({ timetable, offered, next: updated });
     });
     return () => {
       cancelled = true;
     };
-    // The timetable and the offered file identify the download.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timetable, offered]);
 
   const diff =

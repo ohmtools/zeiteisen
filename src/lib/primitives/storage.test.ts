@@ -69,6 +69,20 @@ test("a broken profile or duplicate name is dropped alone", () => {
   ]);
 });
 
+test("names differing only in case count as duplicates on load", () => {
+  const store = memory();
+  saveProfiles(
+    [
+      profile("Plan", [timetable("BEI3", []), timetable("bei3", [subject("A")])]),
+      profile("PLAN", []),
+    ],
+    store,
+  );
+  expect(loadProfiles(store).map((p) => [p.name, p.timetables.map((t) => t.name)])).toEqual([
+    ["Plan", ["BEI3"]],
+  ]);
+});
+
 test("unreadable storage reads as empty", () => {
   const store = memory();
   store.data.set(PROFILES_KEY, "{not json");
@@ -284,6 +298,12 @@ describe("backup", () => {
     const [p] = good.profiles;
     const twice = { ...p, timetables: [p.timetables[0], p.timetables[0]] };
     expect(parseBackupFile({ ...good, profiles: [twice] })).toBeNull();
+    // The same names in another case.
+    const lower = { ...p, name: p.name.toLowerCase() };
+    expect(parseBackupFile({ ...good, profiles: [p, lower] })).toBeNull();
+    const cased = { ...p.timetables[0], name: p.timetables[0].name.toLowerCase() };
+    const casedTwice = { ...p, timetables: [p.timetables[0], cased] };
+    expect(parseBackupFile({ ...good, profiles: [casedTwice] })).toBeNull();
     expect(parseBackupFile({ ...good, dates: { year: "x" } })).toBeNull();
     expect(parseBackupFile({ ...good, locations: { locations: [{ code: "" }] } })).toBeNull();
   });

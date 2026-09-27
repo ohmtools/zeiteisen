@@ -19,7 +19,8 @@ type ShareEnvelope = { v: 1; timetables: SharedTimetable[] };
 
 const envelopeSchema: z.ZodMiniType<ShareEnvelope> = z.object({
   v: z.literal(1),
-  timetables: z.array(sharedTimetableSchema),
+  // A link without timetables would import an empty profile: not a link.
+  timetables: z.array(sharedTimetableSchema).check(z.minLength(1)),
 });
 
 // Longer links get cut by chat apps and mail clients, so past this the copy

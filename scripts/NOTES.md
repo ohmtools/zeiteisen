@@ -22,7 +22,9 @@
   refused: a file not matching the format, and every code (upper case, as the
   app compares) listed more than once across files or within one, naming the
   file the app will use (the last in index order, i.e. path order). The
-  index is still written. Re-run after every catalog change — hash is
+  index is still written. Every path segment is checked against `nameProblem`
+  (`src/lib/primitives/name.ts`, through jiti) and a timetable whose file name the
+  app would clean gets the name it will show; warnings, never refusals. Re-run after every catalog change — hash is
   what invalidate client cache. `--stdout` print instead of write. Args go
   through `node:util` `parseArgs` (strict: unknown flag or not exactly one dir
   is an error, `-h` usage). `npm run catalog-remote` run it on the server

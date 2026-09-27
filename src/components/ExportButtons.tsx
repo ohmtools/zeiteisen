@@ -109,7 +109,7 @@ export function ExportButtons({ dates, profile, share, catalog }: Props) {
           size="sm"
           className="flex-1 px-2"
           disabled={linkBlocked}
-          title={linkBlocked ? m.groups_export_link_long() : m.groups_export_link_hint()}
+          title={share?.tooLong ? m.groups_export_link_long() : m.groups_export_link_hint()}
           onClick={() => {
             if (!share) return;
             if (outside.length > 0) setWarning(true);

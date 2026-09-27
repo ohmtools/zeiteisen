@@ -12,6 +12,7 @@ import {
 import type { DegreeInformation, Locations, SemesterDates } from "./meta";
 import type { Profile, ProfileName } from "./profile";
 import { degreeInformationSchema, locationsSchema, semesterDatesSchema } from "./meta";
+import { sameName } from "./name";
 import { timetableFromJSON, timetableJSONSchema, type Timetable } from "./timetable";
 
 // localStorage is the only persistence: the app never talks to a server.
@@ -103,18 +104,20 @@ function toStored(profile: Profile): StoredProfile {
   };
 }
 
-// A duplicate timetable name keeps the first one: names are unique in a profile.
+// A duplicate timetable name, in any case (`sameName`), keeps the first one:
+// names are unique in a profile.
 function fromStored(stored: StoredProfile): Profile {
   const timetables: Timetable[] = [];
   for (const timetable of stored.timetables) {
-    if (timetables.some((held) => held.name === timetable.name)) continue;
+    if (timetables.some((held) => sameName(held.name, timetable.name))) continue;
     timetables.push(timetableFromJSON(timetable));
   }
   return { name: stored.name, locked: stored.locked, timetables };
 }
 
 // Parsed one profile at a time: a broken profile is dropped alone instead of
-// taking every other one with it. A duplicate name keeps the first profile.
+// taking every other one with it. A duplicate name, in any case, keeps the
+// first profile.
 export function loadProfiles(store = defaultStore()): Profile[] {
   const raw = readJson(PROFILES_KEY, store);
   if (!Array.isArray(raw)) return [];
@@ -122,7 +125,7 @@ export function loadProfiles(store = defaultStore()): Profile[] {
   for (const item of raw) {
     const parsed = storedProfileSchema.safeParse(item);
     if (!parsed.success) continue;
-    if (profiles.some((profile) => profile.name === parsed.data.name)) continue;
+    if (profiles.some((profile) => sameName(profile.name, parsed.data.name))) continue;
     profiles.push(fromStored(parsed.data));
   }
   return profiles;
@@ -285,9 +288,15 @@ export function loadBackup(store = defaultStore()): Backup {
 export const backupFileSchema = z.object({
   v: z.literal(1),
   profiles: z.array(storedProfileSchema).check(
-    z.refine((profiles) => new Set(profiles.map((one) => one.name)).size === profiles.length, {
-      message: "profile names are unique",
-    }),
+    z.refine(
+      (profiles) =>
+        profiles.every(
+          (one, i) => profiles.findIndex((other) => sameName(other.name, one.name)) === i,
+        ),
+      {
+        message: "profile names are unique",
+      },
+    ),
   ),
   active: z.nullable(z.string().check(z.minLength(1))),
   dates: z.nullable(semesterDatesSchema),

@@ -24,7 +24,7 @@ import {
   type OwnDegreeInformationFile,
 } from "@/lib/primitives/storage";
 import { catalogFetcher } from "@/lib/catalog";
-import { setDegreeInformationOverrides, setLocationOverrides } from "@/lib/overrides";
+import type { Overrides } from "@/lib/overrides";
 
 type Options = {
   // The Data menu's "Catalog". `freeze`: the index is still read (the picker
@@ -70,6 +70,8 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   refresh: () => void;
   // Reads the current catalog, for the Data menu's "Use catalog dates".
   fetchJson: FetchJson;
+  // The lookup tables of names and building links (`OverridesContext`).
+  overrides: Overrides;
 } {
   const [cache, setCache] = useState<CatalogCache>(loadCatalogCache);
   const fetchJson = useMemo(() => catalogFetcher(url), [url]);
@@ -88,7 +90,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   );
 
   // Locations and degreeInformation are the tables `buildings.ts` and
-  // `subjects.ts` read. Derived from the cache during render, so the very
+  // `subjects.ts` look up in, handed out as `overrides`. Derived from the cache during render, so the very
   // first render after a refresh already spells the new names out. Always the
   // newest copy the device has, even when the index now lists another hash
   // for it: the refresh replaces it once the download works, and until then
@@ -96,7 +98,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   // and its files) the older copy beats no names and no links.
   // Own locations replace the catalog's; own degreeInformation go over them,
   // later files winning.
-  const overrides = useMemo(() => {
+  const overrides = useMemo((): Overrides => {
     const [locationsEntry] = catalog.entries(CatalogKind.Locations);
     const locations = own.locations
       ? parseLocations(own.locations)
@@ -112,8 +114,6 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     ]);
     return { locations, degreeInformation };
   }, [cache, catalog, own.locations, own.degreeInformation]);
-  setLocationOverrides(overrides.locations);
-  setDegreeInformationOverrides(overrides.degreeInformation);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,7 +168,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     const start = ({ force = false, restart = false } = {}) => {
       if (cancelled) return;
       if (restart) {
-        generation++;
+        generation += 1;
         running = false;
       }
       if (optionsRef.current.mode === "ignore" || running) return;
@@ -219,5 +219,5 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     startRef.current({ restart: true });
   }, [mode, url]);
 
-  return { catalog, refresh: () => startRef.current({ force: true }), fetchJson };
+  return { catalog, refresh: () => startRef.current({ force: true }), fetchJson, overrides };
 }

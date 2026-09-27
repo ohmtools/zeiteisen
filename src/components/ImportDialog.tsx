@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Catalog } from "@/lib/primitives/catalog";
-import { uniqueName } from "@/lib/primitives/name";
+import { uniqueName, normalizeName } from "@/lib/primitives/name";
 import {
   nameTaken,
   parseProfileFile,
@@ -26,6 +26,8 @@ import { findSubjects, type SubjectsSource } from "@/lib/primitives/subject";
 import type { SharedTimetable, TimetableSource } from "@/lib/primitives/timetable";
 import { decodeShareInput } from "@/lib/share";
 import { readTimetableFiles } from "@/lib/upload";
+import { nameProblemText } from "@/lib/names";
+import { cleanName } from "@/lib/primitives/name";
 
 type Props = {
   open: boolean;
@@ -84,8 +86,9 @@ export function ImportDialog({
       profiles.map((profile) => profile.name),
       m.profile_default(),
     );
-  const nameClash = nameTaken(profiles, nameValue.trim());
-  const nameInvalid = !nameValue.trim() || nameClash;
+  const nameClash = nameTaken(profiles, normalizeName(nameValue));
+  const nameProblem = nameProblemText(normalizeName(nameValue));
+  const nameInvalid = !normalizeName(nameValue) || nameClash || nameProblem !== null;
 
   // Files uploaded here count like a profile of their own, searched last.
   const pool: Profile = {
@@ -158,7 +161,8 @@ export function ImportDialog({
     }
     if (run !== session.current) return;
     const profile = parseProfileFile(json, file.name, profiles);
-    const wanted = profile?.name.trim();
+    // A file saved on Linux may carry a ":" Windows refuses.
+    const wanted = profile && cleanName(profile.name.trim(), "");
     if (!profile || !wanted) {
       setFailed(true);
       return;
@@ -186,7 +190,7 @@ export function ImportDialog({
     const picked = shared.filter((_, i) => included(i));
     const { profile, unresolved } = await resolveSharedProfile(
       picked,
-      nameValue.trim(),
+      normalizeName(nameValue),
       holders,
       catalog,
     );
@@ -256,13 +260,14 @@ export function ImportDialog({
                 id="import-name"
                 value={nameValue}
                 autoFocus
-                aria-invalid={nameClash || undefined}
+                aria-invalid={nameClash || nameProblem !== null || undefined}
                 onChange={(event) => setName(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void confirm();
                 }}
               />
               {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+              {nameProblem && <p className="text-sm text-destructive">{nameProblem}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">{m.import_timetables()}</p>

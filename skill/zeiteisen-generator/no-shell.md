@@ -64,10 +64,12 @@ adjustments, since you can't render, crop or measure pixels:
    title (`G MOD1:Pr:10.2`); in the image it is red. Every box with a prefix
    in one source should have it in the other.
 
-## 3. Official abbreviation list by hand
+## 3. Degree information by hand
 
-Follow `degreeinformation/instructions.md`, Source A (all rules, including when
-to ask), reading the table from the text layer:
+### The abbreviation list
+
+Follow `degreeinformation/instructions.md`, step 1 (all rules, including
+when to ask), reading the table from the text layer:
 
 - Skip page headers and footers: the title (`Abkürzungen`), the column header
   (`Fachkürzel Typ Fach`), the semester/`Stand` line and the `Seite N
@@ -80,6 +82,19 @@ to ask), reading the table from the text layer:
   and keep a running count of rows and codes so nothing is skipped or
   duplicated. Mention the counts in the chat summary.
 
+### The module handbook
+
+`handbook_digest.py` can't run, so read the handbook's text layer directly,
+following steps 2-4 of `degreeinformation/instructions.md`:
+
+- Start with the table of contents to build the module index, then read one
+  module at a time. Skip literature lists, staff and contact fields.
+- Handbooks are long. Write the finished entries of each batch down (in a
+  file if you have one, else keep them in your reply draft) before reading
+  on, so earlier modules don't have to be re-read.
+- If the handbook is too long to read completely, say up to which module you
+  read; the rest counts as "no handbook module" for the matching.
+
 ## 4. Checking the output without the validator
 
 `scripts/validate.py` can't run, so check each file yourself against its
@@ -88,6 +103,13 @@ to ask), reading the table from the text layer:
 - **JSON syntax:** double quotes only, no trailing commas, no comments, `true`
   / `false` lowercase, special characters in strings escaped (`"` and `\`).
 - **Top level:** an array for timetables, an object for the other tasks.
+- **File name:** exactly the pattern from SKILL.md; none of
+  `< > : " / \ | ? *`, no trailing dot or space, no `CON`, `PRN`, `AUX`,
+  `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9` before the first dot.
+- **Degreeinformation, most important:** go through the abbreviation list
+  row by row and confirm every code is in the file, spelled exactly as
+  printed, each exactly once, in list order and before any handbook-only
+  entries.
 - **Keys:** every required key present; no key that the schema doesn't
   define, at any level (e.g. no `day` at the top level of a timetable entry).
 - **Values:** every enum value exactly as listed in the schema (case
@@ -97,6 +119,8 @@ to ask), reading the table from the text layer:
 - **Structure-specific:** for timetables, weekly `repeat` has `type`, `day`,
   `startTime`, `endTime` and no `dates`; individual-date `repeat` has `type`
   `"I"` and a non-empty `dates` array and no `day`.
+- **Degree information:** every code only once; each description at most
+  100 words per language (count them); all texts one line, no Markdown.
 - **Consistency:** end time after start time; the entry count matches your
   count check; nothing invented to satisfy the schema (missing data is a
   question, not a guess).

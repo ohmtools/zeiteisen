@@ -104,7 +104,7 @@ npm test          # vitest, `src/**/*.test.ts`, pure logic only
   custom CSS.
 - **No uppercase text, no boxes** (divider lines instead), **no theme
   toggle** — user decisions, do not bring back.
-- Desktop (`desktop:` variant = width ≥ 64rem AND height ≥ 700px): the whole
+- Desktop (`desktop:` variant = width ≥ 64rem AND height ≥ 600px): the whole
   app in one viewport, no page scroll, sections scroll inside themselves.
   Below it (phones, short laptops): a bottom tab bar "Timetable | Groups |
   Settings", with the grid's controls docked just above it.

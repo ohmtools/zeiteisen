@@ -15,7 +15,8 @@ import { encodeShare, MAX_SHARE_LENGTH, shareUrl } from "@/lib/share";
 export type ShareLink = { query: string; url: string; tooLong: boolean };
 
 export function useShareLink(profile: Profile | undefined, keepUrl: boolean): ShareLink | null {
-  const query = profile ? encodeShare(profile) : null;
+  // An empty profile has nothing to share (and such a link is refused).
+  const query = profile && profile.timetables.length > 0 ? encodeShare(profile) : null;
 
   useEffect(() => {
     const root = appRoot();

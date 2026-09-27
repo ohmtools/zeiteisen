@@ -156,6 +156,18 @@ describe("profile ops", () => {
     expect(renameTimetable(two, "nope", "X")).toBe(two);
   });
 
+  test("renameTimetable: another timetable's name in any case is taken, its own is not", () => {
+    const two = profile("Simon", [bei3, timetable("BEI4", [])]);
+    expect(renameTimetable(two, "BEI3", "bei4")).toBe(two);
+    expect(renameTimetable(two, "BEI3", "bei3").timetables.map((t) => t.name)).toEqual([
+      "bei3",
+      "BEI4",
+    ]);
+    expect(renameTimetable(two, "BEI3", "Wahlfa\u0308cher").timetables[0].name).toBe(
+      "Wahlf\u00e4cher",
+    );
+  });
+
   test("setEnabled switches only the given indexes", () => {
     const off = setEnabled(simon, "BEI3", [1], false);
     expect(off.timetables[0].subjects.map((_, extra) => extra.enabled)).toEqual([true, false]);
@@ -178,6 +190,13 @@ describe("profile ops", () => {
     expect(nameTaken(profiles, "Anna")).toBe(true);
     expect(nameTaken(profiles, "Simon", "Simon")).toBe(false);
     expect(nameTaken(profiles, "Bob")).toBe(false);
+  });
+
+  test("nameTaken ignores case, except for the profile's own name", () => {
+    const profiles = [simon, profile("Anna", [])];
+    expect(nameTaken(profiles, "anna")).toBe(true);
+    expect(nameTaken(profiles, "ANNA", "Simon")).toBe(true);
+    expect(nameTaken(profiles, "SIMON", "Simon")).toBe(false);
   });
 });
 

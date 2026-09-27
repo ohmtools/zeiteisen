@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
 import { duplicateProfile } from "@/lib/duplicate";
+import { cleanTimetableName, withCleanNames } from "@/lib/names";
 import { requestPersistence } from "@/lib/persist";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
-import { uniqueName } from "@/lib/primitives/name";
+import { normalizeName, uniqueName } from "@/lib/primitives/name";
 import {
   addTimetables,
   editSubjects,
@@ -61,16 +62,13 @@ export function useProfiles() {
 
   // Another tab changed the profiles: take them over, or this tab's next
   // write would undo that. This tab keeps its own active profile while it
-  // still exists.
+  // still exists, and follows it when it was renamed there.
   useStorageSync([PROFILES_KEY], () => {
     const profiles = loadProfiles();
     loaded.current = profiles;
     setState((previous) => {
-      const active = profileByName(profiles, previous.active)
-        ? previous.active
-        : (profiles[0]?.name ?? "");
-      const next = { profiles, active };
-      return profileByName(profiles, active) ? next : withDefault(next);
+      const next = { profiles, active: followActive(previous, profiles) };
+      return profileByName(profiles, next.active) ? next : withDefault(next);
     });
   });
 
@@ -90,8 +88,11 @@ export function useProfiles() {
   // A taken name is refused, never suffixed: the dialogs check first, this is
   // the guard behind them. The profile becomes the active one. Returns whether
   // it was added.
-  const add = (profile: Profile): boolean => {
-    const name = profile.name.trim();
+  const add = (added: Profile): boolean => {
+    // Timetable names become file names; one from a link or a file may not be
+    // a valid one yet. The profile's name is checked by the dialogs.
+    const profile = { ...added, timetables: withCleanNames(added.timetables) };
+    const name = normalizeName(profile.name);
     if (!name || nameTaken(state.profiles, name)) return false;
     setState((previous) => {
       if (nameTaken(previous.profiles, name)) return previous;
@@ -116,14 +117,14 @@ export function useProfiles() {
 
     // A new profile is created with its timetables in ONE state change.
     addProfile: (name: ProfileName, sources: readonly TimetableSource[]) =>
-      add(addTimetables({ name, locked: false, timetables: [] }, sources)),
+      add(addTimetables({ name, locked: false, timetables: [] }, cleanSources(sources))),
     // An imported profile, whole: from a link (the user typed its name, a
     // taken one is refused) or from a file (already made unique).
     addProfileObject: (profile: Profile) => add(profile),
     // A copy of the active profile, unlocked, under a name the user typed.
     duplicate: (name: ProfileName) => (active ? add(duplicateProfile(active, name)) : false),
     addTimetables: (sources: readonly TimetableSource[]) =>
-      update((profile) => addTimetables(profile, sources)),
+      update((profile) => addTimetables(profile, cleanSources(sources))),
     removeTimetable: (name: TimetableName) => {
       // The toast is fired here, not inside the updater: an updater may run
       // twice and would then report the removal twice.
@@ -146,7 +147,7 @@ export function useProfiles() {
     // A taken name is refused. The active profile's name moves along with it.
     rename: (from: ProfileName, to: string) =>
       setState((previous) => {
-        const name = to.trim();
+        const name = normalizeName(to);
         const profile = profileByName(previous.profiles, from);
         if (!profile || profile.locked || !name || nameTaken(previous.profiles, name, from)) {
           return previous;
@@ -180,6 +181,22 @@ export function useProfiles() {
         };
       }),
   };
+}
+
+// The active profile after another tab changed the profiles: the same name
+// while it exists. Gone, with exactly one new name in its place and the count
+// unchanged, it was renamed there: that name. Else the first profile.
+function followActive(previous: State, profiles: readonly Profile[]): ProfileName {
+  if (profileByName(profiles, previous.active)) return previous.active;
+  const before = new Set(previous.profiles.map((profile) => profile.name));
+  const added = profiles.filter((profile) => !before.has(profile.name));
+  if (added.length === 1 && profiles.length === previous.profiles.length) return added[0].name;
+  return profiles[0]?.name ?? "";
+}
+
+// File-safe names; `addTimetables` then makes them unique in the profile.
+function cleanSources(sources: readonly TimetableSource[]): TimetableSource[] {
+  return sources.map((source) => ({ ...source, name: cleanTimetableName(source.name) }));
 }
 
 function replace(profiles: Profile[], old: Profile, next: Profile): Profile[] {

@@ -32,7 +32,7 @@ describe("encodeShare / decodeShare", () => {
     expect(two.subjects).toBeUndefined();
     expect(encodeShare(simon)).toBe(`v=1&t=${one.hash}.${one.subjects}&t=${two.hash}`);
     expect(encodeShare(profile("Empty", []))).toBe("v=1");
-    expect(decodeShare("v=1")).toEqual([]);
+    expect(decodeShare("v=1")).toBeNull();
   });
 
   it("rejects garbage and other versions", () => {

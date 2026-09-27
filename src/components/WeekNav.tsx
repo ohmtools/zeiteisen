@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LazyCalendar } from "@/components/LazyCalendar";
+import { useNow } from "@/hooks/useNow";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-function relativeWeekLabel(weekStart: Date): string {
-  const offset = differenceInCalendarWeeks(weekStart, new Date(), {
+function relativeWeekLabel(weekStart: Date, now: Date): string {
+  const offset = differenceInCalendarWeeks(weekStart, now, {
     weekStartsOn: 1,
   });
   if (offset === 0) return m.week_this();
@@ -39,6 +40,8 @@ type WeekNavProps = {
 
 export function WeekNav({ value, onChange, semesterWeek }: WeekNavProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  // "This week" moves on by itself on a page left open past Sunday.
+  const now = useNow();
 
   return (
     <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-4">
@@ -57,7 +60,7 @@ export function WeekNav({ value, onChange, semesterWeek }: WeekNavProps) {
           className="min-w-0 flex-1 sm:min-w-32"
           onClick={() => onChange(startOfISOWeek(new Date()))}
         >
-          <span className="truncate">{relativeWeekLabel(value)}</span>
+          <span className="truncate">{relativeWeekLabel(value, now)}</span>
         </Button>
         <Button
           variant="outline"

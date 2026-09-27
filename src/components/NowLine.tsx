@@ -1,13 +1,8 @@
-import { useEffect, useState } from "react";
+import { useNow } from "@/hooks/useNow";
 
 // Current-time marker in today's column; re-renders once a minute.
 export function NowLine({ firstHour, lastHour }: { firstHour: number; lastHour: number }) {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
+  const now = useNow();
 
   const minutes = now.getHours() * 60 + now.getMinutes() - firstHour * 60;
   const total = (lastHour - firstHour) * 60;

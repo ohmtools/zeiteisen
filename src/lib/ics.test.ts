@@ -45,7 +45,7 @@ describe("icsFile", () => {
       range,
       "Simon K",
     );
-    expect(file.filename).toBe("Simon-K.ics");
+    expect(file.filename).toBe("Simon K.ics");
     expect(file.text).toContain("X-WR-CALNAME:Simon K");
     expect(file.text).toContain("SUMMARY:M1 (SU) · BEI3");
     expect(file.text).toContain("SUMMARY:PH (SU) · BEI 4");

@@ -11,10 +11,12 @@ import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
 import { TAB_ITEM, TabBar, type Tab } from "@/components/TabBar";
 import { ViewSwitch, type View } from "@/components/ViewSwitch";
 import { WeekNav } from "@/components/WeekNav";
+import { OverridesContext } from "@/components/OverridesContext";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useCatalogSources } from "@/hooks/useCatalogSources";
 import { useInstallHint } from "@/hooks/useInstallHint";
+import { useNow } from "@/hooks/useNow";
 import { useOnline } from "@/hooks/useOnline";
 import { useOwnData } from "@/hooks/useOwnData";
 import { useSemesterDates } from "@/hooks/useSemesterDates";
@@ -65,6 +67,7 @@ export default function App() {
     catalog,
     refresh: refreshCatalog,
     fetchJson: fetchCatalogJson,
+    overrides,
   } = useCatalog({
     mode: sources.mode,
     url: sources.url,
@@ -147,10 +150,10 @@ export default function App() {
     onCatalogUrl: sources.setUrl,
     datesManual: dates.manual,
     onUploadDates: (file) => void dates.upload(file),
-    onCatalogDates: () => void dates.useCatalogDates(fetchCatalogJson),
+    onCatalogDates: () => void dates.switchToCatalogDates(fetchCatalogJson),
     ownLocations: own.locations !== null,
     onUploadLocations: (file) => void own.uploadLocations(file),
-    onCatalogLocations: own.useCatalogLocations,
+    onCatalogLocations: own.switchToCatalogLocations,
     ownDegreeInformation: own.degreeInformation,
     onUploadDegreeInformation: (files) => void own.uploadDegreeInformation(files),
     onRemoveDegreeInformation: own.removeDegreeInformation,
@@ -159,7 +162,7 @@ export default function App() {
 
   // The week's number in its own semester (`semesterWeek`): the calendar
   // alone decides, not the dates file and not today.
-  const now = new Date();
+  const now = useNow();
   const weekNumber = semesterWeek(weekStart);
 
   let week: WeekView | null = null;
@@ -174,146 +177,150 @@ export default function App() {
   }
 
   return (
-    // Desktop: the page itself never scrolls — the shell is exactly one
-    // viewport tall and the subject section takes whatever height the
-    // fixed-height profile section leaves. Phones (and any viewport too short,
-    // see the `desktop` variant in index.css): the Timetable tab is one
-    // viewport tall too, the grid stretches to fill it; the Groups tab keeps
-    // the ordinary page scroll. Phones keep room for the fixed tab bar.
-    <div
-      className={cn(
-        "flex flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] desktop:h-screen desktop:min-h-0 desktop:overflow-hidden desktop:pb-0",
-        tab === "timetable" ? "h-dvh overflow-hidden" : "min-h-screen",
-      )}
-    >
-      {/* No visible header (user decision); the name lives in the footer. */}
-      <h1 className="sr-only">{m.app_title()}</h1>
+    // Names and building links for every block and the subject editor.
+    <OverridesContext value={overrides}>
+      {/* Desktop: the page itself never scrolls — the shell is exactly one
+          viewport tall and the subject section takes whatever height the
+          fixed-height profile section leaves. Phones (and any viewport too
+          short, see the `desktop` variant in index.css): the Timetable tab is
+          one viewport tall too, the grid stretches to fill it; the Groups tab
+          keeps the ordinary page scroll. Phones keep room for the fixed tab
+          bar. */}
+      <div
+        className={cn(
+          "flex flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] desktop:h-dvh desktop:min-h-0 desktop:overflow-hidden desktop:pb-0",
+          tab === "timetable" ? "h-dvh overflow-hidden" : "min-h-screen",
+        )}
+      >
+        {/* No visible header (user decision); the name lives in the footer. */}
+        <h1 className="sr-only">{m.app_title()}</h1>
 
-      <main className="grid w-full min-h-0 flex-1 grid-cols-1 desktop:grid-cols-[24rem_minmax(0,1fr)]">
-        {/* Desktop shows both columns, phones the one their tab picks.
+        <main className="grid w-full min-h-0 flex-1 grid-cols-1 desktop:grid-cols-[24rem_minmax(0,1fr)]">
+          {/* Desktop shows both columns, phones the one their tab picks.
             Divider lines separate the sections instead of boxes. */}
-        <div
-          className={cn(
-            "min-h-0 flex-col divide-y desktop:flex desktop:border-r",
-            tab === "groups" ? "flex" : "hidden",
-          )}
-        >
-          {/* Nothing while it loads: the column is a fixed 24rem on desktop
+          <div
+            className={cn(
+              "min-h-0 flex-col divide-y desktop:flex desktop:border-r",
+              tab === "groups" ? "flex" : "hidden",
+            )}
+          >
+            {/* Nothing while it loads: the column is a fixed 24rem on desktop
               and its own tab on phones, so the grid never shifts. */}
-          <Suspense fallback={null}>
-            <ProfileSection
-              className="shrink-0"
-              profiles={profiles.profiles}
-              activeName={profiles.activeName}
-              locked={profiles.locked}
-              dates={dates.dates}
-              share={share}
-              catalog={catalog}
-              onSelect={profiles.select}
-              onOpenAdd={() => setPicking("new-profile")}
-              onRename={profiles.rename}
-              onDuplicate={profiles.duplicate}
-              onRemove={profiles.remove}
-              onToggleLock={profiles.toggleLock}
-              onOpenImport={() => setImporting(true)}
-            />
-            {/* The only section that grows: it eats the leftover height and
+            <Suspense fallback={null}>
+              <ProfileSection
+                className="shrink-0"
+                profiles={profiles.profiles}
+                activeName={profiles.activeName}
+                locked={profiles.locked}
+                dates={dates.dates}
+                share={share}
+                catalog={catalog}
+                onSelect={profiles.select}
+                onOpenAdd={() => setPicking("new-profile")}
+                onRename={profiles.rename}
+                onDuplicate={profiles.duplicate}
+                onRemove={profiles.remove}
+                onToggleLock={profiles.toggleLock}
+                onOpenImport={() => setImporting(true)}
+              />
+              {/* The only section that grows: it eats the leftover height and
                 its trees scroll inside it when they are longer than that. */}
-            <GroupTree
-              timetables={timetables}
-              library={profiles.profiles.flatMap((profile) => profile.timetables)}
-              locked={profiles.locked}
-              catalog={catalog}
-              online={online}
-              onSetEnabled={profiles.setEnabled}
-              onUpdate={setUpdating}
-              onRename={profiles.renameTimetable}
-              onRemove={profiles.removeTimetable}
-              onEditSubjects={profiles.editSubjects}
-              onAddTimetables={() => setPicking("add")}
-              onHighlight={highlightGroup}
-              flash={flash}
-            />
-          </Suspense>
-        </div>
+              <GroupTree
+                timetables={timetables}
+                library={profiles.profiles.flatMap((profile) => profile.timetables)}
+                locked={profiles.locked}
+                catalog={catalog}
+                online={online}
+                onSetEnabled={profiles.setEnabled}
+                onUpdate={setUpdating}
+                onRename={profiles.renameTimetable}
+                onRemove={profiles.removeTimetable}
+                onEditSubjects={profiles.editSubjects}
+                onAddTimetables={() => setPicking("add")}
+                onHighlight={highlightGroup}
+                flash={flash}
+              />
+            </Suspense>
+          </div>
 
-        {/* On desktop the footer belongs to this column and sits at its
+          {/* On desktop the footer belongs to this column and sits at its
             bottom, so it lines up with the sidebar's end instead of running
             under it. */}
-        <div
-          className={cn("min-h-0 flex-col desktop:flex", tab === "timetable" ? "flex" : "hidden")}
-        >
-          {/* Phones: a dock between grid and tab bar, where the thumb is —
+          <div
+            className={cn("min-h-0 flex-col desktop:flex", tab === "timetable" ? "flex" : "hidden")}
+          >
+            {/* Phones: a dock between grid and tab bar, where the thumb is —
               last in the column. Rows: week nav (an empty row in the general
               view), day, view switch. Desktop: one toolbar row above the grid, switch
               left, week nav right. */}
-          <div className="order-last flex flex-col gap-2 border-t px-6 py-3 desktop:order-none desktop:flex-row desktop:flex-wrap desktop:items-center desktop:justify-between desktop:border-0 desktop:pt-6 desktop:pb-0">
-            {/* Stays in the general view, empty, so the grid keeps its height. */}
-            <div className="flex h-8 items-center desktop:order-last">
-              {view === "week" && (
-                <WeekNav value={weekStart} onChange={setWeekStart} semesterWeek={weekNumber} />
-              )}
+            <div className="order-last flex flex-col gap-2 border-t px-6 py-3 desktop:order-none desktop:flex-row desktop:flex-wrap desktop:items-center desktop:justify-between desktop:border-0 desktop:pt-6 desktop:pb-0">
+              {/* Stays in the general view, empty, so the grid keeps its height. */}
+              <div className="flex h-8 items-center desktop:order-last">
+                {view === "week" && (
+                  <WeekNav value={weekStart} onChange={setWeekStart} semesterWeek={weekNumber} />
+                )}
+              </div>
+              <DayToggle value={day} onChange={setDay} className="md:hidden" />
+              <ViewSwitch value={view} onChange={setView} />
             </div>
-            <DayToggle value={day} onChange={setDay} className="md:hidden" />
-            <ViewSwitch value={view} onChange={setView} />
-          </div>
-          {/* Below `desktop` the grid fills the height the dock leaves and
+            {/* Below `desktop` the grid fills the height the dock leaves and
               scrolls only when that is too short for its minimum rows. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 desktop:pt-4">
-            <TimetableGrid
-              entries={entries}
-              week={week}
-              hasFiles={hasTimetables}
-              highlight={highlight}
-              onJump={jumpToGroup}
-              onInfo={setSubjectInfo}
-              selectedDay={day}
-              onSelectDay={setDay}
-            />
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
+              <TimetableGrid
+                entries={entries}
+                week={week}
+                hasFiles={hasTimetables}
+                highlight={highlight}
+                onJump={jumpToGroup}
+                onInfo={setSubjectInfo}
+                selectedDay={day}
+                onSelectDay={setDay}
+              />
+            </div>
+            <Footer data={dataMenu} />
           </div>
-          <Footer data={dataMenu} />
-        </div>
-      </main>
+        </main>
 
-      <Suspense fallback={null}>
-        <AppDialogs
-          profiles={profiles}
-          catalog={offerCatalog}
-          online={online}
-          picking={picking}
-          onPickingChange={setPicking}
-          updating={updating}
-          onUpdatingChange={setUpdating}
-          importing={importing}
-          onImportingChange={setImporting}
-          linkPayload={linkPayload}
-          onLinkPayloadChange={setLinkPayload}
-        />
-        <SubjectInfoDialog info={subjectInfo} onClose={() => setSubjectInfo(null)} />
-        {/* Transient feedback only (upload, import, copy, download); anything
+        <Suspense fallback={null}>
+          <AppDialogs
+            profiles={profiles}
+            catalog={offerCatalog}
+            online={online}
+            picking={picking}
+            onPickingChange={setPicking}
+            updating={updating}
+            onUpdatingChange={setUpdating}
+            importing={importing}
+            onImportingChange={setImporting}
+            linkPayload={linkPayload}
+            onLinkPayloadChange={setLinkPayload}
+          />
+          <SubjectInfoDialog info={subjectInfo} onClose={() => setSubjectInfo(null)} />
+          {/* Transient feedback only (upload, import, copy, download); anything
             the user has to act on stays on the page itself. `@/lib/toast`
             holds every toast until this is mounted. */}
-        <AppToaster />
-      </Suspense>
+          <AppToaster />
+        </Suspense>
 
-      <TabBar
-        value={tab}
-        onChange={switchTab}
-        settings={
-          // The footer's content, behind the bar's last slot. Until the
-          // deferred chunk arrives a disabled look-alike holds the slot.
-          <Suspense fallback={<SettingsFallback />}>
-            <DataMenu
-              {...dataMenu}
-              trigger={<Button variant="ghost" className={TAB_ITEM} />}
-              settings
-            >
-              <SettingsTriggerContent />
-            </DataMenu>
-          </Suspense>
-        }
-      />
-    </div>
+        <TabBar
+          value={tab}
+          onChange={switchTab}
+          settings={
+            // The footer's content, behind the bar's last slot. Until the
+            // deferred chunk arrives a disabled look-alike holds the slot.
+            <Suspense fallback={<SettingsFallback />}>
+              <DataMenu
+                {...dataMenu}
+                trigger={<Button variant="ghost" className={TAB_ITEM} />}
+                settings
+              >
+                <SettingsTriggerContent />
+              </DataMenu>
+            </Suspense>
+          }
+        />
+      </div>
+    </OverridesContext>
   );
 }
 

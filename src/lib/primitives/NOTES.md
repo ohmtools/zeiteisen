@@ -13,6 +13,17 @@ parameter so tests run without a browser.
   profile; names are the addresses. A name the user types that is taken is
   refused; a name that arrives from a file or a source becomes "Name 2"
   (`uniqueName`), never "{source}: {name}".
+- Names become file names (`.profile`, `.timetable`, `.ics`) and back, so
+  every name is a valid file name on Windows, Linux, Android and iOS (user
+  decision, `name.ts`). Windows/FAT set the rule: no `< > : " / \ | ? *` or
+  control characters, no trailing dot or space, no `CON`/`NUL`/`COM1`…
+  (with any extension), at most 245 UTF-8 bytes (255 minus ".timetable").
+  "Unique" ignores case and Unicode form (`sameName`: NFC, lower case), as
+  those file systems do; typed names are stored NFC (`normalizeName`).
+  `nameProblem` checks (typed names are refused), `cleanName` repairs
+  minimally (names from files, the catalog, links; a valid one stays as is).
+  Loading and backups treat "Plan" / "plan" as a repeated name (user
+  decision): loading keeps the first, a backup is refused.
 - A profile owns full copies of its timetables; nothing is shared or
   referenced between profiles. `Timetable` = name + `Subjects<{ enabled }>` +
   `origin` + `rejected`.
@@ -26,6 +37,10 @@ parameter so tests run without a browser.
 - Optional keys are left out, never `undefined` (`sameSubject` compares the
   serialized form). `repeatSchema` stores `dates` sorted and deduplicated, so
   the same dates in another order hash the same.
+- Every slot (weekly or dated) ends after it starts; the schema refuses
+  anything else (reported on `endTime`). Like the group rule it is a zod
+  `refine`, which `z.toJSONSchema` drops: the AI skill's `validate.py`
+  checks both by hand.
 - Zod mirrors of everything read from outside sit at the bottom of the file
   owning the type, `zod/mini` only (bundle size). `scripts/json-schema.mjs`
   still runs classic `z.toJSONSchema` on them (shared core).

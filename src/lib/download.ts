@@ -1,3 +1,4 @@
+import { cleanName } from "@/lib/primitives/name";
 import { getTimetableFile, type Timetable } from "@/lib/primitives/timetable";
 
 // Client-only download: a Blob URL and a synthetic click, no server anywhere.
@@ -17,9 +18,11 @@ export function downloadText(
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-// Profile names become file names, so anything a file system dislikes goes.
+// Profile and timetable names become file names. Names the app accepts are
+// valid already (`@/lib/filename`) and come through unchanged, so an upload
+// gets the very name back; this only catches names stored before that rule.
 export function safeFilename(name: string): string {
-  return name.replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/^-+|-+$/g, "") || "profile";
+  return cleanName(name, "profile");
 }
 
 // `getTimetableFile` in `<name>.timetable`, the very file the picker and the import

@@ -5,11 +5,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* The two-column shell only works when the sidebar's three sections fit the
-   viewport height without a page scrollbar; below that the phone layout (one
-   column, page scrolls) takes over. Use `desktop:` for shell layout, `lg:`
+/* The two-column shell only works when the sidebar fits the viewport height
+   without a page scrollbar; below that the phone layout (one column, page
+   scrolls) takes over. 600px, not more: an iPad 10 in landscape leaves about
+   700px under the browser's toolbar and tab strip, short laptops about 650px,
+   and both should get the desktop. Use `desktop:` for shell layout, `lg:`
    stays for everything that only cares about width. */
-@custom-variant desktop (@media (width >= 64rem) and (height >= 700px));
+@custom-variant desktop (@media (width >= 64rem) and (height >= 600px));
 
 @theme inline {
   --font-heading: var(--font-sans);

@@ -440,6 +440,13 @@ const slotShape = {
   endTime: timeSchema,
 };
 
+// A slot ends after it starts: a zero or negative length has no block in the
+// grid and no valid calendar event. Reported on `endTime`.
+const endsAfterStart = z.refine<{ startTime: Time; endTime: Time }>(
+  (slot) => minutesOf(slot.endTime) > minutesOf(slot.startTime),
+  { message: "endTime must be after startTime", path: ["endTime"] },
+);
+
 const weeklyRepeatTypes = [
   "A",
   "G",
@@ -466,14 +473,16 @@ export const repeatSchema: z.ZodMiniType<Repeat> = z.discriminatedUnion("type", 
   z.object({
     type: z.literal("I"),
     dates: z
-      .array(z.object({ date: z.iso.date(), ...slotShape }))
+      .array(z.object({ date: z.iso.date(), ...slotShape }).check(endsAfterStart))
       .check(z.minLength(1), z.overwrite(canonicalDates)),
   }),
-  z.object({
-    type: z.enum(weeklyRepeatTypes),
-    day: z.enum(enumValues(Day)),
-    ...slotShape,
-  }),
+  z
+    .object({
+      type: z.enum(weeklyRepeatTypes),
+      day: z.enum(enumValues(Day)),
+      ...slotShape,
+    })
+    .check(endsAfterStart),
 ]);
 
 export const subjectSchema: z.ZodMiniType<Subject> = z.object({

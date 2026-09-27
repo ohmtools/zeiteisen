@@ -1,4 +1,5 @@
 import { timetableNameOf, type Catalog } from "@/lib/primitives/catalog";
+import { cleanTimetableName } from "@/lib/names";
 import { compareNames, uniqueNames } from "@/lib/primitives/name";
 import type { Profile, ProfileName } from "@/lib/primitives/profile";
 import { sourceOf, type SubjectsHash, type SubjectsSource } from "@/lib/primitives/subject";
@@ -84,7 +85,9 @@ export function libraryRows({
   for (const profile of profiles) {
     for (const timetable of profile.timetables) {
       rows.push({
-        key: "p:" + profile.name + "/" + timetable.name,
+        // Unique names alone do not make "profile/timetable" unique: "WS 24/25"
+        // + "BEI3" and "WS 24" + "25/BEI3" would meet. JSON cannot.
+        key: "p:" + JSON.stringify([profile.name, timetable.name]),
         name: timetable.name,
         hash: timetable.subjects.hash(),
         kind: "profile",
@@ -155,7 +158,8 @@ export function blockedRows(rows: LibraryRow[], picked: ReadonlySet<string>): Se
   return blocked;
 }
 
-// The name each picked row lands under, by row key. A profile holds each name
+// The name each picked row lands under, by row key, file-safe (a catalog
+// file or an upload may be named anything its file system allowed). A profile holds each name
 // once: the held timetables keep theirs, then every picked row in list order
 // takes its own name or the next free "Name 2".
 export function finalNames(
@@ -166,7 +170,7 @@ export function finalNames(
   const landing = rows.filter((row) => !row.held && picked.has(row.key));
   const names = uniqueNames(
     held,
-    landing.map((row) => row.name),
+    landing.map((row) => cleanTimetableName(row.name)),
   );
   return new Map(landing.map((row, i) => [row.key, names[i]]));
 }

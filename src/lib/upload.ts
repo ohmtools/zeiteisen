@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import { de, en } from "zod/locales";
 import { getLocale, m } from "@/i18n";
+import { cleanTimetableName } from "@/lib/names";
 import { toast } from "@/lib/toast";
 import {
   degreeInformationSchema,
@@ -83,7 +84,8 @@ export async function readTimetableFiles(files: File[]): Promise<UploadResult> {
 
     const parsed = parseTimetableFile(json, file.name);
     if (!("error" in parsed)) {
-      result.sources.push(parsed.source);
+      // A file saved on Linux may carry a ":" Windows refuses.
+      result.sources.push({ ...parsed.source, name: cleanTimetableName(parsed.source.name) });
     } else if (parsed.error === "content") {
       result.errors.push({
         file: file.name,

@@ -35,7 +35,8 @@ re-implements primitive logic.
   copies of the same content are told apart; catalog rows, uploads and empties
   arrive all enabled. Picking a row blocks every row with the same hash, held
   rows claim first (a profile never holds the same content twice, user
-  decision).
+  decision). A held row's checkbox is checked but muted, not primary (user
+  decision: primary read as clickable).
 - `share.ts` — the link `/s/#v=1&t=<hash>.<bits>&t=…` in the fragment (never
   reaches a server), read and written with `ufo`, validated with zod. `/s/`
   only carries the "shared" link preview card (`src/NOTES.md`);
@@ -46,6 +47,14 @@ re-implements primitive logic.
   `MAX_SHARE_LENGTH` 1500; four real-size timetables stay far below.
 - `download.ts` — Blob URL downloads. The URL is revoked after 10s: revoking
   right after `click()` cancels the download in Chromium.
+- `names.ts` — glue over the name rule in `primitives/name.ts` (every name a
+  valid file name everywhere, unique regardless of case): `nameProblemText` words a typed name's problem (all
+  four name inputs: profile rename/duplicate, new profile, link import,
+  timetable rename refuse it); `cleanTimetableName` / `withCleanNames` repair
+  names that arrive untyped (uploads, profile files, catalog files, a link's
+  copies), applied in `upload.ts`, `finalNames` and again in `useProfiles`
+  as the guard. Stored names with forbidden characters stay (no migrations);
+  `safeFilename` cleans them on download.
 - `ics.ts` — ONE `.ics` per profile (user decision), calendar name = profile
   name, `SUMMARY` = "M1 (SU) · BEI3". Expanded single VEVENTs, never RRULE
   (`G1`/`U2` have no RRULE form); Europe/Berlin wall clock written as UTC
@@ -62,12 +71,19 @@ re-implements primitive logic.
   adding or renaming one may shift the others. Hue never changes, all red
   (user decision); only lightness + chroma step down so `--primary-foreground`
   keeps contrast. Colour is never the only cue.
-- `overrides.ts` — module-level tables the catalog (or the user's own file
-  of that kind, instead of it) fills (locations, degree information): lookups sit
-  deep in render helpers. Building links and full names live only in the
-  catalog or the user's own file, never in the app.
+- `overrides.ts` — the `Overrides` type: the lookup tables (locations, degree
+  information) `useCatalog` derives from the catalog and the user's own files.
+  Every lookup (`subjectName`, `subjectInfoOf`, `buildingLinks`, the editor's
+  code suggestions) takes its table as an ARGUMENT; components read it from
+  `OverridesContext`. Never module state: the React Compiler caches a lookup
+  by its arguments, so a table it cannot see left old names and links on
+  screen. Building links and full names live only in the catalog or the
+  user's own file, never in the app.
+- `uploader.ts` — `loadUpload()`: the lazy `@/lib/upload` import of the Data
+  menu uploads, `null` plus a toast when the chunk is gone after a deploy.
 - `backup.ts` — footer "Data" menu backup: `zeiteisen-<date>.backup`; a restore
-  writes storage and reloads the page, because every hook read its state on
+  writes storage (a refused write puts every key back as it was, so storage
+  and the running page agree) and reloads the page, because every hook read its state on
   the first render. A backup reading another catalog URL (or `ignore`)
   empties the catalog cache too, as the Data menu's switch does.
 - `persist.ts` — `navigator.storage.persist()` once per page load, after the

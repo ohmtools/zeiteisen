@@ -1,4 +1,4 @@
-import { locationOverride } from "@/lib/overrides";
+import type { Overrides } from "@/lib/overrides";
 
 // The university spells a room as "<building>.<room>" ("WE.105"). The building
 // shortcut maps to a street address on Google Maps and to the page of that site
@@ -14,10 +14,13 @@ export type BuildingLinks = {
 };
 
 // "WE.105" -> the links of building WE; "Hörsaal B" or "online" -> null.
-export function buildingLinks(location: string): BuildingLinks | null {
+export function buildingLinks(
+  location: string,
+  locations: Overrides["locations"],
+): BuildingLinks | null {
   const match = /^\s*([A-Za-z]{2})\./.exec(location);
   if (!match) return null;
-  const entry = locationOverride(match[1]);
+  const entry = locations[match[1].toUpperCase()];
   if (!entry) return null;
   return { name: entry.name, mapsUrl: entry.mapsUrl, siteUrl: entry.siteUrl };
 }

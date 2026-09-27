@@ -1,5 +1,5 @@
 import type { SubjectInformation } from "@/lib/primitives/meta";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { cn } from "cn";
 import { localized, m } from "@/i18n";
 import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
@@ -65,11 +65,14 @@ export function TimetableGrid({
   onSelectDay,
 }: Props) {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  // The subject under the mouse: its other blocks get a faint ring.
+  const [hovered, setHovered] = useState<string | null>(null);
 
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i);
   const { grid, list } = byDay(entries);
   // A class toggle per block, nothing moves.
   const dimmed = (entry: Entry) => highlight !== null && !isHighlighted(entry, highlight);
+  const related = (entry: Entry) => hovered !== null && entry.subject.name === hovered;
   const otherEvents = week?.events[Day.other] ?? [];
   const showOther = selectedDay === Day.other;
   const unclear = (entry: Entry) => week !== null && isUnclearRepeat(entry.subject.repeat);
@@ -78,12 +81,10 @@ export function TimetableGrid({
   // moves. The swipe covers grid and list, so it moves between them too.
   return (
     <div
-      className={cn(
-        "flex flex-1 touch-pan-y flex-col gap-4 text-sm md:flex-row desktop:flex-none",
-        // The all-day row's height (divider included) as space on top, so the
-        // hours do not move when switching between general and week view.
-        !week && "mt-12 md:mt-16",
-      )}
+      // No placeholder for the all-day row in the general view (user
+      // decision): the grid starts right below the toolbar, the hours move
+      // down when the week view adds that row.
+      className="flex flex-1 touch-pan-y flex-col gap-4 text-sm md:flex-row desktop:flex-none"
       onPointerDown={(event) => {
         if (event.pointerType === "mouse") return;
         swipeStart.current = { x: event.clientX, y: event.clientY };
@@ -140,14 +141,15 @@ export function TimetableGrid({
         {/* Hour rows draw the grid lines; the subjects sit in an overlay of
               the same columns so they can span and share a slot freely. */}
         {/* Below `desktop` the hours share the height left over (one
-              viewport, no page scroll), down to a floor; desktop scrolls. */}
+              viewport, no page scroll), down to a 24px floor (the hour label
+              still fits) so common phones need no scrolling; desktop scrolls. */}
         <div className="relative flex flex-1 flex-col desktop:flex-none">
           {hours.map((hour, index) => (
             <div
               key={hour}
               className={cn(
                 COLUMNS,
-                "min-h-9 flex-1 desktop:h-14 desktop:flex-none",
+                "min-h-6 flex-1 desktop:h-14 desktop:flex-none",
                 index < hours.length - 1 && "border-b",
               )}
             >
@@ -175,6 +177,8 @@ export function TimetableGrid({
                     lane={{ lane, lanes }}
                     unclear={unclear(entry)}
                     dimmed={dimmed(entry)}
+                    related={related(entry)}
+                    onHover={setHovered}
                     onInfo={onInfo}
                     onJump={() =>
                       onJump?.({ timetableName: entry.timetableName, index: entry.index })
@@ -223,6 +227,8 @@ export function TimetableGrid({
                 lane={null}
                 unclear={unclear(entry)}
                 dimmed={dimmed(entry)}
+                related={related(entry)}
+                onHover={setHovered}
                 onInfo={onInfo}
                 onJump={() => onJump?.({ timetableName: entry.timetableName, index: entry.index })}
               />

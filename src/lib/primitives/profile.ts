@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 import type { Catalog } from "./catalog";
-import { nameFromFile, uniqueName, uniqueNames } from "./name";
+import { nameFromFile, normalizeName, sameName, uniqueName, uniqueNames } from "./name";
 import { findSubjects } from "./subject";
 import {
   getSharedTimetable,
@@ -42,10 +42,11 @@ export function profileByName(
   return profiles.find((profile) => profile.name === name);
 }
 
-// Whether another profile already goes by `name`; `except` is the profile
-// being renamed, which may keep its own name.
+// Whether another profile already goes by `name` in any case (`sameName`);
+// `except` is the profile being renamed, which may keep its own name or change
+// only its case.
 export function nameTaken(profiles: readonly Profile[], name: string, except?: string): boolean {
-  return profiles.some((profile) => profile.name === name && profile.name !== except);
+  return profiles.some((profile) => sameName(profile.name, name) && profile.name !== except);
 }
 
 // The timetable a profile holds under that name, if any.
@@ -80,11 +81,13 @@ export function removeTimetable(profile: Profile, name: TimetableName): Profile 
 }
 
 // Origin and refusals stay: a renamed catalog timetable still offers its
-// updates. Unchanged when `to` is empty, the same or taken.
+// updates. Unchanged when `to` is empty, the same or taken by another
+// timetable in any case (`sameName`); a change of case alone is a rename.
 export function renameTimetable(profile: Profile, from: TimetableName, to: string): Profile {
-  const name = to.trim();
+  const name = normalizeName(to);
   const held = timetableByName(profile, from);
-  if (!held || !name || name === from || timetableByName(profile, name)) return profile;
+  const taken = profile.timetables.some((other) => other !== held && sameName(other.name, name));
+  if (!held || !name || name === from || taken) return profile;
   return replaceTimetable(profile, from, { ...held, name });
 }
 

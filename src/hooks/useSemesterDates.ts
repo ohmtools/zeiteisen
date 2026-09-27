@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
 import { requestPersistence } from "@/lib/persist";
 import { toast } from "@/lib/toast";
+import { loadUpload } from "@/lib/uploader";
 import { m } from "@/i18n";
 import { Catalog, parseDates, type CatalogEntry, type FetchJson } from "@/lib/primitives/catalog";
 import type { SemesterDates } from "@/lib/primitives/meta";
@@ -17,7 +18,7 @@ type Sources = {
 
 // Owns `tt.dates.v1`. The app holds one dates file at a time: the catalog
 // installs its own and keeps it current, unless the user uploaded theirs —
-// `useCatalogDates` hands control back.
+// `switchToCatalogDates` hands control back.
 export function useSemesterDates(sources: Sources) {
   const [dates, setDates] = useState<SemesterDates | null>(loadDates);
   // Dates installed or uploaded in another tab.
@@ -44,7 +45,9 @@ export function useSemesterDates(sources: Sources) {
     // details. `@/lib/upload` (and zod's locales) load on the first upload
     // only.
     upload: async (file: File) => {
-      const { readDatesFile, toastUploadError } = await import("@/lib/upload");
+      const upload = await loadUpload();
+      if (!upload) return;
+      const { readDatesFile, toastUploadError } = upload;
       const result = await readDatesFile(file);
       if ("error" in result) return toastUploadError(result.error);
       if (!apply(result.data, true)) return;
@@ -73,7 +76,9 @@ export function useSemesterDates(sources: Sources) {
     // The Data menu's way back: take the catalog's dates again and let it
     // keep them current. It fetches on its own, because it may run long after
     // the last catalog refresh.
-    useCatalogDates: async (fetchJson: FetchJson) => {
+    // Not named `use…`: it is no hook, and the React Compiler would refuse
+    // the component calling it from a callback.
+    switchToCatalogDates: async (fetchJson: FetchJson) => {
       const entry = (await Catalog.load(fetchJson)).dates;
       const next = entry ? parseDates(await fetchJson(entry.path)) : null;
       if (!entry || !next) {

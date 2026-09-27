@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
 import { requestPersistence } from "@/lib/persist";
 import { toast } from "@/lib/toast";
+import { loadUpload } from "@/lib/uploader";
 import { m } from "@/i18n";
 import type { Locations } from "@/lib/primitives/meta";
 import {
@@ -41,7 +42,9 @@ export function useOwnData() {
 
     // `@/lib/upload` (and zod's locales) load on the first upload only.
     uploadLocations: async (file: File) => {
-      const { readLocationsFile, toastUploadError } = await import("@/lib/upload");
+      const upload = await loadUpload();
+      if (!upload) return;
+      const { readLocationsFile, toastUploadError } = upload;
       const result = await readLocationsFile(file);
       if ("error" in result) return toastUploadError(result.error);
       setLocations(result.data);
@@ -52,7 +55,9 @@ export function useOwnData() {
     // Several files at once; each is added under its file name, and one with a
     // name already held replaces it and moves last, so the newest upload wins.
     uploadDegreeInformation: async (files: File[]) => {
-      const { readDegreeInformationFile, toastUploadError } = await import("@/lib/upload");
+      const upload = await loadUpload();
+      if (!upload) return;
+      const { readDegreeInformationFile, toastUploadError } = upload;
       const read: OwnDegreeInformationFile[] = [];
       for (const file of files) {
         const result = await readDegreeInformationFile(file);
@@ -70,7 +75,8 @@ export function useOwnData() {
       });
     },
 
-    useCatalogLocations: () => {
+    // Not named `use…`: no hook (see `switchToCatalogDates`).
+    switchToCatalogLocations: () => {
       setLocations(null);
       if (saved(saveOwnLocations(null))) toast.success(m.toast_catalog_locations_again());
     },

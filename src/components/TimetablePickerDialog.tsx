@@ -17,12 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SkillDialog } from "@/components/SkillDialog";
 import type { Catalog } from "@/lib/primitives/catalog";
-import { uniqueName } from "@/lib/primitives/name";
+import { uniqueName, normalizeName } from "@/lib/primitives/name";
 import { nameTaken, type Profile } from "@/lib/primitives/profile";
 import { Subjects } from "@/lib/primitives/subject";
 import type { TimetableSource } from "@/lib/primitives/timetable";
 import { blockedRows, finalNames, libraryRows, loadRow, type LibraryRow } from "@/lib/library";
 import { readTimetableFiles, type UploadError } from "@/lib/upload";
+import { nameProblemText } from "@/lib/names";
 
 type Props = {
   open: boolean;
@@ -96,8 +97,10 @@ export function TimetablePickerDialog({
       profiles.map((profile) => profile.name),
       m.profile_default(),
     );
-  const nameClash = mode === "new-profile" && nameTaken(profiles, nameValue.trim());
-  const nameInvalid = mode === "new-profile" && (!nameValue.trim() || nameClash);
+  const nameClash = mode === "new-profile" && nameTaken(profiles, normalizeName(nameValue));
+  const nameProblem = mode === "new-profile" ? nameProblemText(normalizeName(nameValue)) : null;
+  const nameInvalid =
+    mode === "new-profile" && (!normalizeName(nameValue) || nameClash || nameProblem !== null);
 
   const reset = () => {
     setName(null);
@@ -160,7 +163,7 @@ export function TimetablePickerDialog({
     }
     setBusy(false);
     if (sources.length === 0 && mode === "add") return;
-    onConfirm(nameValue.trim(), sources);
+    onConfirm(normalizeName(nameValue), sources);
     close();
   };
 
@@ -195,10 +198,11 @@ export function TimetablePickerDialog({
                 id="picker-name"
                 value={nameValue}
                 autoFocus
-                aria-invalid={nameClash || undefined}
+                aria-invalid={nameClash || nameProblem !== null || undefined}
                 onChange={(event) => setName(event.target.value)}
               />
               {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+              {nameProblem && <p className="text-sm text-destructive">{nameProblem}</p>}
             </div>
           )}
 
@@ -349,6 +353,12 @@ function PickerRow({
         id={id}
         checked={checked && !blocked}
         disabled={row.held || blocked}
+        // Already in the profile: checked but out of reach. Primary would
+        // still read as clickable, so the check is muted instead.
+        className={cn(
+          row.held &&
+            "data-checked:border-input data-checked:bg-muted data-checked:text-muted-foreground dark:data-checked:bg-muted",
+        )}
         onCheckedChange={(next) => onToggle(next === true)}
       />
       <div className="flex min-w-0 flex-1 flex-col">

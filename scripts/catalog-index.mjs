@@ -29,6 +29,9 @@ const { shortHash, subjectsFileSchema, subjectsHash } = await jiti.import(
   "../src/lib/primitives/subject.ts",
 );
 const { degreeInformationSchema } = await jiti.import("../src/lib/primitives/meta.ts");
+const { cleanName, nameFromFile, nameProblem, sameName } = await jiti.import(
+  "../src/lib/primitives/name.ts",
+);
 
 const usage = "usage: npm run catalog -- <catalog-dir> [--stdout]\n";
 
@@ -94,8 +97,34 @@ function timetableHash(json) {
 
 const files = [];
 
+// Why each `nameProblem` code keeps a name from being a file on every system.
+const problems = {
+  empty: "is empty",
+  chars: 'contains one of < > : " / \\ | ? * or a control character',
+  end: "ends with a dot or space",
+  reserved: "is a reserved name on Windows",
+  long: "is too long",
+};
+
+// A path the catalog serves must check out and download on Windows, Android
+// and iOS too, and a timetable's file name becomes its name in the app, which
+// then shows a cleaned one: a warning, not a refusal.
+function checkPath(relative, kind) {
+  for (const segment of relative.split("/")) {
+    const problem = nameProblem(segment);
+    if (problem) process.stderr.write(`warning: ${relative}: "${segment}" ${problems[problem]}\n`);
+  }
+  if (kind !== "timetables") return;
+  const name = nameFromFile(relative);
+  const shown = cleanName(name, "Timetable");
+  if (shown !== name) {
+    process.stderr.write(`warning: ${relative}: the app names this timetable "${shown}"\n`);
+  }
+}
+
 // The parsed JSON of the file added, `undefined` when it was skipped.
 async function add(relative, kind, hashOf = shortHash) {
+  checkPath(relative, kind);
   try {
     const file = await read(relative);
     files.push({ path: relative, kind, hash: hashOf(file.json), modified: file.modified });
@@ -149,6 +178,15 @@ warnRepeatedCodes();
 for (const relative of await filesIn("timetables", [".json", ".timetable"])) {
   await add(relative, "timetables", timetableHash);
 }
+
+// Windows, macOS and iOS see paths differing only in case (or Unicode form)
+// as one file: one of them would be lost there.
+files.forEach((file, i) => {
+  const first = files.findIndex((other) => sameName(other.path, file.path));
+  if (first !== i) {
+    process.stderr.write(`warning: ${file.path} and ${files[first].path} differ only in case\n`);
+  }
+});
 
 const index = { version: 1, generated: new Date().toISOString(), files };
 const text = JSON.stringify(index, null, 2) + "\n";

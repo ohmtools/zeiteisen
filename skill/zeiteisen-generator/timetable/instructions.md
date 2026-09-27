@@ -40,7 +40,8 @@ source text, say what you would produce, and offer the options (SKILL.md).
 
 ## Reference layout (the format seen so far)
 
-- One page, header like `Stand: 03.07.2026 07:46 Winter26/27 Fakultät <faculty> ABC3`.
+- One page, header like
+  `Stand: 03.07.2026 07:46 Winter26/27 Fakultät <faculty> ABC3`.
 - Columns `Montag` | `Dienstag` | `Mittwoch` | `Donnerstag` | `Freitag` |
   `Block/n.V./Samstag`, as grey boxes above the grid. All six are present;
   some may be empty. Parse every column, including `Block/n.V./Samstag`.
@@ -67,27 +68,26 @@ the boxes you see.
 
 ## Workflow
 
-0. Try the bundled draft parser first (if you can't run Python, skip this
-   step; `no-shell.md`, section 2, in the skill's root folder says how to do
-   steps 1-4 without rendering or measuring):
+0. Try the bundled draft parser first (if you can't run Python, skip this step;
+   `no-shell.md`, section 2, in the skill's root folder says how to do steps 1-4
+   without rendering or measuring):
 
-   ```
+   ```text
    python3 <skill-dir>/timetable/parse.py <pdf> --outdir <drafts-dir>
    ```
 
-   It detects outlined boxes of any colour, finds the time rows and day
-   columns from their labels (German or English), maps box edges to times,
-   parses cells in the reference syntax, and prints a review table, the
-   rendered page (`<code>_page.png`) and a list of ISSUES. Exit code 0 = no
-   issues, 2 = something needs a decision (lines marked `INFO` are already
-   decided but worth a glance), 1 = the layout was not recognised.
-   It was built on the reference layout. On a different layout it may fail
-   (exit 1) or, worse, succeed with wrong assumptions, so always compare the
-   review table with the image. If the layout differs, use its output only
-   where it is clearly right and do the rest by hand (steps 1-4). Allowed kinds and repeat types
-   are read from `schema.json`. Options
-   `--prefixes`, `--kinds` and `--room-regex` adapt it to other cell
-   conventions once you know them (see `--help`).
+   It detects outlined boxes of any colour, finds the time rows and day columns
+   from their labels (German or English), maps box edges to times, parses cells
+   in the reference syntax, and prints a review table, the rendered page
+   (`<code>_page.png`) and a list of ISSUES. Exit code 0 = no issues, 2 =
+   something needs a decision (lines marked `INFO` are already decided but worth
+   a glance), 1 = the layout was not recognised. It was built on the reference
+   layout. On a different layout it may fail (exit 1) or, worse, succeed with
+   wrong assumptions, so always compare the review table with the image. If the
+   layout differs, use its output only where it is clearly right and do the rest
+   by hand (steps 1-4). Allowed kinds and repeat types are read from
+   `schema.json`. Options `--prefixes`, `--kinds` and `--room-regex` adapt it to
+   other cell conventions once you know them (see `--help`).
 1. Render the PDF at high resolution (e.g. `pdftoppm -r 300 -png`).
 2. Crop each day column (morning and afternoon separately) and inspect it.
    Rotate crops of boxes with rotated text (e.g. `-90`) to read them. Zoom
@@ -106,7 +106,7 @@ The file's top level is a JSON array with one object per visual box. There is
 no wrapper object and no timetable name or semester inside the file. Each
 entry looks like this:
 
-```
+```text
 {
   "repeat": {
     "type": "A",
@@ -145,7 +145,9 @@ intent (see "Layouts differ" above).
    These don't go into the file, but you need them for the file name
    (`timetable_<code>_<half><year>.timetable`) and for the years in rule 9.
    - `<code>` = the timetable code printed in the header (in the reference
-     layout at the right end, after `Fakultät …`), copied exactly as shown.
+     layout at the right end, after `Fakultät …`), copied exactly as shown,
+     except characters a file name cannot hold (SKILL.md, "File names"),
+     which become `-`.
      Read it from the rendered image: a chat text preview can omit it. If no
      code is printed or it is unreadable, ask the user; do not derive it
      from the uploaded file name.
@@ -170,14 +172,13 @@ intent (see "Layouts differ" above).
    - **Row spans:** a box whose edges sit on row boundaries runs from the
      start of its top row to the end of its bottom row (e.g. rows
      `8:00-9:30` + `9:45-11:15` -> `8:00` to `11:15`).
-   - **Boxes do not have to align with row boundaries.** Interpolate
-     linearly within the row:
+   - **Boxes do not have to align with row boundaries.** Interpolate linearly
+     within the row:
      `time = rowStart + (edgeY - rowTopY) / (rowBottomY - rowTopY) * rowDuration`,
-     rounded to the nearest 15 minutes. Example: a bottom edge 3/4 of the
-     way down a `13:00-14:00` row -> `13:45`. Use the time-label boxes as
-     the reference for each row's top and bottom, measured in the same
-     image. An edge in a gap between rows (a break) snaps to the nearer row
-     boundary.
+     rounded to the nearest 15 minutes. Example: a bottom edge 3/4 of the way
+     down a `13:00-14:00` row -> `13:45`. Use the time-label boxes as the
+     reference for each row's top and bottom, measured in the same image. An
+     edge in a gap between rows (a break) snaps to the nearer row boundary.
    - Sanity check: in the reference layout durations are typically 90 or
      195 minutes. If a duration is unusual, measure again, but keep the
      measured times if they hold up.

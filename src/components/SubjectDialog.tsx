@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { use, useId, useState } from "react";
 import { parseISO } from "date-fns";
 import { AlertTriangle, CalendarPlus, CalendarRange, Trash2 } from "lucide-react";
 import { cn } from "cn";
@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LazyCalendar } from "@/components/LazyCalendar";
+import { OverridesContext } from "@/components/OverridesContext";
 import { SuggestInput, type Suggestion } from "@/components/SuggestInput";
 import {
   isDuplicate,
@@ -122,7 +123,8 @@ function SubjectEditor({
     subject !== null && isDuplicate(timetable.subjects, subject, index ?? undefined);
   const unchanged = subject !== null && original !== null && sameSubject(subject, original);
   const problems = new Set(tried ? result.problems : []);
-  const suggestions = suggestionsFor(library, draft);
+  const { degreeInformation } = use(OverridesContext);
+  const suggestions = suggestionsFor(library, draft, Object.keys(degreeInformation));
 
   const change = (patch: Partial<SubjectDraft>) =>
     setDraft((previous) => ({ ...previous, ...patch }));
@@ -163,7 +165,7 @@ function SubjectEditor({
             value={draft.name}
             onValueChange={(name) => change({ name })}
             suggestions={suggestions.names.map((code) => {
-              const full = subjectName(code);
+              const full = subjectName(code, degreeInformation);
               return { value: code, hint: full === code ? undefined : full };
             })}
             aria-invalid={problems.has("name") || undefined}

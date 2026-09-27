@@ -41,3 +41,18 @@ test("isDuplicate finds the same subject elsewhere, never the one being edited",
   expect(isDuplicate(subjects, subject("M2"))).toBe(false);
   expect(sameSubject(subject("M1"), subject("M1", { note: "x" }))).toBe(false);
 });
+
+test("a slot must end after it starts, weekly and dated alike", () => {
+  const weekly = subject("A");
+  const backwards = { ...weekly.repeat, endTime: { hour: 8, minute: 0 } };
+  expect(subjectSchema.safeParse(weekly).success).toBe(true);
+  const refused = subjectSchema.safeParse({ ...weekly, repeat: backwards });
+  expect(refused.success).toBe(false);
+  expect(refused.error?.issues[0].path).toEqual(["repeat", "endTime"]);
+
+  const once = dated("2026-10-05");
+  if (once.type !== "I") throw new Error("dated fixture");
+  const [slot] = once.dates;
+  const late = { ...once, dates: [{ ...slot, startTime: { hour: 10, minute: 0 } }] };
+  expect(subjectSchema.safeParse({ ...weekly, repeat: late }).success).toBe(false);
+});

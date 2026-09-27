@@ -12,7 +12,6 @@ import {
   type Time,
 } from "@/lib/primitives/subject";
 import type { Timetable } from "@/lib/primitives/timetable";
-import { degreeInformationCodes } from "@/lib/overrides";
 import { timeLabel } from "@/lib/subjects";
 
 // The subject editor's form: everything as the inputs hold it (times "HH:MM",
@@ -231,6 +230,8 @@ const SLOT_LIMIT = 8;
 export function suggestionsFor(
   timetables: readonly Timetable[],
   current: { name: string; kinds: readonly Kind[] },
+  // Every subject code the degree information spells out.
+  codes: readonly string[] = [],
 ): Suggestions {
   const names = new Map<string, number>();
   const groups = new Map<string, number>();
@@ -264,7 +265,7 @@ export function suggestionsFor(
       }
     }
   }
-  for (const code of degreeInformationCodes()) if (!names.has(code)) names.set(code, 0);
+  for (const code of codes) if (!names.has(code)) names.set(code, 0);
 
   return {
     names: byUse(names),
