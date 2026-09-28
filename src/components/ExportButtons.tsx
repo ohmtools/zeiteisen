@@ -13,6 +13,8 @@ import { lectureRange, type DateRange } from "@/lib/primitives/occurrence";
 import { timetablesOutsideCatalog, type Profile } from "@/lib/primitives/profile";
 import { downloadText, safeFilename } from "@/lib/download";
 import { profileFileText } from "@/lib/share";
+import { subjectLabel } from "@/lib/subjects";
+import { limit } from "@/lib/upload";
 
 // `ics` and the date picker are only needed once the user exports, and the
 // dialog only when no dates file fixes the range. Both stay out of the first
@@ -38,20 +40,34 @@ function downloadProfile(profile: Profile) {
 }
 
 // One .ics for the whole profile, expanded to single VEVENTs. The enabled
-// subjects decide what goes in.
-async function downloadIcs(profile: Profile, dates: SemesterDates | null, range: DateRange) {
-  const { icsFile } = await import("@/lib/ics");
-  const { file, error } = icsFile(profile.timetables, dates, range, profile.name);
+// subjects decide what goes in. `lecture`: the range is the lecture period,
+// stretched to the listed dates outside it (`lectureExportRange`); a range the
+// user picked is taken as it is. Classes no date can be given are named.
+async function downloadIcs(
+  profile: Profile,
+  dates: SemesterDates | null,
+  range: DateRange,
+  lecture: boolean,
+) {
+  const { icsFile, lectureExportRange, undatedClasses } = await import("@/lib/ics");
+  const span = lecture ? lectureExportRange(profile.timetables, range) : range;
+  const { file, error } = icsFile(profile.timetables, dates, span, profile.name);
   if (error !== null) {
     toast.error(m.toast_ics_failed());
     return;
   }
-  if (!file) {
+  if (file) {
+    downloadText(file.filename, file.text, "text/calendar");
+    toast.success(m.toast_ics_saved({ count: file.count }));
+  } else {
     toast.error(m.toast_ics_empty());
-    return;
   }
-  downloadText(file.filename, file.text, "text/calendar");
-  toast.success(m.toast_ics_saved({ count: file.count }));
+  const undated = [...new Set(undatedClasses(profile.timetables).map(subjectLabel))];
+  if (undated.length > 0) {
+    toast.warning(m.toast_ics_undated({ count: undated.length }), {
+      description: m.toast_ics_undated_hint({ classes: limit(undated).join(", ") }),
+    });
+  }
 }
 
 // Everything that takes the profile off this device: calendar, share link and
@@ -74,16 +90,18 @@ export function ExportButtons({ dates, profile, share, catalog }: Props) {
 
   // The generator arrives over the network on the first export of a fresh
   // install; a failed chunk load is reported like a failed export.
-  const runExport = (range: DateRange) => {
+  const runExport = (range: DateRange, lecture = false) => {
     if (!profile) return;
-    return downloadIcs(profile, dates, range).catch(() => toast.error(m.toast_ics_failed()));
+    return downloadIcs(profile, dates, range, lecture).catch(() =>
+      toast.error(m.toast_ics_failed()),
+    );
   };
 
   // With dates the lecture period is the range and the download starts right
   // away; without, the dialog asks.
   const startExport = async () => {
     const range = lectureRange(dates);
-    if (range) await runExport(range);
+    if (range) await runExport(range, true);
     else {
       setExportLoaded(true);
       setExporting(true);

@@ -12,7 +12,8 @@ parameter so tests run without a browser.
 - Profile names are unique on the device, timetable names unique within one
   profile; names are the addresses. A name the user types that is taken is
   refused; a name that arrives from a file or a source becomes "Name 2"
-  (`uniqueName`), never "{source}: {name}".
+  (`uniqueName`, which cuts a long name's end so the number still fits the
+  byte limit), never "{source}: {name}".
 - Names become file names (`.profile`, `.timetable`, `.ics`) and back, so
   every name is a valid file name on Windows, Linux, Android and iOS (user
   decision, `name.ts`). Windows/FAT set the rule: no `< > : " / \ | ? *` or
@@ -38,9 +39,11 @@ parameter so tests run without a browser.
   serialized form). `repeatSchema` stores `dates` sorted and deduplicated, so
   the same dates in another order hash the same.
 - Every slot (weekly or dated) ends after it starts; the schema refuses
-  anything else (reported on `endTime`). Like the group rule it is a zod
-  `refine`, which `z.toJSONSchema` drops: the AI skill's `validate.py`
-  checks both by hand.
+  anything else (reported on `endTime`). A dates file's lecture period ends
+  on or after its start (reported on `lectureEnd`): inverted, the week view
+  would hide every weekly class while the export read it as no dates. Like
+  the group rule these are zod `refine`s, which `z.toJSONSchema` drops: the
+  AI skill's `validate.py` checks them by hand.
 - Zod mirrors of everything read from outside sit at the bottom of the file
   owning the type, `zod/mini` only (bundle size). `scripts/json-schema.mjs`
   still runs classic `z.toJSONSchema` on them (shared core).
@@ -134,8 +137,11 @@ app.
 
 A timetable entry's `hash` in `index.json` MUST be `Subjects.hash()` of its
 content (`scripts/catalog-index.mjs` computes it with this very code), so a
-timetable is matched without a download; loading re-checks the hash (stale
-index). Origin paths are relative to `timetables/`. `degrees/` is flat
+timetable is matched without a download; `Catalog.subjects` re-checks the
+hash on every load (a pick, a link, an accepted update), so a stale index
+hands out nothing rather than other content. `httpFetcher` gives each request
+`FETCH_TIMEOUT_MS` (15 s, body included), then reads it as missing: a stalled
+connection must not hold the one running refresh or a dialog's download. Origin paths are relative to `timetables/`. `degrees/` is flat
 (user decision): `*.degree` right in it, the index generator refuses a
 subdirectory; an entry in one or without `.degree` is ignored
 (`degreeProgramOf` = `null`). `index.json` stays

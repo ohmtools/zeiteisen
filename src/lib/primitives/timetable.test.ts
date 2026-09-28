@@ -60,6 +60,16 @@ test("update gives null when the download fails", async () => {
   expect(await update(timetable("BEI3", [a], { origin }), failing)).toBeNull();
 });
 
+test("update gives null when the file is not the version the index lists", async () => {
+  const { catalog } = fakeCatalog(
+    { "timetables/BEI3.json": [a, c] },
+    { "timetables/BEI3.json": subjectsHash([a, b, c]) },
+  );
+  const held = timetable("BEI3", [a], { origin });
+  expect(timetableHasUpdate(held, catalog)).toBe(true);
+  expect(await update(held, catalog)).toBeNull();
+});
+
 test("findTimetable prefers a profile's copy, else names it after the catalog file", async () => {
   const hash = subjectsHash([a, b]);
   const { catalog, fetched } = fakeCatalog({ "timetables/Cat.json": [b, a] });

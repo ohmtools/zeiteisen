@@ -3,6 +3,7 @@ import { useStorageSync } from "@/hooks/useStorageSync";
 import { requestPersistence } from "@/lib/persist";
 import { toast } from "@/lib/toast";
 import { loadUpload } from "@/lib/uploader";
+import { withOwnDegrees } from "@/lib/ownDegrees";
 import { m } from "@/i18n";
 import { DEGREE_EXTENSION } from "@/lib/primitives/catalog";
 import type { Locations } from "@/lib/primitives/meta";
@@ -68,12 +69,11 @@ export function useOwnData() {
       }
       return read;
     },
-    // Each under its name; one with a name already held replaces it and
-    // moves last.
+    // Each under its name; one with a name already held, in any case,
+    // replaces it and moves last.
     addDegrees: (files: readonly OwnDegreeFile[]) => {
       if (files.length === 0) return;
-      const names = new Set(files.map((file) => file.name));
-      const next = [...loadOwnDegrees().filter((file) => !names.has(file.name)), ...files];
+      const next = withOwnDegrees(loadOwnDegrees(), files);
       setDegrees(next);
       if (!saved(saveOwnDegrees(next))) return;
       requestPersistence();

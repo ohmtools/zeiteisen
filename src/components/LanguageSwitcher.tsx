@@ -13,6 +13,9 @@ export function LanguageSwitcher() {
           variant={locale === current ? "secondary" : "ghost"}
           size="xs"
           aria-pressed={locale === current}
+          // "EN" reads as letters: say the language, in itself.
+          lang={locale}
+          aria-label={new Intl.DisplayNames([locale], { type: "language" }).of(locale)}
           onClick={() => void setLocale(locale)}
         >
           {locale.toUpperCase()}

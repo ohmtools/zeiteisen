@@ -38,8 +38,9 @@ type Props = {
   // The profile the picks go to; undefined while a new one is being named.
   target?: Profile;
   // The profile name (new-profile mode) and the timetables, under their final
-  // names.
-  onConfirm: (name: string, sources: TimetableSource[]) => void;
+  // names. `false` when they were refused (the name was taken or the profile
+  // locked meanwhile, in another tab): the dialog stays open and says why.
+  onConfirm: (name: string, sources: TimetableSource[]) => boolean;
 };
 
 // One dialog for both roads into a profile: creating one, and extending one.
@@ -163,8 +164,7 @@ export function TimetablePickerDialog({
     }
     setBusy(false);
     if (sources.length === 0 && mode === "add") return;
-    onConfirm(normalizeName(nameValue), sources);
-    close();
+    if (onConfirm(normalizeName(nameValue), sources)) close();
   };
 
   // Every way out forgets the dialog's state, so the next opening starts

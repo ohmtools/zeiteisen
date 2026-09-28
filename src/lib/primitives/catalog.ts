@@ -82,16 +82,25 @@ export const catalogIndexSchema: z.ZodMiniType<CatalogIndex> = z.object({
 // Reads one catalog file by its path, `undefined` when it is not there.
 export type FetchJson = (path: string) => Promise<unknown>;
 
+// How long one catalog request may take. A stalled connection would otherwise
+// hold its caller until the browser gives up, minutes later: the one running
+// refresh (no other starts meanwhile) and a dialog waiting on a download.
+export const FETCH_TIMEOUT_MS = 15_000;
+
 // A `FetchJson` over HTTP. `baseUrl` is resolved against the page, so the
-// default finds a `catalog/` directory next to `index.html`.
-export function httpFetcher(baseUrl = "catalog/"): FetchJson {
+// default finds a `catalog/` directory next to `index.html`. A request past
+// `timeoutMs` (body included) reads as missing.
+export function httpFetcher(baseUrl = "catalog/", timeoutMs = FETCH_TIMEOUT_MS): FetchJson {
   const base = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
   return async (path) => {
     try {
       const url = new URL(path, new URL(base, globalThis.location?.href));
       // `no-cache` revalidates instead of serving a stale HTTP-cache copy; the
       // service worker still answers when offline.
-      const response = await fetch(url, { cache: "no-cache" });
+      const response = await fetch(url, {
+        cache: "no-cache",
+        signal: AbortSignal.timeout(timeoutMs),
+      });
       if (!response.ok) return undefined;
       return (await response.json()) as unknown;
     } catch {
@@ -167,25 +176,23 @@ export class Catalog {
     return this.#fetchJson(path);
   }
 
-  // The validated subjects of a timetable entry, `null` when missing or broken.
+  // The validated subjects of a timetable entry, `null` when missing, broken
+  // or not the content the entry's hash stands for: an index older than its
+  // files would otherwise hand out other subjects than it lists (a pick, a
+  // link, an accepted update alike).
   async subjects(entry: CatalogEntry): Promise<Subject[] | null> {
     const parsed = subjectsFileSchema.safeParse(await this.json(entry.path));
-    return parsed.success ? parsed.data : null;
+    return parsed.success && subjectsHash(parsed.data) === entry.hash ? parsed.data : null;
   }
 
-  // Every timetable file listing this hash. Loading one checks the content
-  // really has it: an index older than its files would otherwise hand out other
-  // subjects than asked for.
+  // Every timetable file listing this hash, loaded through `subjects`.
   sources(hash: SubjectsHash): SubjectsSource[] {
     return this.timetables
       .filter((entry) => entry.hash === hash)
       .map((entry) => ({
         name: timetableNameOf(entry),
         origin: originOf(entry),
-        load: async () => {
-          const subjects = await this.subjects(entry);
-          return subjects && subjectsHash(subjects) === hash ? subjects : null;
-        },
+        load: () => this.subjects(entry),
       }));
   }
 }

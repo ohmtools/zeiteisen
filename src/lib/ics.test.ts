@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { GlobalEvent, SemesterDates } from "@/lib/primitives/meta";
 import { subject as base, dated, timetable, weekly } from "@/lib/primitives/fixtures.test-util";
 import { type Day, type Subject, type WeeklyRepeatType } from "@/lib/primitives/subject";
-import { icsFile } from "@/lib/ics";
+import { lectureRange } from "@/lib/primitives/occurrence";
+import { icsFile, lectureExportRange, undatedClasses } from "@/lib/ics";
 
 // The export writes one VEVENT per occurrence (dates from the primitives'
 // `occurrencesOf`) as UTC instants of Europe/Berlin wall-clock times — a wrong
@@ -147,5 +148,45 @@ describe("icsFile", () => {
     const uids = file.text.match(/UID:.*/g) ?? [];
     expect(uids).toHaveLength(6);
     expect(new Set(uids).size).toBe(6);
+  });
+});
+
+describe("lectureExportRange", () => {
+  const lecture = lectureRange(dates())!;
+
+  it("stretches the lecture period to enabled listed dates outside it", () => {
+    const block = subject({ name: "BLOCK", repeat: dated("2025-09-22", "2025-11-14") });
+    const off = { ...timetable("T", [subject({ repeat: dated("2025-12-24") })]) };
+    off.subjects = off.subjects.withAllExtra({ enabled: false });
+    expect(lectureExportRange([timetable("T", [block]), off], lecture)).toEqual({
+      start: day("2025-09-22"),
+      end: day("2025-11-14"),
+    });
+    expect(lectureExportRange([timetable("T", [subject()])], lecture)).toEqual(lecture);
+  });
+
+  it("exports a block seminar after the period, and no weekly class with it", () => {
+    const block = subject({ name: "BLOCK", repeat: dated("2025-11-14") });
+    const timetables = [timetable("T", [subject(), block])];
+    const file = exported(timetables, dates(), lectureExportRange(timetables, lecture), "S");
+    // Wednesdays in October 2025: 1, 8, 15, 22, 29; then the one block date.
+    expect(file.count).toBe(6);
+    // `dated` meets at 08:00, 07:00 UTC in November.
+    expect(file.text).toContain("DTSTART:20251114T070000Z");
+    expect(file.text).not.toContain("DTSTART:20251105");
+    expect(file.text).not.toContain("DTSTART:20251112");
+  });
+});
+
+describe("undatedClasses", () => {
+  it("names enabled weekly classes without a weekday, never listed dates", () => {
+    const sat = subject({ name: "SAT", repeat: on("other") });
+    const weekend = subject({ name: "WE", repeat: dated("2025-10-04") });
+    const off = timetable("U", [subject({ name: "OFF", repeat: on("other") })]);
+    off.subjects = off.subjects.withAllExtra({ enabled: false });
+    const timetables = [timetable("T", [sat, weekend, subject()]), off];
+    expect(undatedClasses(timetables).map((one) => one.name)).toEqual(["SAT"]);
+    // Not in the file: no date to give them.
+    expect(exported(timetables, dates(), range, "S").text).not.toContain("SUMMARY:SAT");
   });
 });

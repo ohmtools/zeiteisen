@@ -6,6 +6,7 @@ import { Day, type WeeklyRepeatType } from "./subject";
 import {
   eventsForWeek,
   generalColumn,
+  isoDay,
   meetingsInWeek,
   repeatMatches,
   semesterBegin,
@@ -136,4 +137,11 @@ test("wallClockInstant follows the DST switch", () => {
   const time = { hour: 8, minute: 0 };
   expect(wallClockInstant(day("2025-10-20"), time).toISOString()).toBe("2025-10-20T06:00:00.000Z");
   expect(wallClockInstant(day("2025-10-27"), time).toISOString()).toBe("2025-10-27T07:00:00.000Z");
+});
+
+test("isoDay: the local calendar day, zero-padded, at any time of day", () => {
+  expect(isoDay(new Date(2026, 0, 5))).toBe("2026-01-05");
+  expect(isoDay(new Date(2025, 11, 31, 23, 59))).toBe("2025-12-31");
+  // The day of the DST switch keeps its date.
+  expect(isoDay(new Date(2025, 9, 26, 0, 30))).toBe("2025-10-26");
 });

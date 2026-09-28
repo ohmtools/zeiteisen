@@ -1,7 +1,6 @@
 import {
   addDays,
   differenceInCalendarWeeks,
-  format,
   isAfter,
   isWithinInterval,
   parseISO,
@@ -66,6 +65,14 @@ export function repeatMatches(type: WeeklyRepeatType, week: number): boolean {
 // SH1/SH2 have no known date range: always shown, flagged by a warning.
 export function isUnclearRepeat(repeat: Repeat): boolean {
   return repeat.type === "SH1" || repeat.type === "SH2";
+}
+
+// A date's own calendar day, ISO YYYY-MM-DD, what `DatedSlot.date` holds. By
+// hand rather than date-fns' `format`, whose formatter and locale would ride
+// along into the first load for this one pattern.
+export function isoDay(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 // Column of a date: Mon-Fri map to their day, the weekend to `other`.
@@ -178,8 +185,8 @@ export function meetingsInWeek(
   events: WeekEvents,
 ): Meeting[] {
   if (repeat.type === "I") {
-    const first = format(weekStart, "yyyy-MM-dd");
-    const last = format(addDays(weekStart, 6), "yyyy-MM-dd");
+    const first = isoDay(weekStart);
+    const last = isoDay(addDays(weekStart, 6));
     return meetingsOf(repeat).filter(({ date }) => date !== null && date >= first && date <= last);
   }
   if (
@@ -191,9 +198,6 @@ export function meetingsInWeek(
   }
   return meetingsOf(repeat).map((meeting) => ({
     ...meeting,
-    date:
-      meeting.day === Day.other
-        ? null
-        : format(addDays(weekStart, DAYS.indexOf(meeting.day)), "yyyy-MM-dd"),
+    date: meeting.day === Day.other ? null : isoDay(addDays(weekStart, DAYS.indexOf(meeting.day))),
   }));
 }

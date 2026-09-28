@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SemesterDates } from "@/lib/primitives/meta";
-import { defaultView } from "@/lib/view";
+import { defaultView, shownDay, shownWeek } from "@/lib/view";
 
 const dates: SemesterDates = {
   year: 2025,
@@ -27,5 +27,29 @@ describe("defaultView", () => {
     expect(defaultView(null, at("2025-12-10"))).toBe("general");
     const inverted = { ...dates, lectureStart: "2026-02-01" };
     expect(defaultView(inverted, at("2025-12-10"))).toBe("general");
+  });
+});
+
+describe("shownWeek / shownDay", () => {
+  const midnight = (iso: string) => new Date(`${iso}T00:00:00`).getTime();
+
+  it("show this week and today until the user picks", () => {
+    expect(shownWeek(null, at("2025-10-09"))).toBe(midnight("2025-10-06"));
+    expect(shownDay(null, at("2025-10-09"))).toBe("thursday");
+    expect(shownDay(null, at("2025-10-11"))).toBe("other");
+  });
+
+  it("keep a pick while its week or day lasts", () => {
+    const week = { value: midnight("2025-11-03"), pickedIn: midnight("2025-10-06") };
+    expect(shownWeek(week, at("2025-10-12"))).toBe(midnight("2025-11-03"));
+    const day = { value: "monday" as const, pickedIn: midnight("2025-10-09") };
+    expect(shownDay(day, at("2025-10-09"))).toBe("monday");
+  });
+
+  it("move on to the new week and day, like a fresh start", () => {
+    const week = { value: midnight("2025-10-06"), pickedIn: midnight("2025-10-06") };
+    expect(shownWeek(week, at("2025-10-13"))).toBe(midnight("2025-10-13"));
+    const day = { value: "friday" as const, pickedIn: midnight("2025-10-10") };
+    expect(shownDay(day, at("2025-10-13"))).toBe("monday");
   });
 });

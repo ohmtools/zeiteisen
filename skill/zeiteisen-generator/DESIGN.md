@@ -163,6 +163,12 @@ deciding when to ask).
 
 ## 10. Change log
 
+- Checks: `validate.py` compares degree codes in any case, as the app does
+  (it looks them up upper case), and reports a malformed field instead of
+  crashing on it. `parse_studyplan.py` reads a table that runs on to the
+  next page without its header with that table's columns (`INFO`), and no
+  longer crashes on a module without readable LP.
+
 - Schema change (user decision): the folder and task are renamed to
   `degree`, its output is `<major>.degree` (plain JSON, like `.timetable`).
   A timetable's `degreeProgram` is now the bare name of that file, without

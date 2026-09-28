@@ -80,6 +80,15 @@ export function SubjectBlock({
   ]
     .filter((part) => part !== null)
     .join(" · ");
+  // A screen reader has no position or tint to go by: a block in the hour grid
+  // says its day (or date) and time, every block its timetable.
+  const spoken = [
+    lane === null ? null : (datesLabel ?? dayName(meeting.day)),
+    lane === null ? null : timeRangeLabel(meeting),
+    entry.timetableName,
+  ]
+    .filter((part) => part !== null)
+    .join(", ");
   // Every kind of the subject is shown, not only the first.
   const kinds = kindLabel(subject.kind);
   // The popup spells both out: "I2" -> "Computer Science 2", "Pr" ->
@@ -189,6 +198,7 @@ export function SubjectBlock({
           {meeting.location && (
             <span className="truncate text-primary-foreground/80">{meeting.location}</span>
           )}
+          <span className="sr-only">{spoken}</span>
         </div>
       </PopoverTrigger>
 

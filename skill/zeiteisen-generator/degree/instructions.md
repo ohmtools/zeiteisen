@@ -118,7 +118,8 @@ List rules (already decided, don't ask):
 - A name that is empty after cleaning (`MODX Pr MODX Praktikum`): keep the
   name as printed (`MODX Praktikum`).
 - Codes are unique in the output: one entry per code, never two entries with
-  the same code (the validator rejects them). Don't offer that as an option
+  the same code, in any case (`ABC1` and `abc1` are one code to the app; the
+  validator rejects them). Don't offer that as an option
   when asking about a name.
 - Keep the wording as printed, including abbreviations
   (`Grundl. d. Beispielfachs u. Anw.`) and typos. The list is the faculty's own
@@ -161,6 +162,9 @@ Study plan rules (already decided, don't ask):
   module or a numbered elective of the list (`101XYZ`), even when the slot
   says every choice has the same LP; the plan doesn't state it per module.
 - Decimal commas become points (`2,5` → `2.5`); whole numbers stay whole.
+- **Page breaks.** A table that runs on to the next page without repeating
+  its header keeps its columns there until a header, footnote or section
+  ends it (`INFO p.N`); spot-check that page's rows.
 - A name printed slightly differently in two catalogues (`X in der Y` /
   `X in Y`) is the same module; the parser keeps the first spelling (`INFO`).
 

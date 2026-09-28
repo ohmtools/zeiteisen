@@ -41,8 +41,9 @@ type Props = {
   // there, the dialog only asks for a name and which ones to take.
   initial?: SharedTimetable[] | null;
   // A new profile, from a link (`unresolved` timetables could not be rebuilt)
-  // or from a profile file.
-  onImport: (profile: Profile, unresolved: number) => void;
+  // or from a profile file. `false` when it was refused (its name was taken
+  // meanwhile, in another tab): the dialog stays open, the name field says so.
+  onImport: (profile: Profile, unresolved: number) => boolean;
 };
 
 // Where a shared timetable's content is found: a copy on this device (a
@@ -171,8 +172,10 @@ export function ImportDialog({
       profiles.map((one) => one.name),
       wanted,
     );
-    onImport({ ...profile, name }, 0);
-    close();
+    // Refused only when another tab took the name meanwhile: picking the
+    // file again finds the next free one.
+    if (onImport({ ...profile, name }, 0)) close();
+    else toast.error(m.profile_name_taken());
   };
 
   const upload = async (files: File[]) => {
@@ -196,8 +199,8 @@ export function ImportDialog({
     );
     // Closed while the catalog was still downloading: the user cancelled.
     if (run !== session.current) return;
-    onImport(profile, unresolved.length);
-    close();
+    if (onImport(profile, unresolved.length)) close();
+    else setBusy(false);
   };
 
   return (

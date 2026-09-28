@@ -80,12 +80,22 @@ const globalEventSchema: z.ZodMiniType<GlobalEvent> = z.object({
   description: z.optional(localizedSchema),
 });
 
-export const semesterDatesSchema: z.ZodMiniType<SemesterDates> = z.object({
-  year: z.int().check(z.minimum(1900), z.maximum(2999)),
-  lectureStart: isoDate,
-  lectureEnd: isoDate,
-  events: z._default(z.array(globalEventSchema), []),
-});
+// A lecture period that ends before it starts would hide every weekly class
+// in every week, while the export and the opening view read it as no dates:
+// refused, reported on `lectureEnd`. ISO dates compare as strings.
+export const semesterDatesSchema: z.ZodMiniType<SemesterDates> = z
+  .object({
+    year: z.int().check(z.minimum(1900), z.maximum(2999)),
+    lectureStart: isoDate,
+    lectureEnd: isoDate,
+    events: z._default(z.array(globalEventSchema), []),
+  })
+  .check(
+    z.refine((dates) => dates.lectureStart <= dates.lectureEnd, {
+      message: "lectureEnd must not be before lectureStart",
+      path: ["lectureEnd"],
+    }),
+  );
 
 // Both links end up as `<a href>` in the subject popup, and the file may come
 // from any catalog URL the user set or from an upload: web links only, no

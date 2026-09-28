@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { profile, subject, timetable } from "@/lib/primitives/fixtures.test-util";
 import { getSharedTimetables, parseProfileFile } from "@/lib/primitives/profile";
-import { subjectsFileSchema } from "@/lib/primitives/subject";
-import bei3File from "../../srv/catalog/timetables/BEI3.json";
 import {
   MAX_SHARE_LENGTH,
   decodeShare,
@@ -67,10 +65,16 @@ it("profileFileText reads back through parseProfileFile", () => {
 });
 
 it("keeps a real-size profile far below the length guard", () => {
-  const bei3 = subjectsFileSchema.parse(bei3File);
+  // About the size of a real semester timetable: 100 subjects.
+  const semester = Array.from({ length: 100 }, (_, i) => subject(`S${i}`));
   const big = profile(
     "Simon",
-    ["BEI1", "BEI2", "BEI3", "BEI4"].map((name) => timetable(name, bei3)),
+    ["BEI1", "BEI2", "BEI3", "BEI4"].map((name) => {
+      const one = timetable(name, semester);
+      // Some subjects off, so the link carries the bits too.
+      one.subjects = one.subjects.with(0, { enabled: false });
+      return one;
+    }),
   );
   // Four full semesters: the link grows with the number of timetables, not
   // with their size.

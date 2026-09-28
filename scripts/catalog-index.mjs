@@ -137,27 +137,35 @@ async function add(relative, kind, hashOf = shortHash) {
 }
 
 // `degreeProgram` (file name in `degrees/` without `.degree`) -> its subject
-// codes (upper case, as the app compares them). Files are never merged: a
-// timetable subject names its file, so a name it points at that is missing
+// codes (upper case, as the app compares them), `null` for a file that was
+// skipped or does not match the format. Files are never merged: a timetable
+// subject names its file, so a name it points at that is missing or broken
 // shows as a bare code in the app — worth a warning, not a refusal.
 const programs = new Map();
 
+// `json` is `undefined` when `add` skipped the file.
 function collectCodes(relative, json) {
+  const program = relative.slice(DEGREES_DIR.length, -DEGREE_EXTENSION.length);
+  if (json === undefined) {
+    programs.set(program, null);
+    return;
+  }
   const parsed = degreeSchema.safeParse(json);
   if (!parsed.success) {
     process.stderr.write(`warning: ${relative} does not match the degree format\n`);
+    programs.set(program, null);
     return;
   }
-  const codes = new Set(parsed.data.subjects.map(({ code }) => code.toUpperCase()));
-  programs.set(relative.slice(DEGREES_DIR.length, -DEGREE_EXTENSION.length), codes);
+  programs.set(program, new Set(parsed.data.subjects.map(({ code }) => code.toUpperCase())));
 }
 
-// Like `subjectInfoOf`: the whole code, else the part in front of a slash.
+// Like `subjectInfoOf`: the whole code, else the part in front of the last
+// slash — only with something on both sides of it (`splitVariant`).
 function knows(codes, name) {
   const key = name.toUpperCase();
   if (codes.has(key)) return true;
   const cut = key.lastIndexOf("/");
-  return cut > 0 && knows(codes, key.slice(0, cut));
+  return cut > 0 && cut < key.length - 1 && knows(codes, key.slice(0, cut));
 }
 
 function checkPrograms(relative, json) {
@@ -167,11 +175,15 @@ function checkPrograms(relative, json) {
   for (const { name, degreeProgram } of parsed.data) {
     if (!degreeProgram) continue;
     const codes = programs.get(degreeProgram);
-    const problem = !codes
-      ? `names degreeProgram ${degreeProgram}, which is no ${DEGREES_DIR}${degreeProgram}${DEGREE_EXTENSION}`
-      : knows(codes, name)
-        ? null
-        : `subject ${name} is not in ${DEGREES_DIR}${degreeProgram}${DEGREE_EXTENSION}`;
+    const file = `${DEGREES_DIR}${degreeProgram}${DEGREE_EXTENSION}`;
+    const problem =
+      codes === undefined
+        ? `names degreeProgram ${degreeProgram}, which is no ${file}`
+        : codes === null
+          ? `names degreeProgram ${degreeProgram}, but ${file} was skipped or is broken (see above)`
+          : knows(codes, name)
+            ? null
+            : `subject ${name} is not in ${file}`;
     if (problem && !warned.has(problem)) {
       warned.add(problem);
       process.stderr.write(`warning: ${relative}: ${problem}\n`);
@@ -204,8 +216,7 @@ await add("locations.json", "locations");
 // `SemesterDates` and installs this one by itself.
 await add("dates.json", "dates");
 for (const relative of await filesIn("degrees", [DEGREE_EXTENSION])) {
-  const json = await add(relative, "degrees");
-  if (json !== undefined) collectCodes(relative, json);
+  collectCodes(relative, await add(relative, "degrees"));
 }
 // `.timetable` is what the app downloads and uploads, so such a file can be
 // dropped in as it is; the app names it after the file without the extension.

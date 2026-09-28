@@ -44,7 +44,9 @@ export function GroupCell({
   const variant = state === "all" ? "default" : state === "partial" ? "secondary" : "outline";
   const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (flashing) ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (!flashing) return;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ref.current?.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
   }, [flashing]);
 
   return (
@@ -60,12 +62,14 @@ export function GroupCell({
         "h-8 min-w-0 overflow-hidden px-0 text-(length:--cell-font) tabular-nums -ml-px first:ml-0",
         // A ring drawn inside the cell: outside it would claim no width but
         // be clipped by the neighbours and the scrolling section.
-        flashing && "z-10 animate-pulse ring-3 ring-foreground ring-inset",
+        flashing && "z-10 ring-3 ring-foreground ring-inset motion-safe:animate-pulse",
         className,
       )}
       // Nothing to select in a group no subject of this file uses.
       disabled={locked || group.indexes.length === 0}
-      aria-pressed={state !== "none"}
+      // Some of the group's classes picked, not all: "mixed", as a partial
+      // checkbox would say.
+      aria-pressed={state === "partial" ? "mixed" : state === "all"}
       aria-label={name}
       title={name}
       onClick={() => onSetAll(state !== "all")}

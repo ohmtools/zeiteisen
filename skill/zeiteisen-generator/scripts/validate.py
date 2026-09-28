@@ -13,11 +13,13 @@ Checks, in addition to the JSON schema itself:
   * timetable: a group index is at most its category (group 2.3 does not
     exist), and every slot ends after it starts; the app refuses the first
     and cannot show the second
+  * dates: `lectureEnd` is not before `lectureStart`; the app refuses it
   * timetable: `degreeProgram`, if present, is one value on every entry, the
     bare name of a degree file (`B-ABC` for `B-ABC.degree`): a valid file
     name (below), no path, no extension; the app looks the degree file up by
     exactly this name
-  * degree: codes unique, descriptions at most 100 words per
+  * degree: codes unique in any case (the app compares them upper case, so
+    `ABC1` and `abc1` are one code), descriptions at most 100 words per
     language, texts single-line without Markdown; with --list (the working
     file of parse_list.py): every code of the abbreviation list is present,
     spelled exactly as in the list (this check is the most important one), and
@@ -198,21 +200,46 @@ def timetable_problems(data):
     return errors
 
 
+def dates_problems(data):
+    """Rules of the app's dates format that the JSON schema can't express."""
+    if not isinstance(data, dict):
+        return []
+    start, end = data.get("lectureStart"), data.get("lectureEnd")
+    # ISO dates compare as strings; malformed ones are the schema's to report.
+    if isinstance(start, str) and isinstance(end, str) and end < start:
+        return [f"$.lectureEnd: {end} is before lectureStart {start}"]
+    return []
+
+
+def subjects_of(data):
+    """The degree file's subjects that are objects, with their index; anything
+    else is left to the schema errors."""
+    subjects = data.get("subjects") if isinstance(data, dict) else None
+    if not isinstance(subjects, list):
+        return []
+    return [(i, s) for i, s in enumerate(subjects) if isinstance(s, dict)]
+
+
 def degree_problems(data):
     """Rules of degree/instructions.md that a JSON schema can't express."""
     errors, seen = [], {}
-    subjects = data.get("subjects", []) if isinstance(data, dict) else []
-    for i, s in enumerate(subjects):
-        if not isinstance(s, dict):
-            continue
+    for i, s in subjects_of(data):
         code = s.get("code")
-        if code in seen:
-            errors.append(
-                f"$.subjects[{i}].code: {code!r} already used by $.subjects[{seen[code]}]"
-            )
-        seen.setdefault(code, i)
+        if isinstance(code, str):
+            # The app looks codes up in upper case: `ABC1` and `abc1` are one.
+            key = code.upper()
+            if key in seen:
+                j = seen[key]
+                errors.append(
+                    f"$.subjects[{i}].code: {code!r} already used by $.subjects[{j}]"
+                    + ("" if data["subjects"][j]["code"] == code else " (codes ignore case)")
+                )
+            seen.setdefault(key, i)
         for field in ("name", "description", "test"):
-            for lang, text in (s.get(field) or {}).items():
+            texts = s.get(field)
+            if not isinstance(texts, dict):
+                continue  # reported by the schema
+            for lang, text in texts.items():
                 if not isinstance(text, str):
                     continue
                 where = f"$.subjects[{i}].{field}.{lang} ({code})"
@@ -268,7 +295,8 @@ def pick_branch(error, kind):
 def list_coverage(data, list_path):
     """Every code of the abbreviation list must be in the output (exact spelling)."""
     entries = json.loads(Path(list_path).read_text(encoding="utf-8")).get("entries", [])
-    have = {s.get("code") for s in data.get("subjects", []) if isinstance(s, dict)}
+    subjects = [s for _, s in subjects_of(data)]
+    have = {s.get("code") for s in subjects}
     missing = [e["code"] for e in entries if e["code"] not in have]
     print(
         f"list coverage: {len(entries) - len(missing)} of {len(entries)} list codes present"
@@ -277,8 +305,8 @@ def list_coverage(data, list_path):
     # order: list codes first, in list order; handbook-only codes after them
     rank = {e["code"]: i for i, e in enumerate(entries)}
     last, seen_other = -1, None
-    for s in data.get("subjects", []):
-        c = s.get("code") if isinstance(s, dict) else None
+    for s in subjects:
+        c = s.get("code")
         if c in rank:
             if seen_other is not None:
                 errors.append(
@@ -298,13 +326,14 @@ def plan_check(data, plan_path):
     """Every lp value must be the LP of a non-slot study plan module."""
     modules = json.loads(Path(plan_path).read_text(encoding="utf-8")).get("modules", [])
     allowed = {m["lp"] for m in modules if m.get("lp") is not None and not m.get("slot")}
-    subjects = [s for s in data.get("subjects", []) if isinstance(s, dict)]
+    subjects = [s for _, s in subjects_of(data)]
     with_lp = [s for s in subjects if "lp" in s]
     print(f"lp: {len(with_lp)} of {len(subjects)} entries have LP")
     return [
         f"{s.get('code')!r}: lp {s['lp']} is not the LP of any study plan module (slots excluded)"
         for s in with_lp
-        if s["lp"] not in allowed
+        # a non-number is reported by the schema
+        if isinstance(s["lp"], (int, float)) and s["lp"] not in allowed
     ]
 
 
@@ -354,6 +383,8 @@ def main():
     errors += name_problems(output_path, task)
     if task == "timetable":
         errors += timetable_problems(data)
+    if task == "dates":
+        errors += dates_problems(data)
     if task == "degree":
         errors += degree_problems(data)
         if list_path:

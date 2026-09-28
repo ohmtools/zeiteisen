@@ -54,7 +54,16 @@
   "import_timetables": "Timetables in this profile",
   "import_text": "Paste a share link or choose a profile file. The import always creates a new profile.",
   "import_title": "Import profile",
-  "import_unresolved": "{count} timetables could not be imported.",
+  "import_unresolved": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} timetable could not be imported.",
+        "countPlural=other": "{count} timetables could not be imported."
+      }
+    }
+  ],
   "import_upload": "Upload files",
   "kind_elective": "Elective",
   "kind_exercise": "Exercise",
@@ -67,7 +76,16 @@
   "location_site": "Campus",
   "picker_add_text": "Choose the timetables to copy into this profile. Copies are yours: an update is only ever applied when you ask for it.",
   "picker_add_title": "Add timetables",
-  "picker_added": "{count} timetables added.",
+  "picker_added": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} timetable added.",
+        "countPlural=other": "{count} timetables added."
+      }
+    }
+  ],
   "picker_added_as": "added as “{name}”",
   "picker_confirm": "Add",
   "picker_empty": "New empty timetable",
@@ -156,28 +174,49 @@
   "toast_catalog_locations_updated": "Room information updated from the catalog.",
   "toast_ics_empty": "Nothing to export in this period.",
   "toast_ics_failed": "Could not build the calendar file.",
-  "toast_ics_saved": "{count} calendar entries saved.",
+  "toast_ics_saved": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} calendar entry saved.",
+        "countPlural=other": "{count} calendar entries saved."
+      }
+    }
+  ],
+  "toast_ics_undated": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} class has no fixed weekday and is not in the file.",
+        "countPlural=other": "{count} classes have no fixed weekday and are not in the file."
+      }
+    }
+  ],
+  "toast_ics_undated_hint": "Block, by arrangement or Saturday: {classes}. Give them dates (Edit subject) to include them.",
   "toast_imported": "Profile “{name}” imported.",
   "toast_json_saved": "Profile file saved.",
   "toast_link_failed": "Could not copy the link.",
   "toast_timetable_removed": "“{name}” removed.",
   "toast_timetable_saved": "Timetable file saved.",
   "toast_timetable_updated": "“{name}” updated.",
-  "tree_add_subject": "Add subject",
+  "tree_add_subject": "Add a subject to {name}",
   "tree_catalog_current": "Up to date with the catalog",
   "tree_catalog_offline": "Offline: catalog updates cannot be checked",
   "tree_category": "Category {category}",
-  "tree_collapse": "Hide classes",
+  "tree_collapse": "Hide the classes of {name}",
   "tree_description": "Try out different subject variations for this profile.",
-  "tree_download": "Download timetable",
+  "tree_download": "Download {name}",
   "tree_edit_subject": "Edit {subject}",
   "tree_empty": "Groups appear here once the profile holds a timetable.",
-  "tree_expand": "Show classes",
+  "tree_expand": "Show the classes of {name}",
   "tree_no_group": "No group",
-  "tree_pick": "Choose single classes",
+  "tree_pick": "Choose single classes in category {category}",
+  "tree_pick_ungrouped": "Choose single classes without a group",
   "tree_pick_title": "Classes in category {category}",
   "tree_pick_title_ungrouped": "Classes without a group",
-  "tree_remove": "Remove timetable",
+  "tree_remove": "Remove {name}",
   "tree_remove_confirm": "Remove",
   "tree_remove_text": "“{name}” and its group selection are removed from this profile. Other profiles keep their copy.",
   "tree_remove_title": "Remove this timetable?",
@@ -189,16 +228,33 @@
   "name_invalid_reserved": "“{name}” is a reserved file name on Windows.",
   "name_invalid_long": "This name is too long for a file name.",
   "tree_title": "Subjects",
-  "tree_update": "Update available",
-  "tree_warning_count": "{count} warnings",
+  "tree_update": "Update available for {name}",
+  "tree_warning_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} warning",
+        "countPlural=other": "{count} warnings"
+      }
+    }
+  ],
   "update_added": "New classes",
   "update_confirm": "Update",
   "update_from_catalog": "The catalog serves a new version of {file}.",
   "update_loading": "Downloading the new version…",
-  "update_none": "This version is identical to yours.",
   "update_reject": "Never for this version",
   "update_removed": "Classes that go",
-  "update_summary": "{count} classes stay as they are.",
+  "update_summary": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} class stays as it is.",
+        "countPlural=other": "{count} classes stay as they are."
+      }
+    }
+  ],
   "update_title": "Update {name}",
   "upload_dates_loaded": "Global dates loaded.",
   "upload_error_dates_shape": "does not match the expected global dates format:",
@@ -210,7 +266,7 @@
   "view_general": "General",
   "view_week": "Current week",
   "warn_empty_category": "No group selected in category {category}.",
-  "warn_multi_group_for_subject": "More than one group selected for {subject}: {groups}.",
+  "warn_multi_group_in_category": "More than one group selected in category {category} for {subjects}: {groups}.",
   "warn_no_class_for_subject": "No class selected for {subject}.",
   "warn_non_overlap": "Selected groups do not overlap: {group} does not fit.",
   "warn_sh_range": "Date range unclear for SH1/SH2 subjects.",
@@ -260,7 +316,16 @@
   "data_own_file": "own file",
   "data_own_hint": "Your own dates and locations replace the catalog's, an own degree program replaces the catalog's of the same name. The catalog never updates your own files.",
   "upload_locations_loaded": "Locations loaded.",
-  "upload_degrees_loaded": "{count} degree programs loaded.",
+  "upload_degrees_loaded": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} degree program loaded.",
+        "countPlural=other": "{count} degree programs loaded."
+      }
+    }
+  ],
   "upload_own_no_updates": "The catalog no longer updates them until you switch back to the catalog.",
   "upload_error_locations_shape": "does not match the expected locations format:",
   "upload_error_degree_shape": "does not match the expected degree program format:",
@@ -309,11 +374,29 @@
   "app_error_title": "Something went wrong",
   "app_error_text": "Part of the app could not be loaded, probably because a new version was published. Your data is safe on this device.",
   "app_error_reload": "Reload",
+  "app_error_help": "If reloading does not help: save a backup, then delete what keeps the app from starting.",
   "degree_names_title": "Names of your degree programs",
   "degree_names_text": "Give each file the name subjects use as their degree program, e.g. B-ABC. It replaces the catalog's degree program of that name.",
   "degree_name_label": "Name of {file}",
   "degree_name_placeholder": "B-ABC",
   "degree_name_duplicate": "Another file already has this name.",
   "degree_name_replaces": "Replaces your degree program loaded under this name.",
-  "degree_names_confirm": "Load"
+  "degree_name_replaces_catalog": "Replaces the catalog's degree program “{name}”.",
+  "degree_names_confirm": "Load",
+  "data_delete": "Delete data…",
+  "data_delete_title": "Delete data",
+  "data_delete_text": "Choose what to delete from this device. This cannot be undone; the app starts again afterwards.",
+  "data_delete_profiles": "Profiles",
+  "data_delete_profiles_text": "Every profile with its timetables and group selection.",
+  "data_delete_files": "Dates, locations and degree programs",
+  "data_delete_files_text": "The semester dates and your own locations and degree programs.",
+  "data_delete_catalog": "Catalog cache",
+  "data_delete_catalog_text": "What was downloaded from the catalog; the catalog hands it out again.",
+  "data_delete_settings": "Settings",
+  "data_delete_settings_text": "Catalog mode and URL (the catalog cache with them), hints already shown.",
+  "data_delete_all": "Everything selected: this device forgets the app, as on a first visit.",
+  "data_delete_confirm": "Delete",
+  "data_delete_error": "Your browser refused to delete the data.",
+  "data_delete_app": "Offline app files",
+  "data_delete_app_text": "The app is downloaded again on the next start; that needs a connection."
 }

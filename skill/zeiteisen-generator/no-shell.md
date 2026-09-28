@@ -127,7 +127,8 @@ following steps 2-4 of `degree/instructions.md`:
   `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9` before the first dot.
 - **Degree file, most important:** go through the abbreviation list
   row by row and confirm every code is in the file, spelled exactly as
-  printed, each exactly once, in list order and before any handbook-only
+  printed, each exactly once (in any case: `ABC1` and `abc1` are one code
+  to the app), in list order and before any handbook-only
   entries.
 - **Keys:** every required key present; no key that the schema doesn't
   define, at any level (e.g. no `day` at the top level of a timetable entry).

@@ -17,7 +17,8 @@ import {
 } from "@/lib/primitives/catalog";
 import type { Locations, SemesterDates } from "@/lib/primitives/meta";
 import { loadCatalogCache, saveCatalogCache, type OwnDegreeFile } from "@/lib/primitives/storage";
-import { catalogFetcher } from "@/lib/catalog";
+import { catalogFetcher, degreesUpdated } from "@/lib/catalog";
+import { dropsCatalog, refreshScheduler, type RefreshStart } from "@/lib/refresh";
 import { overridesOf, type Overrides } from "@/lib/primitives/overrides";
 
 type Options = {
@@ -75,7 +76,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     optionsRef.current = { mode, fetchJson, sources, onDates, onDropDates, own, cache };
   });
   // Set by the effect below; a no-op until it ran and after unmount.
-  const startRef = useRef<(options?: { force?: boolean; restart?: boolean }) => void>(() => {});
+  const startRef = useRef<RefreshStart>(() => {});
 
   const ignored = mode === "ignore";
   const catalog = useMemo(
@@ -92,16 +93,8 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   );
 
   useEffect(() => {
-    let cancelled = false;
-    // One refresh at a time: a second one asked for meanwhile would only
-    // download the same index again. A restart (mode or URL changed) drops
-    // the running one instead: its result belongs to the old setting.
-    let running = false;
-    let generation = 0;
-    let last = 0;
-
-    const refresh = async (run: number) => {
-      const stale = () => cancelled || run !== generation;
+    // `stale()`: unmounted, or the mode or URL changed meanwhile.
+    const refresh = async (stale: () => boolean) => {
       const { fetchJson: read } = optionsRef.current;
       const fresh = await Catalog.load(read);
       // No index: offline, no catalog served, or an unreadable one. The cached
@@ -117,12 +110,13 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
       setCache(next);
       saveCatalogCache(next);
       // Only a file the device already had and that really changed is news,
-      // and only while it is in use: own locations hide the catalog's.
+      // and only while it is in use: own locations hide the catalog's, an own
+      // degree file the catalog file of its name.
       const { own: mine } = optionsRef.current;
       if (updated.has(CatalogKind.Locations) && !mine.locations) {
         toast.success(m.toast_catalog_locations_updated());
       }
-      if (updated.has(CatalogKind.Degrees)) {
+      if (degreesUpdated(fresh, before, next, mine.degrees)) {
         toast.success(m.toast_catalog_degrees_updated());
       }
 
@@ -137,25 +131,14 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
       install(dates, entry, { quiet: recorded.dates === null });
     };
 
-    // `force` skips the "just refreshed" check, `restart` also the
-    // one-at-a-time one. Nothing is read while the catalog is ignored. A
-    // restart drops the running refresh even when switching to `ignore`:
-    // its result would bring back the cache and the dates just dropped.
-    const start = ({ force = false, restart = false } = {}) => {
-      if (cancelled) return;
-      if (restart) {
-        generation += 1;
-        running = false;
-      }
-      if (optionsRef.current.mode === "ignore" || running) return;
-      if (!force && !restart && Date.now() - last < FRESH_FOR) return;
-      running = true;
-      last = Date.now();
-      const run = generation;
-      void refresh(run).finally(() => {
-        if (run === generation) running = false;
-      });
-    };
+    // One at a time, not again within `FRESH_FOR` unless forced, a restart
+    // drops the running one; nothing is read while the catalog is ignored.
+    const scheduler = refreshScheduler({
+      run: refresh,
+      skip: () => optionsRef.current.mode === "ignore",
+      freshFor: FRESH_FOR,
+    });
+    const start = scheduler.start;
     startRef.current = start;
 
     const onVisible = () => {
@@ -170,7 +153,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     window.addEventListener("online", onOnline);
 
     return () => {
-      cancelled = true;
+      scheduler.stop();
       startRef.current = () => {};
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
@@ -186,8 +169,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   useEffect(() => {
     const before = previous.current;
     previous.current = { mode, url };
-    const ignoredNow = mode === "ignore" && before.mode !== "ignore";
-    if (before.url !== url || ignoredNow) {
+    if (dropsCatalog(before, { mode, url })) {
       setCache(emptyCatalogCache);
       saveCatalogCache(emptyCatalogCache);
       optionsRef.current.onDropDates();

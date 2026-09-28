@@ -144,9 +144,11 @@ export function TimetableGrid({
               viewport, no page scroll), down to a 24px floor (the hour label
               still fits) so common phones need no scrolling; desktop scrolls. */}
         <div className="relative flex flex-1 flex-col desktop:flex-none">
+          {/* Grid lines and hour labels only: the blocks say their own time. */}
           {hours.map((hour, index) => (
             <div
               key={hour}
+              aria-hidden
               className={cn(
                 COLUMNS,
                 "min-h-6 flex-1 desktop:h-14 desktop:flex-none",

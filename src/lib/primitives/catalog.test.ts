@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   Catalog,
   CatalogKind,
@@ -6,6 +6,8 @@ import {
   degreeProgramOf,
   emptyCatalogCache,
   emptySources,
+  httpFetcher,
+  parseDates,
   parseDegree,
   refreshCache,
   timetableNameOf,
@@ -45,6 +47,14 @@ describe("Catalog", () => {
     expect(await sources[0].load()).toEqual(bei3);
     // The index claims the hash, the file has other content.
     expect(await sources[1].load()).toBeNull();
+  });
+
+  test("subjects refuses a file that is not the version the index lists", async () => {
+    const { catalog } = fakeCatalog(
+      { "timetables/BEI3.json": bei3 },
+      { "timetables/BEI3.json": subjectsHash([subject("M1")]) },
+    );
+    expect(await catalog.subjects(catalog.timetables[0])).toBeNull();
   });
 
   test("subjects rejects broken files", async () => {
@@ -120,4 +130,37 @@ test("datesToInstall", () => {
   expect(datesToInstall(old, catalog)?.path).toBe("dates.json");
   expect(datesToInstall(old, catalog, false)).toBeNull();
   expect(datesToInstall(emptySources, Catalog.empty)).toBeNull();
+});
+
+test("parseDates refuses a lecture period that ends before it starts", () => {
+  const dates = { year: 2026, lectureStart: "2026-10-05", lectureEnd: "2027-01-29", events: [] };
+  expect(parseDates(dates)).toEqual(dates);
+  expect(parseDates({ ...dates, lectureEnd: "2026-10-05" })).not.toBeNull();
+  expect(parseDates({ ...dates, lectureEnd: "2026-10-04" })).toBeNull();
+});
+
+describe("httpFetcher", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("a request that takes too long reads as missing", async () => {
+    // Answers only when aborted, like a stalled connection.
+    vi.stubGlobal("fetch", (_url: URL, init: RequestInit) => {
+      return new Promise((_, reject) => {
+        init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    });
+    expect(await httpFetcher("https://example.org/catalog", 10)("index.json")).toBeUndefined();
+  });
+
+  test("reads a file relative to the base URL", async () => {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (url: URL) => {
+      asked.push(url.href);
+      return new Response(JSON.stringify({ version: 1 }));
+    });
+    expect(await httpFetcher("https://example.org/catalog")("index.json")).toEqual({ version: 1 });
+    expect(asked).toEqual(["https://example.org/catalog/index.json"]);
+  });
 });

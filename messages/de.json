@@ -54,7 +54,16 @@
   "import_timetables": "Stundenpläne in diesem Profil",
   "import_text": "Füge einen Freigabelink ein oder wähle eine Profildatei. Der Import legt immer ein neues Profil an.",
   "import_title": "Profil importieren",
-  "import_unresolved": "{count} Stundenpläne konnten nicht importiert werden.",
+  "import_unresolved": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Stundenplan konnte nicht importiert werden.",
+        "countPlural=other": "{count} Stundenpläne konnten nicht importiert werden."
+      }
+    }
+  ],
   "import_upload": "Dateien hochladen",
   "kind_elective": "Wahlfach",
   "kind_exercise": "Übung",
@@ -67,7 +76,16 @@
   "location_site": "Standort",
   "picker_add_text": "Wähle die Stundenpläne, die in dieses Profil kopiert werden. Die Kopien gehören dir: eine Aktualisierung passiert nur, wenn du sie anstößt.",
   "picker_add_title": "Stundenpläne hinzufügen",
-  "picker_added": "{count} Stundenpläne hinzugefügt.",
+  "picker_added": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Stundenplan hinzugefügt.",
+        "countPlural=other": "{count} Stundenpläne hinzugefügt."
+      }
+    }
+  ],
   "picker_added_as": "wird hinzugefügt als „{name}“",
   "picker_confirm": "Hinzufügen",
   "picker_empty": "Neuer leerer Stundenplan",
@@ -156,28 +174,49 @@
   "toast_catalog_locations_updated": "Rauminformationen aus dem Katalog aktualisiert.",
   "toast_ics_empty": "In diesem Zeitraum gibt es nichts zu exportieren.",
   "toast_ics_failed": "Die Kalenderdatei konnte nicht erstellt werden.",
-  "toast_ics_saved": "{count} Kalendereinträge gespeichert.",
+  "toast_ics_saved": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Kalendereintrag gespeichert.",
+        "countPlural=other": "{count} Kalendereinträge gespeichert."
+      }
+    }
+  ],
+  "toast_ics_undated": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Veranstaltung hat keinen festen Wochentag und fehlt in der Datei.",
+        "countPlural=other": "{count} Veranstaltungen haben keinen festen Wochentag und fehlen in der Datei."
+      }
+    }
+  ],
+  "toast_ics_undated_hint": "Block, n. V. oder Samstag: {classes}. Mit Terminen (Fach bearbeiten) kommen sie in die Datei.",
   "toast_imported": "Profil „{name}“ importiert.",
   "toast_json_saved": "Profildatei gespeichert.",
   "toast_link_failed": "Link konnte nicht kopiert werden.",
   "toast_timetable_removed": "„{name}“ entfernt.",
   "toast_timetable_saved": "Stundenplandatei gespeichert.",
   "toast_timetable_updated": "„{name}“ aktualisiert.",
-  "tree_add_subject": "Fach hinzufügen",
+  "tree_add_subject": "Fach zu {name} hinzufügen",
   "tree_catalog_current": "Aktuell laut Katalog",
   "tree_catalog_offline": "Offline: Aktualisierungen aus dem Katalog können nicht geprüft werden",
   "tree_category": "Kategorie {category}",
-  "tree_collapse": "Klassen ausblenden",
+  "tree_collapse": "Klassen von {name} ausblenden",
   "tree_description": "Probiere verschiedene Varianten der Fächer für dieses Profil aus.",
-  "tree_download": "Stundenplan herunterladen",
+  "tree_download": "{name} herunterladen",
   "tree_edit_subject": "{subject} bearbeiten",
   "tree_empty": "Gruppen erscheinen hier, sobald das Profil einen Stundenplan hat.",
-  "tree_expand": "Klassen zeigen",
+  "tree_expand": "Klassen von {name} zeigen",
   "tree_no_group": "Ohne Gruppe",
-  "tree_pick": "Einzelne Veranstaltungen wählen",
+  "tree_pick": "Einzelne Veranstaltungen in Kategorie {category} wählen",
+  "tree_pick_ungrouped": "Einzelne Veranstaltungen ohne Gruppe wählen",
   "tree_pick_title": "Veranstaltungen in Kategorie {category}",
   "tree_pick_title_ungrouped": "Veranstaltungen ohne Gruppe",
-  "tree_remove": "Stundenplan entfernen",
+  "tree_remove": "{name} entfernen",
   "tree_remove_confirm": "Entfernen",
   "tree_remove_text": "„{name}“ und seine Gruppenauswahl werden aus diesem Profil entfernt. Andere Profile behalten ihre Kopie.",
   "tree_remove_title": "Diesen Stundenplan entfernen?",
@@ -189,16 +228,33 @@
   "name_invalid_reserved": "„{name}“ ist unter Windows ein reservierter Dateiname.",
   "name_invalid_long": "Dieser Name ist für einen Dateinamen zu lang.",
   "tree_title": "Fächer",
-  "tree_update": "Aktualisierung verfügbar",
-  "tree_warning_count": "{count} Warnungen",
+  "tree_update": "Aktualisierung für {name} verfügbar",
+  "tree_warning_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Warnung",
+        "countPlural=other": "{count} Warnungen"
+      }
+    }
+  ],
   "update_added": "Neue Lehrveranstaltungen",
   "update_confirm": "Aktualisieren",
   "update_from_catalog": "Der Katalog bietet eine neue Version von {file}.",
   "update_loading": "Neue Version wird geladen…",
-  "update_none": "Diese Version ist identisch mit deiner.",
   "update_reject": "Nie für diese Version",
   "update_removed": "Lehrveranstaltungen, die wegfallen",
-  "update_summary": "{count} Lehrveranstaltungen bleiben unverändert.",
+  "update_summary": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Lehrveranstaltung bleibt unverändert.",
+        "countPlural=other": "{count} Lehrveranstaltungen bleiben unverändert."
+      }
+    }
+  ],
   "update_title": "{name} aktualisieren",
   "upload_dates_loaded": "Globale Termine geladen.",
   "upload_error_dates_shape": "entspricht nicht dem erwarteten Format für globale Termine:",
@@ -210,7 +266,7 @@
   "view_general": "Allgemein",
   "view_week": "Aktuelle Woche",
   "warn_empty_category": "Keine Gruppe in Kategorie {category} ausgewählt.",
-  "warn_multi_group_for_subject": "Mehr als eine Gruppe für {subject} ausgewählt: {groups}.",
+  "warn_multi_group_in_category": "Mehr als eine Gruppe in Kategorie {category} für {subjects} ausgewählt: {groups}.",
   "warn_no_class_for_subject": "Keine Veranstaltung für {subject} ausgewählt.",
   "warn_non_overlap": "Ausgewählte Gruppen überschneiden sich nicht: {group} passt nicht.",
   "warn_sh_range": "Zeitraum für SH1/SH2-Fächer unklar.",
@@ -260,7 +316,16 @@
   "data_own_file": "eigene Datei",
   "data_own_hint": "Deine eigenen Termine und Standorte ersetzen die des Katalogs, ein eigener Studiengang ersetzt den gleichnamigen des Katalogs. Der Katalog aktualisiert deine eigenen Dateien nie.",
   "upload_locations_loaded": "Standorte geladen.",
-  "upload_degrees_loaded": "{count} Studiengänge geladen.",
+  "upload_degrees_loaded": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Studiengang geladen.",
+        "countPlural=other": "{count} Studiengänge geladen."
+      }
+    }
+  ],
   "upload_own_no_updates": "Der Katalog aktualisiert sie nicht mehr, bis du wieder zum Katalog wechselst.",
   "upload_error_locations_shape": "entspricht nicht dem erwarteten Format für Standorte:",
   "upload_error_degree_shape": "entspricht nicht dem erwarteten Format für Studiengänge:",
@@ -309,11 +374,29 @@
   "app_error_title": "Etwas ist schiefgelaufen",
   "app_error_text": "Ein Teil der App konnte nicht geladen werden, wahrscheinlich wegen einer neuen Version. Deine Daten sind auf diesem Gerät sicher.",
   "app_error_reload": "Neu laden",
+  "app_error_help": "Hilft Neuladen nicht: Speichere ein Backup und lösche dann, was den Start verhindert.",
   "degree_names_title": "Namen deiner Studiengänge",
   "degree_names_text": "Gib jeder Datei den Namen, den Fächer als Studiengang nennen, z. B. B-ABC. Sie ersetzt den gleichnamigen Studiengang des Katalogs.",
   "degree_name_label": "Name von {file}",
   "degree_name_placeholder": "B-ABC",
   "degree_name_duplicate": "Eine andere Datei hat schon diesen Namen.",
   "degree_name_replaces": "Ersetzt deinen unter diesem Namen geladenen Studiengang.",
-  "degree_names_confirm": "Laden"
+  "degree_name_replaces_catalog": "Ersetzt den Studiengang „{name}“ des Katalogs.",
+  "degree_names_confirm": "Laden",
+  "data_delete": "Daten löschen…",
+  "data_delete_title": "Daten löschen",
+  "data_delete_text": "Wähle, was von diesem Gerät gelöscht wird. Das lässt sich nicht rückgängig machen; die App startet danach neu.",
+  "data_delete_profiles": "Profile",
+  "data_delete_profiles_text": "Alle Profile mit ihren Stundenplänen und ihrer Gruppenauswahl.",
+  "data_delete_files": "Termine, Standorte und Studiengänge",
+  "data_delete_files_text": "Die Semestertermine und deine eigenen Standorte und Studiengänge.",
+  "data_delete_catalog": "Katalog-Zwischenspeicher",
+  "data_delete_catalog_text": "Was aus dem Katalog geladen wurde; der Katalog liefert es wieder.",
+  "data_delete_settings": "Einstellungen",
+  "data_delete_settings_text": "Katalog-Modus und -URL (samt Katalog-Zwischenspeicher), bereits gezeigte Hinweise.",
+  "data_delete_all": "Alles ausgewählt: Dieses Gerät vergisst die App wie vor dem ersten Besuch.",
+  "data_delete_confirm": "Löschen",
+  "data_delete_error": "Dein Browser hat das Löschen abgelehnt.",
+  "data_delete_app": "Offline-App-Dateien",
+  "data_delete_app_text": "Die App wird beim nächsten Start neu geladen; dafür braucht es eine Verbindung."
 }

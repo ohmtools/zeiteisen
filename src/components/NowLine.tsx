@@ -10,6 +10,7 @@ export function NowLine({ firstHour, lastHour }: { firstHour: number; lastHour: 
 
   return (
     <div
+      aria-hidden
       className="absolute inset-x-0 z-10 border-t-2 border-primary"
       style={{ top: `${(minutes / total) * 100}%` }}
     />

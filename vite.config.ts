@@ -109,22 +109,29 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,zip}"],
         // Inter's other scripts: German and English never hit their
         // `unicode-range`, so the browser never asks for them either.
-        // The link preview cards are for crawlers only, never shown in the app.
+        // The link preview cards are for crawlers only, never shown in the app;
+        // iOS reads the touch icon once, when the app is added to the home
+        // screen (online).
         globIgnores: [
           "**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2",
           "og.png",
           "og-share.png",
+          "apple-touch-icon.png",
         ],
         // The catalog is served next to the app but is not part of the build,
         // so it cannot be precached. Network first keeps it fresh online and
         // still answers offline from the last response. The app also keeps its
-        // own copy in `tt.catalog.v1`, so this is only a second line.
+        // own copy in `tt.catalog.v1`, so this is only a second line. A network
+        // that has not answered after 5 s (a dead Wi-Fi, a captive portal)
+        // gets the cached copy instead; without one, the worker keeps waiting
+        // for the network, up to the app's own timeout (`FETCH_TIMEOUT_MS`).
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.includes("/catalog/"),
             handler: "NetworkFirst",
             options: {
               cacheName: "catalog",
+              networkTimeoutSeconds: 5,
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 180 },
               cacheableResponse: { statuses: [0, 200] },
             },

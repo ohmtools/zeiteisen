@@ -10,6 +10,8 @@ What it does (rules: instructions.md in this folder, step 1b):
   1. Reads word positions (pdftotext -bbox) and finds every table whose header
      line contains the words "SWS" and "LP"; the name column comes from a
      header word like "Modulname" / "Modul" / "Fach" / "Lehrveranstaltung".
+     A table that runs on to the next page without repeating its header keeps
+     its columns there (INFO), until a header, footnote or section ends it.
   2. Rebuilds rows: a module identifier (e.g. `1`, `15a`, `MOD2`, `MOD2/1`)
      left of the name, the name (wrapped lines joined), and the numbers under
      the SWS and LP headers. A row without LP is a group heading
@@ -79,6 +81,11 @@ def lines_of(ws):
 
 def centre(w):
     return (w["x0"] + w["x1"]) / 2
+
+
+def lp_text(v):
+    """An LP value for a message; `?` when none could be read."""
+    return "?" if v is None else f"{v:g}"
 
 
 def parse_number(t):
@@ -157,13 +164,17 @@ def main():
     a = ap.parse_args()
 
     rows, issues, tables, checked, block_start = [], [], 0, [], 0
+    hd = None
     for page, ws in words_by_page(a.pdf):
-        hd, last = None, None
+        # A table still open at the end of the last page runs on here: it
+        # keeps its columns until a header, footnote or section ends it.
+        # `carried` notes it once a row comes of it.
+        last, carried = None, hd is not None
         for line in lines_of(ws):
             first = line[0]["t"]
             h = header_of(line)
             if h:
-                hd, last, tables = h, None, tables + 1
+                hd, last, tables, carried = h, None, tables + 1, False
                 block_start = len(rows)
                 continue
             if hd is None:
@@ -201,6 +212,12 @@ def main():
                 "timeline": hd["timeline"], "y": line[0]["y"],
             }
             rows.append(last)
+            if carried:
+                issues.append(
+                    f"INFO p.{page}: a table runs on from the page before without its "
+                    f"header; its rows are read with that table's columns, spot-check them"
+                )
+                carried = False
 
     if not rows:
         print("NOT RECOGNISED: no table with the header columns SWS and LP and a name column.")
@@ -256,16 +273,18 @@ def main():
             mod["lp"] = sum(v for v in lps if v is not None) if any(v is not None for v in lps) else None
             mod["sws"] = sum(x["sws"] for x in tl if x["sws"] is not None) or None
             if len(tl) > 1:
-                issues.append(f"INFO {key} ({mod['name']}): {len(tl)} semester rows summed to {mod['lp']:g} LP")
+                issues.append(f"INFO {key} ({mod['name']}): {len(tl)} semester rows summed to {lp_text(mod['lp'])} LP")
         if cat:
             vals = {x["lp"] for x in cat}
             if len(vals) > 1:
-                issues.append(f"{key} ({mod['name']}): catalogue rows disagree on LP {sorted(v for v in vals if v is not None)}")
+                shown = ", ".join(lp_text(v) for v in sorted(vals, key=lambda v: (v is None, v or 0)))
+                issues.append(f"{key} ({mod['name']}): catalogue rows disagree on LP ({shown})")
             elif mod["lp"] is None:
                 mod["lp"] = cat[0]["lp"]
                 mod["sws"] = cat[0]["sws"]
-            elif tl and cat[0]["lp"] != mod["lp"]:
-                issues.append(f"{key} ({mod['name']}): semester plan says {mod['lp']:g} LP, catalogue {cat[0]['lp']:g}")
+            elif tl and cat[0]["lp"] is not None and cat[0]["lp"] != mod["lp"]:
+                # A catalogue row without LP (a dash) leaves the semester plan's.
+                issues.append(f"{key} ({mod['name']}): semester plan says {lp_text(mod['lp'])} LP, catalogue {lp_text(cat[0]['lp'])}")
             names = {x["name"] for x in cat}
             if len(names) > 1:
                 issues.append(f"INFO {key}: names differ between catalogues {sorted(names)}; first kept")
@@ -312,7 +331,7 @@ def main():
     for m in out_mods:
         flags = [f for f in ("slot", "derived") if m.get(f)]
         parts = f" parts={','.join(m['parts'])}" if m.get("parts") else ""
-        lp = "?" if m["lp"] is None else f"{m['lp']:g}"
+        lp = lp_text(m["lp"])
         print(f"  {m['id']:<10} {lp:>4} LP  {m['name'] or '(no name)'}{parts}{' [' + ','.join(flags) + ']' if flags else ''}")
 
     slug = a.major or re.sub(r"[^A-Za-z0-9-]+", "-", Path(a.pdf).stem).strip("-")

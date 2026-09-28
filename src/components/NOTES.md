@@ -29,7 +29,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   scroll (user decision, was 36px); below that the
   grid scrolls inside itself), week nav (an empty row of the same height in
   General, so the grid keeps its height), day toggle, view
-  switch, tab bar (user decision). The dock is the same element as the
+  switch, tab bar (user decision). The shown week and day move on with the
+  clock unless the user picked one that still lasts (`src/lib/NOTES.md`,
+  `view.ts`). The dock is the same element as the
   desktop toolbar, last in the timetable column; `desktop:` puts it back
   above the grid as one row (switch left, week nav right) with fixed 56px
   hours. `WeekNav` stays one row (short range label below `sm`).
@@ -44,8 +46,10 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   own file is, disabled while the catalog is ignored); degree programs "Load
   own …" / "Add own …" (several `.degree` files, trailing "n own files"; after
   picking, a dialog asks each checked file's name — the `degreeProgram`
-  subjects name, filled in with its file name without `.degree`, noting a name
-  that replaces a held file; cancel loads none) plus "Remove own degree
+  subjects name, filled in with its file name without `.degree`, stored NFC
+  like every typed name, unique in any case, noting a name that replaces a
+  held file, else one that replaces a catalog file (named, in the catalog's
+  spelling, which the file then takes); cancel loads none) plus "Remove own degree
   programs…", a dialog listing the files by name in upload order with a
   remove button each and "Remove all"; removing is immediate
   (the user still has the file), the last one closes it. One hidden file input
@@ -67,8 +71,20 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   touched), then confirms ("Profiles now: N, in the backup: M") with "Save
   current backup first" in the dialog; restoring replaces everything but the
   catalog cache.
+  Last "Delete data…" (destructive): the reset for when storage breaks the
+  app. Its dialog ticks parts (profiles; dates, locations and degree programs;
+  catalog cache; settings; offline app files — `@/lib/reset`, list in
+  `DataParts`), none at first, offers "Save current backup first", then
+  removes the keys and reloads.
+- Error screen (`ErrorBoundary`, first chunk): title, text, Reload. Below it
+  `ErrorTools` from the deferred chunk (loaded right after the first paint,
+  so a tab failing later holds it): "Save backup" and "Delete data…" as an
+  inline list, since the Data menu is out of reach and no toaster runs. If
+  that chunk does not load either, the screen stays with Reload alone.
 - Exports (ICS | Link | profile file) live in `ProfileSection` and work while
-  locked. **Never in the header** (user decision): up there they would imply
+  locked. ICS over the lecture period also holds listed dates outside it;
+  classes without a weekday are named in a warning toast (`src/lib/NOTES.md`,
+  `ics.ts`). **Never in the header** (user decision): up there they would imply
   global state like the dates, which never leave the device. Link warns first
   when a timetable is outside the catalog (the receiver needs its file); past
   `MAX_SHARE_LENGTH` it is disabled and the profile file becomes the obvious
@@ -77,9 +93,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (user decision), on top of the button's inline "Copied".
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`, `.degree`; the pickers accept
-  only their own. Downloads go out as `application/octet-stream` so no browser appends
-  `.json`. Catalog dates / locations and own dates / locations uploads stay
-  `.json`. The `.degree` extension is never shown: a degree program is its
+  only their own. Downloads go out as `application/octet-stream` so no browser
+  appends `.json`. Catalog dates / locations and own dates / locations uploads
+  stay `.json`. The `.degree` extension is never shown: a degree program is its
   bare name everywhere in the UI.
 - `@/lib/ics` is only reached through `import()`, date pickers only through
   `LazyCalendar` — both stay out of the first load.
@@ -107,15 +123,19 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   beside the block. A swipe stops it with `preventBaseUIHandler()` — Base UI
   ignores `preventDefault()`.
 - **Tree ↔ grid** (user decision): on desktop, hovering (mouse, read off the
-  ruler by position so it works on locked, disabled cells too) or keyboard
-  focus (`:focus-visible`; a tap focuses the button too on iPad and must not
-  dim the grid) on a group cell keeps its blocks and dims all others — a class toggle, no
-  re-layout. On every screen the popup names the block's group as a control;
+  ruler by position so it works on locked, disabled cells too) or keyboard focus
+  (`:focus-visible`; a tap focuses the button too on iPad and must not dim the
+  grid) on a group cell keeps its blocks and dims all others — a class toggle,
+  no re-layout. On every screen the popup names the block's group as a control;
   it jumps to the tree cell (phones switch to Groups), unfolds its timetable,
   scrolls to the cell and flashes it.
 - Hovering a block with the mouse gives every block of the same subject name
   (across timetables) a faint ring (user decision: subtle, nothing dimmed).
   Mouse only, so a tap leaves nothing behind.
+- Screen readers: a block in the hour grid carries its day (or date) and time
+  as `sr-only` text, every block its timetable (the tint's stand-in; the
+  visible popup still names none). Hour rows are `aria-hidden`, the now-line
+  too.
 
 ## Group tree
 
@@ -131,11 +151,16 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   2, 3, 6, 12 stacked at 1440 and 360px after touching it.
 - Partial selection per category, not per cell: `ClassPicker`, one row per
   slot (user decision), each with a pen that opens the subject editor.
-- Subject editor: an optional "Degree program" select (None + every
-  degree file on the device, by its bare name, after the name because it decides the name
+- Subject editor: an optional "Degree program" select (None + every degree file
+  on the device, by its bare name, after the name because it decides the name
   hints). The draft's own value stays listed even when its file is not on the
   device, so an edit never drops it silently.
 - No "select all / none" (user decision: redundant).
+- Screen readers: each category ruler is a `group` labelled by its category
+  line; a cell with some of its classes picked is `aria-pressed="mixed"`. The
+  heading's icon buttons name their timetable ("Download BEI3"), the class
+  picker its category; the folded warning count reads as "3 warnings". The
+  jump's flash and scroll respect `prefers-reduced-motion`.
 - Lock applies to the profile: tree cells, pickers, rename, delete, removing a
   timetable, subject edits and update decisions are disabled; exports and
   downloads keep working.

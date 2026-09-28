@@ -118,7 +118,8 @@ export function timetableHasUpdate(timetable: Timetable, catalog: Catalog): bool
 
 // The timetable with the catalog's current content, once the user accepted it.
 // A subject that stays keeps its enabled state, a new one arrives enabled.
-// `null` when there is no update or the download failed.
+// `null` when there is no update, the download failed or the file is not the
+// version the index lists (`Catalog.subjects`).
 export async function update(timetable: Timetable, catalog: Catalog): Promise<Timetable | null> {
   const entry = catalogUpdate(timetable, catalog);
   if (!entry) return null;

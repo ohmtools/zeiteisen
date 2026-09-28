@@ -39,7 +39,16 @@ export function ClassPicker({ timetableName, category, subjects, onSetEnabled, o
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="sm" className="-my-1 h-6 px-1" aria-label={m.tree_pick()} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-my-1 h-6 px-1"
+            aria-label={
+              category.category === null
+                ? m.tree_pick_ungrouped()
+                : m.tree_pick({ category: category.category })
+            }
+          />
         }
       >
         <ListChecks />

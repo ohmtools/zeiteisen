@@ -22,8 +22,9 @@
   stderr, not fatal. Degree files are checked against
   `degreeSchema` (`meta.ts`, through jiti) and warned about, never
   refused: a file not matching the format, a timetable subject whose
-  `degreeProgram` names no `degrees/<name>.degree`, and one whose code (or the part
-  before its last slash) is not in that file. Files are never merged, so a
+  `degreeProgram` names no `degrees/<name>.degree` (or a skipped or broken
+  one, said so), and one whose code (or the part before its last slash, with
+  something after it, like `splitVariant`) is not in that file. Files are never merged, so a
   code in several files is fine. The index is still written. Every path segment is checked against `nameProblem`
   (`src/lib/primitives/name.ts`, through jiti) and a timetable whose file name the
   app would clean gets the name it will show; warnings, never refusals. Re-run after every catalog change — hash is
@@ -42,6 +43,11 @@
   `__pycache__` skipped; a fixed entry date, so an unchanged skill gives the
   same zip. Optional positional = other output path; `parseArgs` strict, `-h`.
   The skill's own texts live in `skill/`; edit them there and re-run.
+- `scripts/touch-icon.mjs` (`node scripts/touch-icon.mjs`, by hand after a
+  logo change) renders `public/logo.svg` full-bleed (square backdrop, no rim:
+  iOS rounds corners itself and paints transparency black) to
+  `public/apple-touch-icon.png`, 180×180, committed; `index.html` links it,
+  the service worker skips it (iOS reads it once, on "Add to Home Screen").
 - `scripts/og/card.mjs` (`node scripts/og/card.mjs`, by hand) write the link
   preview cards `og.svg` / `og-share.svg` from one template (favicon watch,
   mini Mo–Fr grid in the favicon's and timetable tints' reds, Inter from

@@ -2,9 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
 import { cleanTimetableName, withCleanNames } from "@/lib/names";
 import { requestPersistence } from "@/lib/persist";
+import {
+  initialState,
+  removedState,
+  renamedState,
+  syncedState,
+  type ProfilesState,
+} from "@/lib/profileState";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
-import { normalizeName, uniqueName } from "@/lib/primitives/name";
+import { normalizeName } from "@/lib/primitives/name";
 import {
   addTimetables,
   duplicateProfile,
@@ -34,15 +41,13 @@ import type {
   TimetableSubjectExtra,
 } from "@/lib/primitives/timetable";
 
-// `active` is the active profile's name: names are unique on the device, so
-// the name is the address.
-type State = { profiles: Profile[]; active: ProfileName };
-
 // Owns `tt.profiles.v1` + `tt.active.v1`. A profile owns its timetables
 // outright: there is no shared file store, so nothing folds new files into
 // profiles behind the user's back.
 export function useProfiles() {
-  const [state, setState] = useState<State>(initial);
+  const [state, setState] = useState<ProfilesState>(() =>
+    initialState(loadProfiles(), loadActive()),
+  );
   const refused = useRef(false);
   // What storage held on load: writing it back is no change of the user's.
   const loaded = useRef(state.profiles);
@@ -66,10 +71,7 @@ export function useProfiles() {
   useStorageSync([PROFILES_KEY], () => {
     const profiles = loadProfiles();
     loaded.current = profiles;
-    setState((previous) => {
-      const next = { profiles, active: followActive(previous, profiles) };
-      return profileByName(profiles, next.active) ? next : withDefault(next);
-    });
+    setState((previous) => syncedState(previous, profiles));
   });
 
   const active = profileByName(state.profiles, state.active);
@@ -123,8 +125,13 @@ export function useProfiles() {
     addProfileObject: (profile: Profile) => add(profile),
     // A copy of the active profile, unlocked, under a name the user typed.
     duplicate: (name: ProfileName) => (active ? add(duplicateProfile(active, name)) : false),
-    addTimetables: (sources: readonly TimetableSource[]) =>
-      update((profile) => addTimetables(profile, cleanSources(sources))),
+    // `false` when there is no active profile or it is locked (another tab
+    // may have locked it while a dialog was open).
+    addTimetables: (sources: readonly TimetableSource[]): boolean => {
+      if (!active || active.locked) return false;
+      update((profile) => addTimetables(profile, cleanSources(sources)));
+      return true;
+    },
     removeTimetable: (name: TimetableName) => {
       // The toast is fired here, not inside the updater: an updater may run
       // twice and would then report the removal twice.
@@ -146,29 +153,10 @@ export function useProfiles() {
 
     // A taken name is refused. The active profile's name moves along with it.
     rename: (from: ProfileName, to: string) =>
-      setState((previous) => {
-        const name = normalizeName(to);
-        const profile = profileByName(previous.profiles, from);
-        if (!profile || profile.locked || !name || nameTaken(previous.profiles, name, from)) {
-          return previous;
-        }
-        return {
-          profiles: replace(previous.profiles, profile, { ...profile, name }),
-          active: previous.active === from ? name : previous.active,
-        };
-      }),
+      setState((previous) => renamedState(previous, from, to)),
     // Deleting a profile deletes its timetables with it: they belong to it.
-    remove: (name: ProfileName) =>
-      setState((previous) => {
-        const profile = profileByName(previous.profiles, name);
-        if (!profile || profile.locked) return previous;
-        const profiles = previous.profiles.filter((one) => one !== profile);
-        // The app always has an active profile; deleting the last one starts a
-        // fresh, empty default rather than leaving the app without one.
-        if (profiles.length === 0) return withDefault({ ...previous, profiles });
-        const next = previous.active === name ? profiles[0].name : previous.active;
-        return { profiles, active: next };
-      }),
+    // Deleting the last one starts a fresh, empty default.
+    remove: (name: ProfileName) => setState((previous) => removedState(previous, name)),
     // Lock applies to the profile, not to the live selection: a locked profile
     // keeps everything it stores — its timetables included — until unlocked.
     toggleLock: () =>
@@ -183,17 +171,6 @@ export function useProfiles() {
   };
 }
 
-// The active profile after another tab changed the profiles: the same name
-// while it exists. Gone, with exactly one new name in its place and the count
-// unchanged, it was renamed there: that name. Else the first profile.
-function followActive(previous: State, profiles: readonly Profile[]): ProfileName {
-  if (profileByName(profiles, previous.active)) return previous.active;
-  const before = new Set(previous.profiles.map((profile) => profile.name));
-  const added = profiles.filter((profile) => !before.has(profile.name));
-  if (added.length === 1 && profiles.length === previous.profiles.length) return added[0].name;
-  return profiles[0]?.name ?? "";
-}
-
 // File-safe names; `addTimetables` then makes them unique in the profile.
 function cleanSources(sources: readonly TimetableSource[]): TimetableSource[] {
   return sources.map((source) => ({ ...source, name: cleanTimetableName(source.name) }));
@@ -201,27 +178,4 @@ function cleanSources(sources: readonly TimetableSource[]): TimetableSource[] {
 
 function replace(profiles: Profile[], old: Profile, next: Profile): Profile[] {
   return profiles.map((one) => (one === old ? next : one));
-}
-
-// `loadProfiles` already drops broken profiles and repeated names.
-function initial(): State {
-  const profiles = loadProfiles();
-  const stored = loadActive();
-  const state: State = {
-    profiles,
-    active: stored && profileByName(profiles, stored) ? stored : (profiles[0]?.name ?? ""),
-  };
-  return profileByName(state.profiles, state.active) ? state : withDefault(state);
-}
-
-function withDefault(state: State): State {
-  const profile: Profile = {
-    name: uniqueName(
-      state.profiles.map((one) => one.name),
-      m.profile_default(),
-    ),
-    locked: false,
-    timetables: [],
-  };
-  return { active: profile.name, profiles: [...state.profiles, profile] };
 }

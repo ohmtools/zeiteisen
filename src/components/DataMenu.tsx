@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CircleOff,
   Download,
+  Eraser,
   Globe,
   Languages,
   MapPin,
@@ -53,7 +54,10 @@ import {
 import { DEGREE_EXTENSION, type CatalogMode } from "@/lib/primitives/catalog";
 import type { Backup, OwnDegreeFile } from "@/lib/primitives/storage";
 import { downloadBackup, readBackupFile, restoreBackup } from "@/lib/backup";
-import { nameProblemText } from "@/lib/names";
+import { resetAndReload, type DataPart } from "@/lib/reset";
+import { DataPartsList } from "@/components/DataParts";
+import { appRoot } from "@/lib/catalog";
+import { degreeNames, type DegreeName } from "@/lib/degrees";
 import { toast } from "@/lib/toast";
 
 type Props = {
@@ -71,6 +75,9 @@ type Props = {
   onCatalogLocations: () => void;
   // The own degree files, in upload order.
   ownDegrees: OwnDegreeFile[];
+  // The names of the catalog's degree files: an own file of such a name
+  // replaces it.
+  catalogDegrees: readonly string[];
   // Reads and checks picked files, each under its file name without
   // `.degree`; `onAddDegrees` stores them under the names the user gave.
   onReadDegrees: (files: File[]) => Promise<OwnDegreeFile[]>;
@@ -108,6 +115,7 @@ export function DataMenu({
   onUploadLocations,
   onCatalogLocations,
   ownDegrees,
+  catalogDegrees,
   onReadDegrees,
   onAddDegrees,
   onRemoveDegrees,
@@ -153,6 +161,7 @@ export function DataMenu({
   const backupInput = useRef<HTMLInputElement>(null);
   // A backup read and checked, waiting for the user's confirmation.
   const [restoring, setRestoring] = useState<Backup | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const pickBackup = async (file: File) => {
     const backup = await readBackupFile(file);
@@ -277,6 +286,10 @@ export function DataMenu({
               <Upload data-icon="inline-start" />
               {m.backup_load()}
             </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleting(true)}>
+              <Eraser data-icon="inline-start" />
+              {m.data_delete()}
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           {settings && <SettingsExtras />}
         </DropdownMenuContent>
@@ -285,6 +298,7 @@ export function DataMenu({
       <DegreeNamesDialog
         files={placing}
         held={ownDegrees}
+        catalog={catalogDegrees}
         onClose={() => setPlacing([])}
         onAdd={onAddDegrees}
       />
@@ -344,6 +358,8 @@ export function DataMenu({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DeleteDataDialog open={deleting} onOpenChange={setDeleting} />
     </>
   );
 }
@@ -468,12 +484,15 @@ function OwnDegreesDialog({
 function DegreeNamesDialog({
   files,
   held,
+  catalog,
   onClose,
   onAdd,
 }: {
   files: OwnDegreeFile[];
   // The own files already loaded: a name among them is replaced.
   held: OwnDegreeFile[];
+  // The catalog's degree files, by name: one of them is replaced too.
+  catalog: readonly string[];
   onClose: () => void;
   onAdd: (files: OwnDegreeFile[]) => void;
 }) {
@@ -485,15 +504,18 @@ function DegreeNamesDialog({
     setNames(files.map((file) => file.name));
   }
 
-  const trimmed = files.map((_, i) => (names[i] ?? "").trim());
-  const problems = trimmed.map(
-    (name, i) =>
-      nameProblemText(name) ?? (trimmed.indexOf(name) !== i ? m.degree_name_duplicate() : null),
+  // NFC like every typed name (macOS and iOS hand out file names with a
+  // decomposed "ä", which would miss the `degreeProgram` spelled composed),
+  // unique in any case, a catalog file's own spelling when it replaces one.
+  const checked = degreeNames(
+    files.map((_, i) => names[i] ?? ""),
+    held,
+    catalog,
   );
-  const invalid = trimmed.some((name, i) => !name || problems[i] !== null);
+  const invalid = checked.some((one) => !one.name || one.problem !== null);
   const add = () => {
     if (invalid) return;
-    onAdd(files.map((file, i) => ({ ...file, name: trimmed[i] })));
+    onAdd(files.map((file, i) => ({ ...file, name: checked[i].name })));
     onClose();
   };
 
@@ -518,19 +540,14 @@ function DegreeNamesDialog({
                 value={names[i] ?? ""}
                 autoFocus={i === 0}
                 placeholder={m.degree_name_placeholder()}
-                aria-invalid={problems[i] !== null || undefined}
+                aria-invalid={checked[i].problem !== null || undefined}
+                aria-describedby={`degree-name-${i}-note`}
                 onChange={(event) => setNames(names.with(i, event.target.value))}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") add();
                 }}
               />
-              {problems[i] ? (
-                <p className="text-sm text-destructive">{problems[i]}</p>
-              ) : (
-                held.some((own) => own.name === trimmed[i]) && (
-                  <p className="text-sm text-muted-foreground">{m.degree_name_replaces()}</p>
-                )
-              )}
+              <DegreeNameNote id={`degree-name-${i}-note`} checked={checked[i]} />
             </div>
           ))}
         </div>
@@ -544,6 +561,78 @@ function DegreeNamesDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Under a degree name: what is wrong with it, else what it replaces.
+function DegreeNameNote({ id, checked }: { id: string; checked: DegreeName }) {
+  if (checked.problem) {
+    return (
+      <p id={id} className="text-sm text-destructive">
+        {checked.problem}
+      </p>
+    );
+  }
+  if (!checked.replaces) return null;
+  return (
+    <p id={id} className="text-sm text-muted-foreground">
+      {checked.replaces === "own"
+        ? m.degree_name_replaces()
+        : m.degree_name_replaces_catalog({ name: checked.name })}
+    </p>
+  );
+}
+
+// The reset for when storage breaks the app: the chosen parts are removed,
+// then the page starts again, because every hook read its state on the first
+// render (like a restore). Nothing is chosen at first; "Save backup first" is
+// the way back.
+function DeleteDataDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [chosen, setChosen] = useState<DataPart[]>([]);
+  // Every opening starts with nothing chosen.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) setChosen([]);
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      {/* Five parts outgrow a short phone: the list scrolls, the buttons stay. */}
+      <AlertDialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{m.data_delete_title()}</AlertDialogTitle>
+          <AlertDialogDescription>{m.data_delete_text()}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <DataPartsList id="delete" chosen={chosen} onChange={setChosen} />
+        <Button
+          variant="outline"
+          className="sm:justify-self-start"
+          onClick={() => downloadBackup()}
+        >
+          <Download data-icon="inline-start" />
+          {m.backup_save_first()}
+        </Button>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={chosen.length === 0}
+            onClick={async () => {
+              if (!(await resetAndReload(chosen))) toast.error(m.data_delete_error());
+            }}
+          >
+            {m.data_delete_confirm()}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -604,7 +693,7 @@ function CatalogUrlDialog({
             type="url"
             value={value}
             autoFocus
-            placeholder={new URL(defaultUrl, location.href).href}
+            placeholder={new URL(defaultUrl, appRoot()).href}
             aria-invalid={invalid || undefined}
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={(event) => {

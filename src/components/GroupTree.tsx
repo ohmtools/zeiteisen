@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -50,7 +50,7 @@ import { warningsFor } from "@/lib/primitives/warnings";
 import { downloadTimetable } from "@/lib/download";
 import type { Highlight, SubjectRef } from "@/lib/link";
 import { tintStyleOf, tintSteps } from "@/lib/tint";
-import { warningKey, warningText } from "@/lib/warnings";
+import { warningLines } from "@/lib/warnings";
 import { nameProblemText } from "@/lib/names";
 import { normalizeName, sameName } from "@/lib/primitives/name";
 
@@ -278,10 +278,12 @@ function TimetableTree({
 }: TimetableProps) {
   const { timetable } = node;
   const name = timetable.name;
-  const warnings = warningsFor(timetable);
+  const warnings = warningLines(warningsFor(timetable));
   // Several timetables make the sidebar long, so each one folds away. Open by
   // default: the tree is what the section is for.
   const [open, setOpen] = useState(true);
+  // Labels the category rulers for screen readers.
+  const id = useId();
   // A jump into a folded timetable unfolds it first.
   const [seenFlash, setSeenFlash] = useState(flash?.nonce);
   if (flash && flash.nonce !== seenFlash) {
@@ -316,15 +318,15 @@ function TimetableTree({
             type="button"
             className="flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
             aria-expanded={open}
-            title={open ? m.tree_collapse() : m.tree_expand()}
-            aria-label={open ? m.tree_collapse() : m.tree_expand()}
+            title={open ? m.tree_collapse({ name }) : m.tree_expand({ name })}
+            aria-label={open ? m.tree_collapse({ name }) : m.tree_expand({ name })}
             onClick={() => setOpen(!open)}
           >
             {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </button>
           {/* The same tint the timetable's blocks carry in the grid, so the
               grid can be read back to the tree. */}
-          <span className="h-4 w-1 shrink-0 bg-(--tint)" style={tintStyleOf(tint)} />
+          <span aria-hidden className="h-4 w-1 shrink-0 bg-(--tint)" style={tintStyleOf(tint)} />
           {draft !== null ? (
             <Input
               className="h-7 flex-1"
@@ -355,21 +357,23 @@ function TimetableTree({
           {/* Folding a timetable away must not hide that it has warnings. */}
           {!open && warnings.length > 0 && (
             <span
+              role="img"
               className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
               title={m.tree_warning_count({ count: warnings.length })}
+              aria-label={m.tree_warning_count({ count: warnings.length })}
             >
               <AlertTriangle className="size-3.5" />
               {warnings.length}
             </span>
           )}
-          <CatalogIcon status={status} onUpdate={onUpdate} />
+          <CatalogIcon name={name} status={status} onUpdate={onUpdate} />
           {/* Works while locked: it changes nothing. */}
           <Button
             variant="ghost"
             size="icon"
             className="size-6"
-            title={m.tree_download()}
-            aria-label={m.tree_download()}
+            title={m.tree_download({ name })}
+            aria-label={m.tree_download({ name })}
             onClick={() => saveTimetable(timetable)}
           >
             <Download />
@@ -379,8 +383,8 @@ function TimetableTree({
             size="icon"
             className="size-6"
             disabled={locked}
-            title={m.tree_add_subject()}
-            aria-label={m.tree_add_subject()}
+            title={m.tree_add_subject({ name })}
+            aria-label={m.tree_add_subject({ name })}
             onClick={() => onEdit(null)}
           >
             <Plus />
@@ -390,8 +394,8 @@ function TimetableTree({
             size="icon"
             className="size-6"
             disabled={locked}
-            title={m.tree_remove()}
-            aria-label={m.tree_remove()}
+            title={m.tree_remove({ name })}
+            aria-label={m.tree_remove({ name })}
             onClick={onRemove}
           >
             <Trash2 />
@@ -404,7 +408,7 @@ function TimetableTree({
         node.categories.map((category) => (
           <div key={category.category ?? "none"} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>
+              <span id={`${id}-${category.category ?? "none"}`}>
                 {category.category === null
                   ? m.tree_no_group()
                   : m.tree_category({ category: category.category })}
@@ -447,6 +451,8 @@ function TimetableTree({
               after touching any of this: their edges must line up. */}
             <div
               className="grid"
+              role="group"
+              aria-labelledby={`${id}-${category.category ?? "none"}`}
               // Hover is read off the ruler itself, by position: it works on
               // disabled cells too (locked profile), which get no pointer
               // events of their own. Mouse only — a tap is a click.
@@ -492,9 +498,9 @@ function TimetableTree({
       {open && warnings.length > 0 && (
         <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
           {warnings.map((warning) => (
-            <li key={warningKey(warning)} className="flex items-start gap-2">
+            <li key={warning.key} className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-              <span>{warningText(warning)}</span>
+              <span>{warning.text}</span>
             </li>
           ))}
         </ul>
@@ -505,7 +511,16 @@ function TimetableTree({
 
 // What the catalog says about a timetable installed from it. Only a waiting
 // update is a button — it opens the diff; the other states are just shown.
-function CatalogIcon({ status, onUpdate }: { status: CatalogStatus; onUpdate: () => void }) {
+function CatalogIcon({
+  name,
+  status,
+  onUpdate,
+}: {
+  // The timetable's name: several headings each carry this button.
+  name: TimetableName;
+  status: CatalogStatus;
+  onUpdate: () => void;
+}) {
   if (status === "none") return null;
   if (status === "update") {
     return (
@@ -513,8 +528,8 @@ function CatalogIcon({ status, onUpdate }: { status: CatalogStatus; onUpdate: ()
         variant="ghost"
         size="icon"
         className="size-6"
-        title={m.tree_update()}
-        aria-label={m.tree_update()}
+        title={m.tree_update({ name })}
+        aria-label={m.tree_update({ name })}
         onClick={onUpdate}
       >
         <CloudSync />

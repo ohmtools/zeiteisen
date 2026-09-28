@@ -1,4 +1,5 @@
 import { createEvents, type EventAttributes } from "ics";
+import { isAfter, isBefore, parseISO } from "date-fns";
 import { m } from "@/i18n";
 import { groupName } from "@/lib/primitives/group";
 import type { SemesterDates } from "@/lib/primitives/meta";
@@ -8,7 +9,7 @@ import {
   type DateRange,
   type Occurrence,
 } from "@/lib/primitives/occurrence";
-import { getSubjectID, kindLabel, shortHash, type Subject } from "@/lib/primitives/subject";
+import { Day, getSubjectID, kindLabel, shortHash, type Subject } from "@/lib/primitives/subject";
 import { enabledSubjects, type Timetable } from "@/lib/primitives/timetable";
 import type { Meeting } from "@/lib/primitives/week";
 import { safeFilename } from "@/lib/download";
@@ -82,6 +83,41 @@ export function eventOf(
     ...(meeting.location ? { location: meeting.location } : {}),
     ...(description ? { description } : {}),
   };
+}
+
+// What an export over the lecture period covers: the period, stretched to
+// every listed date of an enabled subject. A block seminar in the lecture-free
+// weeks shows in its week (listed dates win over the period, `meetingsInWeek`),
+// so it belongs in the file too. Weekly rhythms stay inside the period: the
+// weeks the stretch adds lie outside it, where they never meet.
+export function lectureExportRange(
+  timetables: readonly Timetable[],
+  lecture: DateRange,
+): DateRange {
+  let { start, end } = lecture;
+  for (const timetable of timetables) {
+    for (const { subject } of enabledSubjects(timetable)) {
+      if (subject.repeat.type !== "I") continue;
+      for (const { date } of subject.repeat.dates) {
+        const day = parseISO(date);
+        if (isBefore(day, start)) start = day;
+        if (isAfter(day, end)) end = day;
+      }
+    }
+  }
+  return { start, end };
+}
+
+// Enabled weekly classes with no weekday: the university's "Block / n.V. /
+// Samstag" column (`Day.other`). No date says when they meet, so no calendar
+// entry can hold them; the export names them instead of dropping them in
+// silence. Listed dates on a weekend have their date and are exported.
+export function undatedClasses(timetables: readonly Timetable[]): Subject[] {
+  return timetables.flatMap((timetable) =>
+    enabledSubjects(timetable)
+      .map(({ subject }) => subject)
+      .filter(({ repeat }) => repeat.type !== "I" && repeat.day === Day.other),
+  );
 }
 
 export type IcsFile = { filename: string; text: string; count: number };

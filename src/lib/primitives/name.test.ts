@@ -23,6 +23,18 @@ test("uniqueName: case and Unicode form do not tell names apart", () => {
   expect(uniqueNames([], ["A", "a"])).toEqual(["A", "a 2"]);
 });
 
+test("uniqueName: a numbered long name still fits the byte limit", () => {
+  // 244 bytes, valid; "ä" is two bytes and must not be cut in half.
+  const long = "a".repeat(MAX_NAME_BYTES - 3) + "ä";
+  expect(nameProblem(long)).toBeNull();
+  const next = uniqueName([long], long);
+  expect(nameProblem(next)).toBeNull();
+  expect(next).toBe("a".repeat(MAX_NAME_BYTES - 3) + " 2");
+  expect(uniqueName([long, next], long)).toBe("a".repeat(MAX_NAME_BYTES - 3) + " 3");
+  // Short names keep all of themselves.
+  expect(uniqueName(["Plan"], "Plan")).toBe("Plan 2");
+});
+
 test("sameName / normalizeName: one file on every system", () => {
   expect(sameName("BEI3", "bei3")).toBe(true);
   expect(sameName("\u00e4", "a\u0308")).toBe(true);

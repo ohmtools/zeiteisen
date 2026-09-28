@@ -51,9 +51,14 @@ export function AppDialogs({
         target={picking === "add" ? profiles.active : undefined}
         onConfirm={(name, sources) => {
           // A profile and its timetables are created in one state change.
-          if (picking === "new-profile") profiles.addProfile(name, sources);
-          else profiles.addTimetables(sources);
-          if (sources.length > 0) toast.success(m.picker_added({ count: sources.length }));
+          const added =
+            picking === "new-profile"
+              ? profiles.addProfile(name, sources)
+              : profiles.addTimetables(sources);
+          if (added && sources.length > 0) {
+            toast.success(m.picker_added({ count: sources.length }));
+          }
+          return added;
         }}
       />
 
@@ -80,10 +85,11 @@ export function AppDialogs({
         offline={!online}
         initial={linkPayload}
         onImport={(profile, unresolved) => {
-          if (!profiles.addProfileObject(profile)) return;
+          if (!profiles.addProfileObject(profile)) return false;
           onLinkPayloadChange(null);
           toast.success(m.toast_imported({ name: profile.name }));
           if (unresolved > 0) toast.warning(m.import_unresolved({ count: unresolved }));
+          return true;
         }}
       />
     </>

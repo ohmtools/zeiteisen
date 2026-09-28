@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState, type ComponentProps } from "react";
-import { startOfISOWeek } from "date-fns";
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentProps } from "react";
+import { startOfDay } from "date-fns";
 import { ChevronDown, Database, Settings } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
@@ -22,7 +22,7 @@ import { useOwnData } from "@/hooks/useOwnData";
 import { useSemesterDates } from "@/hooks/useSemesterDates";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useShareLink } from "@/hooks/useShareLink";
-import { Catalog } from "@/lib/primitives/catalog";
+import { Catalog, CatalogKind, degreeProgramOf } from "@/lib/primitives/catalog";
 import { isKnownSharedProfile } from "@/lib/primitives/profile";
 import type { Day } from "@/lib/primitives/subject";
 import type { TimetableName } from "@/lib/primitives/timetable";
@@ -32,7 +32,7 @@ import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
 import { isDesktop } from "@/lib/media";
-import { defaultView } from "@/lib/view";
+import { defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
 
 // Everything but the grid comes from one deferred chunk (see
 // `components/deferred`): rendering any of these on the first render starts
@@ -46,7 +46,23 @@ const AppToaster = lazy(() => deferred().then((d) => ({ default: d.AppToaster })
 const DataMenu = lazy(() => deferred().then((d) => ({ default: d.DataMenu })));
 
 export default function App() {
-  const [weekStart, setWeekStart] = useState(() => startOfISOWeek(new Date()));
+  // "Now" ticks every minute, so a page left open moves on with the clock.
+  const now = useNow();
+  // The week the week view shows and the one day of the phone grid: what the
+  // user picked while that week (day) lasts, else the current one.
+  const [pickedWeek, setPickedWeek] = useState<Picked<number> | null>(null);
+  const weekTime = shownWeek(pickedWeek, now);
+  // One Date per shown week: the compiler would build a new one on every tick
+  // of `now`, and with it the week's events and blocks.
+  const weekStart = useMemo(() => new Date(weekTime), [weekTime]);
+  const [pickedDay, setPickedDay] = useState<Picked<Day> | null>(null);
+  const day = shownDay(pickedDay, now);
+  // The clock read on the click (an event handler may), so the handlers do not
+  // change, and re-render the grid, on every tick.
+  const pickWeek = (next: Date) =>
+    setPickedWeek({ value: next.getTime(), pickedIn: shownWeek(null, new Date()) });
+  const pickDay = (next: Day) =>
+    setPickedDay({ value: next, pickedIn: startOfDay(new Date()).getTime() });
   // Where the global dates came from, plus the footer switch.
   const sources = useCatalogSources();
   const dates = useSemesterDates(sources);
@@ -54,9 +70,6 @@ export default function App() {
   const own = useOwnData();
   // Current week during the lecture period, else the general grid.
   const [view, setView] = useState<View>(() => defaultView(dates.dates, new Date()));
-  // The one day the grid shows below `md`; weekends start on "other", where
-  // weekend events end up.
-  const [day, setDay] = useState<Day>(() => dayOf(new Date()));
   // Only used to explain the catalog: nothing in the app needs the network.
   const online = useOnline();
   // The optional static catalog: locations, degrees, dates and ready-made
@@ -155,6 +168,10 @@ export default function App() {
     onUploadLocations: (file) => void own.uploadLocations(file),
     onCatalogLocations: own.switchToCatalogLocations,
     ownDegrees: own.degrees,
+    catalogDegrees: catalog
+      .entries(CatalogKind.Degrees)
+      .map(degreeProgramOf)
+      .filter((program) => program !== null),
     onReadDegrees: own.readDegrees,
     onAddDegrees: own.addDegrees,
     onRemoveDegrees: own.removeDegrees,
@@ -163,14 +180,13 @@ export default function App() {
 
   // The week's number in its own semester (`semesterWeek`): the calendar
   // alone decides, not the dates file and not today.
-  const now = useNow();
   const weekNumber = semesterWeek(weekStart);
 
   let week: WeekView | null = null;
   // Visible = the enabled subjects of this profile's timetables.
   let entries = generalEntries(timetables);
   if (view === "week") {
-    const containsToday = startOfISOWeek(now).getTime() === weekStart.getTime();
+    const containsToday = shownWeek(null, now) === weekTime;
     const today = dayOf(now);
     const events = eventsForWeek(dates.dates, weekStart);
     week = { ...events, today: containsToday && today !== "other" ? today : null };
@@ -258,10 +274,10 @@ export default function App() {
               {/* Stays in the general view, empty, so the grid keeps its height. */}
               <div className="flex h-8 items-center desktop:order-last">
                 {view === "week" && (
-                  <WeekNav value={weekStart} onChange={setWeekStart} semesterWeek={weekNumber} />
+                  <WeekNav value={weekStart} onChange={pickWeek} semesterWeek={weekNumber} />
                 )}
               </div>
-              <DayToggle value={day} onChange={setDay} className="md:hidden" />
+              <DayToggle value={day} onChange={pickDay} className="md:hidden" />
               <ViewSwitch value={view} onChange={setView} />
             </div>
             {/* Below `desktop` the grid fills the height the dock leaves and
@@ -275,7 +291,7 @@ export default function App() {
                 onJump={jumpToGroup}
                 onInfo={setSubjectInfo}
                 selectedDay={day}
-                onSelectDay={setDay}
+                onSelectDay={pickDay}
               />
             </div>
             <Footer data={dataMenu} />

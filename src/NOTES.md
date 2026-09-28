@@ -18,7 +18,13 @@
   (`autoUpdate`: the new service worker takes over and drops the old
   precache). `main.tsx` reloads on `vite:preloadError` (at most once a
   minute), and `ErrorBoundary` around App shows a reload button instead of a
-  blank page if that is not enough.
+  blank page if that is not enough, with backup and "Delete data…" from the
+  deferred chunk below it (`components/NOTES.md`).
+- The first load is what the grid waits for: check it after touching anything
+  App or `main.tsx` import statically — `vite build`, then add up the
+  scripts, `modulepreload`s and stylesheet `dist/index.html` names (gzip).
+  `week.ts` writes ISO days by hand (`isoDay`) because date-fns' `format`
+  alone brought ~4 KB gzip of formatter and locale into it.
 - "Now" is `useNow()` (state, ticks every minute), never `new Date()` in
   render: the React Compiler caches that forever. No function called during
   render may be named `use…` unless it is a hook: the compiler then skips the
@@ -39,6 +45,8 @@
 - `src/i18n.ts` is the ONLY importer of paraglide; components do
   `import { m } from "@/i18n"`. `localized()` picks a `{ de, en }` value from
   catalog / dates files, never a message.
+- A `{count}` that can be 1 is a plural variant (`declarations`,
+  `countPlural=one` / `other`, see `picker_added`), not a second message.
 - A profile or timetable name inside a sentence is quoted in the message
   itself (en “…”, de „…“); not in titles, button labels or file names
   (`update_title`, `share_warning_download`) — user decision.

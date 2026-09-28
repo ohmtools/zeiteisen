@@ -72,7 +72,8 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
     const file = latest.current.entry?.path ?? timetable.name;
     void update(timetable, latest.current.catalog).then((updated) => {
       if (cancelled) return;
-      // No update after all, or the download failed: nothing left to show.
+      // No update after all, or the download failed or was not the listed
+      // version: nothing left to show.
       if (!updated) {
         toast.error(m.catalog_error_fetch({ file }));
         latest.current.onOpenChange(false);
@@ -85,12 +86,12 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
     };
   }, [timetable, offered]);
 
+  // Never empty: `update` only hands out the version the index lists, whose
+  // hash differs from the timetable's.
   const diff =
     timetable && next
       ? diffSubjects(timetable.subjects.toSubjects(), next.subjects.toSubjects())
       : null;
-  // A stale index may serve the very content the timetable already has.
-  const identical = diff !== null && diff.added.length === 0 && diff.removed.length === 0;
 
   return (
     <AlertDialog
@@ -109,8 +110,6 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
 
         {diff === null ? (
           <p className="text-sm text-muted-foreground">{m.update_loading()}</p>
-        ) : identical ? (
-          <p className="text-sm text-muted-foreground">{m.update_none()}</p>
         ) : (
           <div className="flex flex-col gap-3 text-sm">
             <p className="text-muted-foreground">{m.update_summary({ count: diff.sameCount })}</p>

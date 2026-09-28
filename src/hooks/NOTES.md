@@ -3,8 +3,11 @@
 Hooks own state; everything else reads it through props. Every read and write
 goes through primitives `storage.ts`.
 
-- `useProfiles` — `tt.profiles.v1` + `tt.active.v1`. A locked profile refuses
-  every write except unlocking. Adds, renames and duplicates REFUSE a taken
+- `useProfiles` — `tt.profiles.v1` + `tt.active.v1`; its state moves live in
+  `@/lib/profileState` (tested there). A locked profile refuses
+  every write except unlocking. Adding timetables and profiles returns whether
+  it happened: the dialogs stay open when another tab took the name or locked
+  the profile meanwhile. Adds, renames and duplicates REFUSE a taken
   name (the dialogs check first; this is the guard behind them). Deleting the
   last profile starts a fresh default. Toasts fire outside state updaters (an
   updater may run twice). A write carries every timetable (~25 KB each); a
@@ -27,13 +30,14 @@ goes through primitives `storage.ts`.
   table per file, keyed by `degreeProgram`):
   `readDegrees` checks picked files without storing them, `addDegrees`
   stores them under the names the user gave (Data menu dialog, file name
-  without `.degree` filled in); a held name is replaced and moves last,
+  without `.degree` filled in); a held name, in any case, is replaced and moves last,
   removing goes by name. Upload toasts say the catalog never touches
   own files.
 - `useCatalogSources` — `tt.sources.v1` (where the dates came from,
   `datesManual`), `tt.catalogmode.v1` (the Data menu's cycling "Catalog":
   ignore → auto-update → freeze) and `tt.catalogurl.v1`.
-- `useCatalog` — `tt.catalog.v1`. Renders from cache, refreshes on every page
+- `useCatalog` — `tt.catalog.v1`. Its scheduling and the drop-on-switch
+  rule are plain code in `@/lib/refresh` (tested there). Renders from cache, refreshes on every page
   load, every 5 minutes while visible, on becoming visible again (unless the
   last refresh is under a minute old), on `online`, and when the picker or the
   import dialog opens (`refresh`, App): a tab or installed app stays open for
@@ -42,7 +46,8 @@ goes through primitives `storage.ts`.
   one. `ignore` reads nothing and hands out `Catalog.empty`; switching to it
   or to another URL empties the cache and removes catalog-installed dates
   (user decision: `freeze` is the mode that keeps catalog data). Own files
-  always stay. A first download is no news (no toast). Locations and degree files
+  always stay. A first download is no news (no toast), nor is a file an own
+  one replaces (own locations; an own degree file of its name). Locations and degree files
   always read the newest copy on the device, even under an older hash: a
   failed or broken download keeps names and building links. Frozen, the copy
   on the device stays in use, however old. **Timetables are never

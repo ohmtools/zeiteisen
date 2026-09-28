@@ -26,6 +26,20 @@ export type NameProblem = "empty" | "chars" | "end" | "reserved" | "long";
 
 const bytes = (text: string) => new TextEncoder().encode(text).length;
 
+// `text` cut to at most `max` UTF-8 bytes, by code point, so a character is
+// never cut in half.
+function cutToBytes(text: string, max: number): string {
+  if (bytes(text) <= max) return text;
+  let kept = "";
+  let size = 0;
+  for (const char of text) {
+    size += bytes(char);
+    if (size > max) break;
+    kept += char;
+  }
+  return kept;
+}
+
 function isReserved(name: string): boolean {
   return RESERVED.test(name.split(".")[0].trimEnd());
 }
@@ -70,15 +84,7 @@ export function cleanName(name: string, fallback: string): string {
   trimEnd();
   if (isReserved(clean)) clean = clean.replace(/^[^.]*/u, (stem) => stem.trimEnd() + "_");
   if (bytes(clean) > MAX_NAME_BYTES) {
-    const kept: string[] = [];
-    let size = 0;
-    // By code point, so a character is never cut in half.
-    for (const char of clean) {
-      size += bytes(char);
-      if (size > MAX_NAME_BYTES) break;
-      kept.push(char);
-    }
-    clean = kept.join("");
+    clean = cutToBytes(clean, MAX_NAME_BYTES);
     trimEnd();
   }
   return clean || fallback;
@@ -86,12 +92,14 @@ export function cleanName(name: string, fallback: string): string {
 
 // "Name", "Name 2", "Name 3", … — the first one not taken yet, in any case
 // (`sameName`). Profile names are unique on the device, timetable names within
-// one profile.
+// one profile. A name close to `MAX_NAME_BYTES` gives up its end for the
+// number, so the numbered one is still a valid file name.
 export function uniqueName(taken: Iterable<string>, wanted: string): string {
   const names = new Set([...taken].map(nameKey));
   if (!names.has(nameKey(wanted))) return wanted;
   for (let i = 2; ; i++) {
-    const candidate = `${wanted} ${i}`;
+    const suffix = ` ${i}`;
+    const candidate = cutToBytes(wanted, MAX_NAME_BYTES - bytes(suffix)) + suffix;
     if (!names.has(nameKey(candidate))) return candidate;
   }
 }
