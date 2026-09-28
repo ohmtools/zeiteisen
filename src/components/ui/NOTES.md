@@ -27,8 +27,8 @@ Style `base-sera` (Base UI primitives, not Radix), theme and font (Inter) pick d
   helper.
 - Dark mode = shadcn's `.dark` class, set by `ThemeProvider`
   (`src/components/theme-provider.tsx`, wrap `App` in `main.tsx`) from
-  `prefers-color-scheme`, live. Inline script in `index.html` set `.dark` before first
-  paint (plus `color-scheme` meta) so dark users get no white flash on load or locale
+  `prefers-color-scheme`, live. Blocking `public/dark.js` (not inline: CSP without hashes)
+  in `index.html` set `.dark` before first paint (plus `color-scheme` meta) so dark users get no white flash on load or locale
   switch. Keep both. **No theme toggle** (user decision).
 - Language follow browser too (paraglide strategy localStorage -> preferredLanguage).
   Only override: small EN/DE ghost buttons in the desktop footer, a language

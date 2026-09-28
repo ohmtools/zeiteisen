@@ -9,13 +9,9 @@
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <!-- Set shadcn's .dark class before first paint so dark users never see a
          white flash on load or on a locale switch (setLocale reloads).
-         ThemeProvider keeps it in sync afterwards. -->
-    <script>
-      document.documentElement.classList.toggle(
-        "dark",
-        matchMedia("(prefers-color-scheme: dark)").matches,
-      );
-    </script>
+         ThemeProvider keeps it in sync afterwards. A classic blocking file,
+         not inline, so the CSP needs no hash. -->
+    <script src="/dark.js"></script>
     <title>Zeiteisen</title>
     <!-- Link preview card (WhatsApp, Discord, …): crawlers read these tags
          from the raw HTML, no JS. German only, one card per URL. The
