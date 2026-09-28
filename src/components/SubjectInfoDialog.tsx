@@ -37,6 +37,12 @@ export function SubjectInfoDialog({
                 <span>{m.subject_info_sws_exercise({ hours: info.sws.exercise })}</span>
                 <span>{m.subject_info_sws_laboratory({ hours: info.sws.laboratory })}</span>
               </section>
+              {info.lp !== undefined && (
+                <section className="flex flex-col gap-1">
+                  <span className="font-medium">{m.subject_info_lp()}</span>
+                  <span>{info.lp}</span>
+                </section>
+              )}
               <section className="flex flex-col gap-1">
                 <span className="font-medium">{m.subject_info_description()}</span>
                 <span>{localized(info.description)}</span>

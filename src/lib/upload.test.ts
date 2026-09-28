@@ -48,6 +48,7 @@ it("reads locations and degreeInformation, refusing a file that lists none", asy
         code: "M1",
         name: { de: "Mathe 1", en: "Maths 1" },
         sws: { lecture: 2, exercise: 1, laboratory: 0 },
+        lp: 5,
         description: { de: "d", en: "d" },
         test: { de: "t", en: "t" },
       },

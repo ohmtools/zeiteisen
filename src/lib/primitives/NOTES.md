@@ -95,7 +95,7 @@ parameter so tests run without a browser.
 - `tt.locations.v1` = the user's own locations file, used INSTEAD of the
   catalog's; `null` or missing = the catalog's. `tt.degreeinformation.v1` = the
   user's own degree information files (each subject a `SubjectInformation`: name,
-  sws, code, description, test; `mergeDegreeInformation` keeps the whole entry) (`OwnDegreeInformationFile[]`, unique file names,
+  sws, lp, code, description, test; `mergeDegreeInformation` keeps the whole entry) (`OwnDegreeInformationFile[]`, unique file names,
   upload order), MERGED OVER the catalog's, later files winning (user
   decision). Present = "own", so `CatalogSources` carries no flag for them
   (dates need `datesManual` because one key holds catalog and own dates

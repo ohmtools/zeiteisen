@@ -1,6 +1,6 @@
 ---
 name: "zeiteisen-generator"
-description: "Extract structured JSON data (timetables as .timetable files) for a university timetable app (TH Nürnberg / Ohm) from four kinds of sources: timetable PDFs (Stundenplan of any programme or faculty, e.g. codes like ABC3 or XYZ2); official faculty abbreviation lists (Abkürzungen / Abkürzungsverzeichnis: Fachkürzel, Typ, Fach) combined with module handbooks (Modulhandbuch / module handbook) into degree information (subject codes, German and English names, SWS, descriptions, exam forms); the semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days); and the campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list or module handbook PDF, even without any text, or asks for subjects, modules, SWS, exams or degree information of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
+description: "Extract structured JSON data for a university timetable app (TH Nürnberg / Ohm) from: timetable PDFs (Stundenplan of any programme or faculty, codes like ABC3, saved as .timetable files); official faculty abbreviation lists (Abkürzungen: Fachkürzel, Typ, Fach) combined with module handbooks (Modulhandbuch) and study plans (Studienplan / Studienverlaufsplan with LP) into degree information (subject codes, German and English names, SWS, LP / ECTS credits, descriptions, exam forms); semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days); and campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list, module handbook or study plan PDF, even without any text, or asks for subjects, modules, SWS, credits, exams or degree information of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
 ---
 
 # Zeiteisen Generator
@@ -12,7 +12,7 @@ outputs are `.json` files. There are four tasks, each in its own folder:
 | Folder | Input | Output |
 |---|---|---|
 | `timetable/` | Timetable PDF (Stundenplan) | Array of subjects, each with a `repeat` block (weekly day/time or individual dates, plus professor and room), group, kind and notes |
-| `degreeinformation/` | Official abbreviation list PDF **and** the programme's module handbook PDF (or the programme's name, to find the handbook online) | Per subject: code, German and English name, SWS per course type, description, exam form |
+| `degreeinformation/` | Official abbreviation list PDF, **and** the programme's module handbook PDF **and** study plan (Studienplan) PDF (or the programme's name, to find both online) | Per subject: code, German and English name, SWS per course type, credit points (LP / ECTS), description, exam form |
 | `dates/` | Semester dates webpage, or nothing | Year, lecture period and events |
 | `locations/` | Campus locations webpage, or nothing | Building codes with street, Maps URL and site URL |
 
@@ -30,6 +30,9 @@ Scripts:
 - `degreeinformation/parse_list.py` reads codes and German names from an
   official abbreviation list PDF (see `degreeinformation/instructions.md`, step
   1).
+- `degreeinformation/parse_studyplan.py` reads the credit points (LP) per
+  module from a study plan PDF and cross-checks them against its `Summe`
+  lines (step 1b).
 - `degreeinformation/handbook_digest.py` shrinks a module handbook PDF to a
   compact digest with its table of contents (step 2).
 - `scripts/validate.py` checks an output file against a task's schema. It needs
@@ -93,16 +96,21 @@ into the expected pattern.
      doesn't match the reference.
    - A PDF titled `Abkürzungen` with a table `Fachkürzel | Typ | Fach` is an
      **official abbreviation list**, and a PDF titled `Modulhandbuch` /
-     `Module handbook` with module descriptions is a **module handbook**. Both
-     feed one **degreeinformation** task; if only one of them is there,
-     `degreeinformation/instructions.md` ("Inputs") says how to get the other.
+     `Module handbook` with module descriptions is a **module handbook**, and
+     a PDF whose title page says `Studienplan`, with a table
+     `Studienverlaufsplan` that has an `LP` column, is a **study plan** (its
+     running page header may still say "Modulhandbuch"; the title page
+     decides). Don't mix up `Studienplan` (study plan) and `Stundenplan`
+     (timetable). All three feed one **degreeinformation** task; if one is
+     missing, `degreeinformation/instructions.md` ("Inputs") says how to get
+     it.
    - "dates", "Termine", "semester schedule", or a link under
      `…/termine-im-ueberblick/` or `…/semester-schedule/` is a **dates** task.
    - "locations", "buildings", "Standorte", or a link under `…/anfahrt/` or
      `…/directions/` is a **locations** task.
    - "subjects / modules / degree information for major X" with no PDF is a
-     **degreeinformation** task: the handbook can come from the website, the
-     list must come from the user.
+     **degreeinformation** task: the handbook and study plan can come from the
+     website, the list must come from the user.
 
    If the user asks for a timetable but attached none, say so and stop that
    task. There is no fallback for timetables.
@@ -131,7 +139,8 @@ into the expected pattern.
    half-finished set.
 4. **Validate.** Run `python3 <skill-dir>/scripts/validate.py <task> <file>` on
    every file (for degreeinformation add `--list <list_<faculty>.json>`: every
-   list code must be in the file, this matters most) (without a shell: check by
+   list code must be in the file, this matters most; and `--plan
+   <plan_<major>.json>`: every `lp` must come from the study plan) (without a shell: check by
    hand as in `no-shell.md`, section 4). On failure, fix your output. You may
    never fix the schema. If the output cannot be made valid without inventing
    data, treat it as an open question (see above) and delete the file. If the

@@ -1,6 +1,7 @@
 You are building one `degreeinformation` file per degree programme: every
-subject with its code, German and English name, SWS per course type, a short
-description of what it teaches, and its exam form (`schema.json`).
+subject with its code, German and English name, SWS per course type, credit
+points (LP / ECTS), a short description of what it teaches, and its exam form
+(`schema.json`).
 
 ## Priority: every list code
 
@@ -12,9 +13,9 @@ codes from the plain PDF text as a cross-check, and `validate.py --list` fails
 if a list code is missing from the output or the list codes aren't first and in
 list order. Never deliver a file that fails this check.
 
-## Inputs: the list and the handbook together
+## Inputs: the list, the handbook and the study plan together
 
-Two documents feed one file, and each contributes what the other lacks:
+Three documents feed one file, and each contributes what the others lack:
 
 - **The official abbreviation list** (Abkürzungen / Abkürzungsverzeichnis) of
   a faculty: title like "Abkürzungen", a table `Fachkürzel | Typ | Fach`, a
@@ -26,21 +27,39 @@ Two documents feed one file, and each contributes what the other lacks:
   programme. It holds the details: SWS and course types, exam form, learning
   goals and contents. Codes may be missing entirely (some handbooks only have
   names), or differ from the list's.
+- **The study plan** (Studienplan) of the same degree programme. Title page
+  "Studienplan" with the programme and an edition (`Ausgabe …`, `gültig ab
+  …`); a table "Studienverlaufsplan" (columns like `Sem. | Nr. | Modulname |
+  Lehrform | SWS | LP | Prüfung …`) and elective catalogues
+  ("Wahlpflichtmodule", "Vertiefungsrichtung", "Musterausbildungsplan") with
+  a `Modul-ID` column. It is the source of the **credit points** (`LP`,
+  Leistungspunkte = ECTS). Only the LP are taken from it; its SWS, exam
+  columns and footnotes are not used (the handbook covers those).
+  Don't confuse it with a **timetable** (Stundenplan: a weekday grid with
+  times), and don't go by its running page header: study plans are often
+  built from the handbook template, so the header can read "Modulhandbuch …".
+  The title page and the LP column decide.
 
-Both are needed. If the user gave only one:
+All three are needed. If the user gave only some:
 
 - No list: ask for it. Don't search the web for one; lists are issued per
   semester and only the user knows which one applies.
 - No handbook: get it from the programme's website (see "Finding a handbook
-  online" at the end), or ask if the programme is unclear.
+  or study plan online" at the end), or ask if the programme is unclear.
+- No study plan: get it from the same programme page. If there is none, ask
+  whether to deliver the file without LP (the field is optional, so that is
+  valid, but the user decides).
 
-Pairing, when several PDFs are attached: one list plus one handbook per
-programme of that faculty; each handbook becomes its own file, and each file
-uses the whole list. A German and an English handbook of the same programme
-count as one handbook in two languages. Ask when a handbook's programme
-belongs to a different faculty than the list, when two handbooks are the same
-programme in the same language (editions), or when two lists of one faculty
-are attached (semesters / `Stand` dates).
+Pairing, when several PDFs are attached: one list plus one handbook and one
+study plan per programme of that faculty; each programme becomes its own
+file, and each file uses the whole list. A German and an English handbook of
+the same programme count as one handbook in two languages. Ask when a
+handbook's or study plan's programme belongs to a different faculty than the
+list, when a study plan has no handbook of the same programme (or the other
+way round), when two handbooks are the same programme in the same language
+(editions), when two study plans of one programme are attached (editions /
+`gültig ab`), or when two lists of one faculty are attached (semesters /
+`Stand` dates).
 
 ## What goes into the file
 
@@ -52,6 +71,8 @@ are attached (semesters / `Stand` dates).
 - **Then every handbook module with a code that no list entry matched**, in
   handbook order. Handbook modules without any code can't be written (the
   schema requires a code); name them in the chat summary instead.
+- The study plan adds **no entries** of its own; it only fills `lp` of the
+  entries above. Its identifiers are module numbers, not timetable codes.
 - Skip handbook entries that are no subjects: group headings such as
   "Wahlpflichtmodule der Gruppe 1", and coded
   placeholders only where the code carries nothing but a pointer to a
@@ -101,6 +122,46 @@ List rules (already decided, don't ask):
 - Keep the wording as printed, including abbreviations
   (`Grundl. d. Beispielfachs u. Anw.`) and typos. The list is the faculty's own
   naming; you may point out obvious typos in the chat summary.
+
+## Step 1b: read the study plan
+
+```text
+python3 <skill-dir>/degreeinformation/parse_studyplan.py <studyplan.pdf> --outdir <drafts-dir> --major <major>
+```
+
+It finds every table with the header columns `SWS` and `LP`, rebuilds the
+rows (identifier, name incl. wrapped lines, SWS, LP), and writes the working
+file `plan_<major>.json` (`id`, `name`, `lp`, plus `parent` / `parts` /
+`slot` / `derived`). It prints each module with its LP and a list of ISSUES
+(exit code 2 = something needs a decision; `INFO` lines are already
+decided). It checks every `Summe` line of the semester plan against the rows
+above it; a `COMPLETENESS` issue means a row was missed or misread: read the
+page (`pdftotext -layout -f N -l N <studyplan.pdf> -`) and fix the working
+file by hand. Spot-check a few values against the PDF anyway. Without a
+shell, read the tables by hand (`no-shell.md`, section 3).
+
+Study plan rules (already decided, don't ask):
+
+- **Semester plan vs. catalogue.** In the semester plan (header starting with
+  `Sem.`), one identifier in several semesters is one module taught over
+  several semesters: its LP are **summed** (`6` with 5 LP in semester 1 and
+  2 LP in semester 2 = 7 LP; study plans often state this in a reading aid
+  such as "Lesehilfe"). In the catalogues, an identifier printed again
+  (the same elective in two specialisation plans) is the same module; don't
+  add it up.
+- **Parts.** A part with its own row (`15a`, `15b`; `MOD2/1`, `MOD2/2` under
+  the group heading `MOD2`) has its own LP. A whole module whose parts are
+  listed separately gets the sum of its parts (`derived`), for a list or
+  handbook entry that names the whole module. A part listed under another
+  module's heading (`ABC3/1` under `MOD1`) belongs to that heading.
+- **Elective slots** (`slot`: rows like "Allgemeinwissenschaftliches
+  Wahlpflichtmodul", "FWPM der Gruppe 2", "Wahlpflichtmodul (siehe 3.3)")
+  reserve credits for a choice. Their LP are **never** given to a catalogue
+  module or a numbered elective of the list (`101XYZ`), even when the slot
+  says every choice has the same LP; the plan doesn't state it per module.
+- Decimal commas become points (`2,5` → `2.5`); whole numbers stay whole.
+- A name printed slightly differently in two catalogues (`X in der Y` /
+  `X in Y`) is the same module; the parser keeps the first spelling (`INFO`).
 
 ## Step 2: make the handbook readable
 
@@ -169,8 +230,17 @@ available (a course part rather than its parent module):
 A list entry that names a whole module the handbook only describes in parts
 matches the whole: sum the parts' SWS and describe the whole module.
 
+**Study plan modules** are matched to the entries in the same pass, with
+the same rules: the plan's identifier (`Nr.` / `Modul-ID`, e.g. `15a`,
+`MOD2/1`) is usually the handbook's module code or number, so an entry
+matched to handbook module `MOD2/1` takes plan module `MOD2/1`. Otherwise
+the list code itself (after removing the marks of rule 1) or an equal name
+(rule 2) decides; a list-only code can get LP this way too. Several list
+codes may share one plan module, as with the handbook.
+
 Write the result as a match table (code, list name, handbook module or
-"—", how it matched) and print it; the chat summary reports its counts.
+"—", plan module and LP or "—", how it matched) and print it; the chat
+summary reports its counts.
 A match that you can't make with confidence (two candidate modules, or a
 plausible but uncertain pairing) is a question, not a guess.
 
@@ -232,6 +302,30 @@ types to the three categories:
   whether and how to convert (quote an example, propose the factor the
   handbook implies, e.g. `Präsenzstunden 48 Std.` ÷ 12 weeks = 4 SWS).
 
+### `lp`
+
+The credit points of the entry's study plan module (step 1b), taken from
+`plan_<major>.json`; never from the handbook, the list's `Typ` column or
+general knowledge. The study plan is the binding source: if the handbook
+states other credits (`ECTS`, `Credits`, `Leistungspunkte`) for a matched
+module, use the plan's value and mention the difference in the chat summary
+(not a question).
+
+- Match the most specific plan module, as for the handbook: part → part
+  LP; whole module → whole LP (a `derived` sum of its parts when the plan
+  only lists parts).
+- Codes that stand for one module in several course-type or group variants
+  (`MOD/A`, `MOD/B`, a lab-only `MOD`, `MOD2-NZ`) each get **the module's
+  LP**: credits belong to the module, not to a course type, and the plan
+  gives no split. Unlike `sws`, don't restrict them by `Typ`.
+- A part code whose plan module is only listed as a whole (a handbook part
+  "Teil A" of `MOD`, but the plan has only `MOD`): omit `lp`; don't split
+  the module's LP.
+- No plan module (list-only code, another programme's code, a slot):
+  **omit `lp`**. Never write `0` for "unknown"; `0` would mean the subject
+  gives no credits.
+- Write the number as JSON number (`5`, `2.5`), never as a string.
+
 ### `description`
 
 Written by you, not copied: at most **100 words** per language (aim for
@@ -268,15 +362,19 @@ Don't infer the exam from the list's `Typ` column or general knowledge.
 
 ```text
 python3 -c "import json,sys; print(json.dumps({'subjects': [json.loads(l) for l in open(sys.argv[1], encoding='utf-8') if l.strip()]}, ensure_ascii=False, indent=2))" <drafts-dir>/<major>.entries.jsonl > <drafts-dir>/degreeinformation_<major>.json
-python3 <skill-dir>/scripts/validate.py degreeinformation <drafts-dir>/degreeinformation_<major>.json --list <drafts-dir>/list_<faculty>.json
+python3 <skill-dir>/scripts/validate.py degreeinformation <drafts-dir>/degreeinformation_<major>.json --list <drafts-dir>/list_<faculty>.json --plan <drafts-dir>/plan_<major>.json
 ```
 
 The validator also checks unique codes, the 100-word limit and single-line plain
-text. In the chat summary per file: the list (faculty, semester, `Stand`) and
-handbook (programme, edition) used; entry counts (total, matched, list-only,
+text, and that every `lp` is the LP of a study plan module that is not a slot.
+In the chat summary per file: the list (faculty, semester, `Stand`), handbook
+(programme, edition) and study plan (programme, `Ausgabe`, `gültig ab`) used;
+entry counts (total, matched, list-only,
 handbook-only); handbook modules skipped for lack of a code (by name); how many
 entries used the SWS lecture fallback, were limited by their course types, or
-have no SWS; how many have no stated exam; which language you translated. If the
+have no SWS; how many have LP and how many don't (and which study plan
+modules no entry used); LP differences between handbook and study plan; how
+many have no stated exam; which language you translated. If the
 request included timetables, list timetable codes missing from the file (don't
 invent entries for them).
 
@@ -290,11 +388,19 @@ invent entries for them).
 - the same handbook code with different names, or, in a two-language pair, a
   module present in only one language.
 - a handbook with contact hours but no SWS (see `sws`).
+- the study plan parser's ISSUES that aren't `INFO`: a `COMPLETENESS` issue
+  you can't resolve from the PDF; catalogue rows of one identifier with
+  different LP; a row whose LP you can't read.
+- a study plan module you can't match with confidence to an entry (two
+  candidates, or an identifier that equals a handbook code of a different
+  subject).
+- no study plan available (see "Inputs").
 - the pairing questions under "Inputs".
 
-## Finding a handbook online
+## Finding a handbook or study plan online
 
-Use this when the user names a programme but attached no handbook.
+Use this when the user names a programme but attached no handbook or no
+study plan. Both are linked on the same programme page.
 
 - The user must name the programme; if the name matches several (Bachelor
   and Master), ask which.
@@ -306,11 +412,14 @@ Use this when the user names a programme but attached no handbook.
   on th-nuernberg.de (`https://www.th-nuernberg.de/studiengang/<slug>/`),
   not a PDF found directly, so you see which handbook the programme links
   now. The language switcher (`EN`) leads to the English page.
-- Use the link "Modulhandbuch" / "Module handbook" (usually under "Wichtige
-  Dokumente" / "Dokumente"). Several linked: take the latest edition
-  ("Ausgabe", "gültig ab", version date); ask if unclear.
+- Use the link "Modulhandbuch" / "Module handbook", and for the study plan
+  "Studienplan" / "Study plan" (usually under "Wichtige Dokumente" /
+  "Dokumente"; not "Stundenplan", that is the timetable). Several linked:
+  take the latest edition ("Ausgabe", "gültig ab", version date) that is
+  already valid; ask if unclear.
 - Fetch it with `web_fetch` (PDF text extraction on). The sandbox can't
-  reach th-nuernberg.de, so the digest script doesn't apply: read the
+  reach th-nuernberg.de, so the digest and study plan scripts don't apply
+  (for the study plan, read its tables as in `no-shell.md`, section 3): read the
   fetched text module by module and use a generous token limit, since a
   full handbook is 80+ pages. If you could only read part of it, say up to
   which module in the chat summary; the modules you didn't see count as

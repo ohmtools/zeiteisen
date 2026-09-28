@@ -21,6 +21,7 @@ export type Locations = {
 export type SubjectInformation = {
   name: Localized;
   sws: SWS;
+  lp?: number;
   code: string;
   description: Localized;
   test: Localized;
@@ -111,6 +112,7 @@ const swsSchema: z.ZodMiniType<SWS> = z.object({
 const subjectInformationSchema: z.ZodMiniType<SubjectInformation> = z.object({
   name: localizedSchema,
   sws: swsSchema,
+  lp: z.optional(z.number().check(z.minimum(0))),
   code: z.string().check(z.minLength(1)),
   description: localizedSchema,
   test: localizedSchema,

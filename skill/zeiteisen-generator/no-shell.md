@@ -14,7 +14,7 @@ get wrong, so be more conservative: when in doubt, ask.
   the user pasted). If you can't read the schema for a task, tell the user
   and don't produce that task's file; the format can't be guaranteed without
   it.
-- Web tasks (dates, locations, handbook via website) need `web_search` /
+- Web tasks (dates, locations, handbook / study plan via website) need `web_search` /
   `web_fetch`, which work without a shell. Without web tools, say which tasks
   can't be done and ask the user to attach or paste the pages instead.
 
@@ -33,7 +33,9 @@ layer and, for many clients, an image of each page. Use them like this:
   and times of a timetable reliably. Don't reconstruct them from text order.
   Ask the user for a screenshot or image of the page (or to switch to an
   environment with code execution), and stop that timetable until then. An
-  abbreviation list or handbook is fine from text alone.
+  abbreviation list, handbook or study plan is fine from text alone (for a
+  study plan, use the page image to confirm which number is in the `LP`
+  column when the text layer runs columns together).
 
 ## 2. Timetables by hand
 
@@ -82,6 +84,23 @@ when to ask), reading the table from the text layer:
   and keep a running count of rows and codes so nothing is skipped or
   duplicated. Mention the counts in the chat summary.
 
+### The study plan
+
+`parse_studyplan.py` can't run, so read the tables yourself, following step
+1b of `degreeinformation/instructions.md` (all rules):
+
+- Find every table with the columns `SWS` and `LP`: the semester plan
+  ("Studienverlaufsplan") and the elective catalogues. Skip the change log
+  ("Änderungsdienst"), abbreviations and footnotes.
+- Per row note identifier (`Nr.` / `Modul-ID`), name and the number in the
+  `LP` column. In the semester plan, sum the LP of an identifier that
+  appears in several semesters; in catalogues, a repeated identifier is the
+  same module. Rows without LP under a group heading are the heading's
+  parts; the heading's LP is the sum of its parts. Mark elective-slot rows.
+- **Count check:** add up the LP of the rows between two `Summe` lines and
+  compare with the `Summe` value (e.g. 30 per semester). Every mismatch
+  means a missed or misread row; resolve it before going on.
+
 ### The module handbook
 
 `handbook_digest.py` can't run, so read the handbook's text layer directly,
@@ -121,6 +140,9 @@ following steps 2-4 of `degreeinformation/instructions.md`:
   `"I"` and a non-empty `dates` array and no `day`.
 - **Degree information:** every code only once; each description at most
   100 words per language (count them); all texts one line, no Markdown.
+  `lp`, when present, is a number (not a string), equals the LP of the
+  matched study plan module, and never comes from an elective slot; entries
+  without a plan module have no `lp` key at all (not `0`).
 - **Consistency:** end time after start time; the entry count matches your
   count check; nothing invented to satisfy the schema (missing data is a
   question, not a guess).

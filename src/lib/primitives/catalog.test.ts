@@ -90,6 +90,7 @@ const info = (code: string, de: string, en: string) => ({
   code,
   name: { de, en },
   sws: { lecture: 2, exercise: 1, laboratory: 0 },
+  lp: 5,
   description: { de: "d", en: "d" },
   test: { de: "t", en: "t" },
 });

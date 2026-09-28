@@ -245,6 +245,7 @@
   "subject_info_sws_lecture": "Vorlesung: {hours}",
   "subject_info_sws_exercise": "Übung: {hours}",
   "subject_info_sws_laboratory": "Praktikum: {hours}",
+  "subject_info_lp": "LP / ECTS",
   "subject_info_description": "Beschreibung",
   "subject_info_test": "Prüfung",
   "block_show_group": "In den Gruppen zeigen",

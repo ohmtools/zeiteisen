@@ -2,7 +2,7 @@
 """Validate a generated JSON file against the schema of one task.
 
 Usage:
-    python3 scripts/validate.py <task> <output file> [--list <list_<faculty>.json>]
+    python3 scripts/validate.py <task> <output file> [--list <list_<faculty>.json>] [--plan <plan_<major>.json>]
 
 <task> is one of: dates, degreeinformation, locations, timetable.
 
@@ -17,7 +17,10 @@ Checks, in addition to the JSON schema itself:
     language, texts single-line without Markdown; with --list (the working
     file of parse_list.py): every code of the abbreviation list is present,
     spelled exactly as in the list (this check is the most important one), and
-    list codes come first, in list order, before handbook-only codes.
+    list codes come first, in list order, before handbook-only codes. With
+    --plan (the working file of parse_studyplan.py): every `lp` value is the
+    LP of a study plan module that is not an elective slot (so no LP is
+    invented or taken from a slot); the number of entries with LP is printed.
   * the file name saves on Windows, macOS / iOS, Linux and Android (the app
     names a timetable after its file): none of < > : " / \\ | ? * or control
     characters, no trailing dot or space, no reserved Windows device name
@@ -257,16 +260,36 @@ def list_coverage(data, list_path):
     return errors
 
 
+def plan_check(data, plan_path):
+    """Every lp value must be the LP of a non-slot study plan module."""
+    modules = json.loads(Path(plan_path).read_text(encoding="utf-8")).get("modules", [])
+    allowed = {m["lp"] for m in modules if m.get("lp") is not None and not m.get("slot")}
+    subjects = [s for s in data.get("subjects", []) if isinstance(s, dict)]
+    with_lp = [s for s in subjects if "lp" in s]
+    print(f"lp: {len(with_lp)} of {len(subjects)} entries have LP")
+    return [
+        f"{s.get('code')!r}: lp {s['lp']} is not the LP of any study plan module (slots excluded)"
+        for s in with_lp
+        if s["lp"] not in allowed
+    ]
+
+
+def take_option(args, flag):
+    if flag not in args:
+        return None
+    i = args.index(flag)
+    if i + 1 >= len(args):
+        print(__doc__)
+        sys.exit(1)
+    value = args[i + 1]
+    del args[i : i + 2]
+    return value
+
+
 def main():
     args = sys.argv[1:]
-    list_path = None
-    if "--list" in args:
-        i = args.index("--list")
-        if i + 1 >= len(args):
-            print(__doc__)
-            sys.exit(1)
-        list_path = args[i + 1]
-        del args[i : i + 2]
+    list_path = take_option(args, "--list")
+    plan_path = take_option(args, "--plan")
     if len(args) != 2 or args[0] not in TASKS:
         print(__doc__)
         sys.exit(1)
@@ -301,6 +324,8 @@ def main():
         errors += degree_problems(data)
         if list_path:
             errors += list_coverage(data, list_path)
+        if plan_path:
+            errors += plan_check(data, plan_path)
 
     if errors:
         print(f"INVALID ({len(errors)} problem(s)):")

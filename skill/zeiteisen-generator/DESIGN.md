@@ -16,8 +16,8 @@ file before the app uses it. Everything else follows from that:
   after all tasks have been drafted as far as possible, so the files are
   ready as soon as the user answers. Drafts stay out of the outputs folder
   until nothing is open.
-- **No invented content.** SWS, exam forms and descriptions come only from
-  the source documents. A list code without a handbook module gets its code
+- **No invented content.** SWS, LP, exam forms and descriptions come only
+  from the source documents. A list code without a handbook module gets its code
   and name, and "Keine Angabe" / "Not specified" where the schema demands a
   value. General knowledge never fills a field.
 
@@ -36,6 +36,9 @@ codes from the plain PDF text; `validate.py --list` fails on a missing list
 code or a list code out of order), not just described in prose. The recount
 must not depend on knowing the course types: it accepts any short type token,
 so a faculty using a type this skill has never seen still gets counted.
+Likewise, `parse_studyplan.py` checks its rows against the plan's own
+`Summe` lines, and `validate.py --plan` rejects an `lp` that is not the LP of
+a non-slot plan module.
 
 ## 3. The schemas are fixed
 
@@ -90,6 +93,17 @@ input layouts change between semesters.
     prefer (e.g. `SU` and `SU/Pr` rows with different names), stay a question
     for the user. Don't add further tie-breakers (like "prefer the row whose
     Typ is exactly `SU`"): which name is right can't be told from the list.
+  - LP come only from the study plan (Studienplan), the binding document;
+    a different handbook value is reported, not used. In the semester plan
+    one identifier over several semesters is summed; in catalogues a
+    repeated identifier is the same module. Parts keep their own LP; a
+    whole module listed only as parts gets their sum. Elective-slot rows
+    never pass their LP to catalogue modules or numbered electives. Course-
+    type / group variants of one module (`MOD/A`, lab-only `MOD`, `MOD2-NZ`)
+    all get the module's LP (no split by `Typ`, unlike SWS). A part code
+    whose plan module is listed only as a whole, and any code without a
+    plan module, gets no `lp` key (never `0`). The study plan adds no
+    entries.
   - SWS without a stated category go to `lecture`. A code's SWS are limited
     to the course types of its list rows (`MOD/A` `SU`, `MOD` `Pr` → lecture
     for one, laboratory for the other), so one module's hours are not
@@ -120,8 +134,8 @@ deciding when to ask).
 - Issues are printed as a list. Lines starting with `INFO` are already
   decided and informational; all others require a decision. `COMPLETENESS`
   issues must always be resolved before delivery.
-- Working files (`list_<faculty>.json`, digests, `.entries.jsonl`) go to a
-  drafts folder, never to the outputs folder.
+- Working files (`list_<faculty>.json`, `plan_<major>.json`, digests,
+  `.entries.jsonl`) go to a drafts folder, never to the outputs folder.
 
 ## 8. Language and style
 
@@ -141,7 +155,14 @@ deciding when to ask).
 2. Keep all examples generic (see 4), including code comments.
 3. Don't touch the schemas (see 3).
 4. Test changed scripts on real input documents and run
-   `validate.py` (with `--list` for degreeinformation) on a real output.
+   `validate.py` (with `--list` and `--plan` for degreeinformation) on a
+   real output.
 5. Add a new design decision to section 5 or the relevant section here.
 6. Package the skill under its unchanged name (`zeiteisen-generator`) so the
    installed version is replaced, not duplicated.
+
+## 10. Change log
+
+- Schema change (user decision): `degreeinformation` entries have an
+  optional `lp` (credit points). Source: a third input, the programme's
+  study plan (Studienplan), read by `degreeinformation/parse_studyplan.py`.
