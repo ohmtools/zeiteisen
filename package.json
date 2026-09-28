@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "schema:locations": "node scripts/json-schema.mjs locations",
-    "schema:degreeinformation": "node scripts/json-schema.mjs degreeinformation",
+    "schema:degree": "node scripts/json-schema.mjs degree",
     "schema:catalog": "node scripts/json-schema.mjs catalog",
     "catalog": "node scripts/catalog-index.mjs",
     "skill": "node scripts/skill.mjs",

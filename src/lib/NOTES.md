@@ -10,11 +10,13 @@ re-implements primitive logic.
   `SubjectID` is not unique). Hours fixed 8–20, Mon–Fri columns; `other` is a
   list, not a column (user decision). Listed dates with the same slot merge
   into one block in the general view.
-- `subjects.ts` — words for subjects (`subjectInfoOf` = catalog entry, shown by the popup's "More info"). Unknown degree information fall back to
-  themselves, `/` variants to their base.
+- `subjects.ts` — words for subjects. `subjectName` spells a code out from
+  the lookup tables in `primitives/overrides.ts` (only the file its
+  `degreeProgram` names; unknown codes stay themselves, `/` variants spell out
+  their base and keep the variant).
 - `warnings.ts` — wording of the primitives' warning data only.
 - `upload.ts` — reads files and words failures; dates, locations and
-  degree information go through one `readJsonFile`, and the latter two refuse a
+  degree files go through one `readJsonFile`, and the latter two refuse a
   file listing nothing (every list defaults to empty, so a dates file would
   otherwise pass as locations). `toastUploadError` = the Data menu's error
   toast (zod details capped at 5 +
@@ -24,8 +26,9 @@ re-implements primitive logic.
 - `toast.ts` — the only way to toast. Each call waits for sonner AND the
   mounted `AppToaster`, so sonner stays out of the entry chunk and early toasts
   are shown late instead of lost.
-- `edit.ts` — subject editor form ↔ subject; the duplicate check and the
-  origin switch live in primitives.
+- `edit.ts` — subject editor form ↔ subject; the duplicate check, the origin
+  switch and the time / date / slot rules (`parseTime`, `isIsoDate`,
+  `endsAfterStart`, `REPEAT_TYPES`) live in primitives.
   Time chips: the university's six 90-minute blocks (08:00 … 17:30-19:00)
   always, plus slots the device's timetables use often (double blocks).
 - `library.ts` — the picker's rows. ONE ROW PER SOURCE, never merged or hidden
@@ -71,14 +74,6 @@ re-implements primitive logic.
   adding or renaming one may shift the others. Hue never changes, all red
   (user decision); only lightness + chroma step down so `--primary-foreground`
   keeps contrast. Colour is never the only cue.
-- `overrides.ts` — the `Overrides` type: the lookup tables (locations, degree
-  information) `useCatalog` derives from the catalog and the user's own files.
-  Every lookup (`subjectName`, `subjectInfoOf`, `buildingLinks`, the editor's
-  code suggestions) takes its table as an ARGUMENT; components read it from
-  `OverridesContext`. Never module state: the React Compiler caches a lookup
-  by its arguments, so a table it cannot see left old names and links on
-  screen. Building links and full names live only in the catalog or the
-  user's own file, never in the app.
 - `uploader.ts` — `loadUpload()`: the lazy `@/lib/upload` import of the Data
   menu uploads, `null` plus a toast when the chunk is gone after a deploy.
 - `backup.ts` — footer "Data" menu backup: `zeiteisen-<date>.backup`; a restore
@@ -88,9 +83,6 @@ re-implements primitive logic.
   empties the catalog cache too, as the Data menu's switch does.
 - `persist.ts` — `navigator.storage.persist()` once per page load, after the
   first real write (not the load-time rewrite: Firefox prompts).
-- `duplicate.ts` — "Duplicate" copies the whole profile (timetables,
-  selection, origin, refusals), unlocked, under a name the user confirms
-  ("Plan A 2" suggested; a taken name is refused).
 - `view.ts` — the app opens on Current week while today is inside the lecture
   period of the installed dates, General otherwise (user decision, not
   persisted).

@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vitest";
 import {
   Catalog,
+  CatalogKind,
   datesToInstall,
+  degreeProgramOf,
   emptyCatalogCache,
   emptySources,
-  mergeDegreeInformation,
+  parseDegree,
   refreshCache,
   timetableNameOf,
 } from "./catalog";
@@ -61,17 +63,14 @@ describe("refreshCache", () => {
   test("downloads small files only, reports changes, drops unlisted paths", async () => {
     const { catalog, fetched } = fakeCatalog({
       "locations.json": { locations: [] },
-      "degreeinformation/bei.json": { subjects: [] },
+      "degrees/bei.degree": { subjects: [] },
       "timetables/BEI3.json": bei3,
     });
     const first = await refreshCache(
       { ...emptyCatalogCache, files: { "gone.json": { hash: "x", data: 1 } } },
       catalog,
     );
-    expect(Object.keys(first.cache.files).sort()).toEqual([
-      "degreeinformation/bei.json",
-      "locations.json",
-    ]);
+    expect(Object.keys(first.cache.files).sort()).toEqual(["degrees/bei.degree", "locations.json"]);
     expect(fetched).not.toContain("timetables/BEI3.json");
     expect(first.updated.size).toBe(0);
 
@@ -95,13 +94,20 @@ const info = (code: string, de: string, en: string) => ({
   test: { de: "t", en: "t" },
 });
 
-test("mergeDegreeInformation: later files win, broken ones are skipped", () => {
-  const table = mergeDegreeInformation([
-    { subjects: [info("m1", "Mathe", "Maths")] },
-    "broken",
-    { subjects: [info("M1", "Mathe 1", "Maths 1")] },
-  ]);
-  expect(table).toEqual({ M1: info("M1", "Mathe 1", "Maths 1") });
+test("parseDegree: one file, codes upper case, broken is null", () => {
+  expect(parseDegree({ subjects: [info("m1", "Mathe", "Maths")] })).toEqual({
+    M1: info("m1", "Mathe", "Maths"),
+  });
+  expect(parseDegree("broken")).toBeNull();
+});
+
+test("degreeProgramOf: file name in the flat degrees/ without .degree", () => {
+  const of = (path: string) => degreeProgramOf({ path, kind: CatalogKind.Degrees, hash: "h" });
+  expect(of("degrees/B-EI.degree")).toBe("B-EI");
+  expect(of("degrees/ee/B-EI.degree")).toBeNull();
+  expect(of("degrees/B-EI.json")).toBeNull();
+  expect(of("degrees/.degree")).toBeNull();
+  expect(of("other/B-EI.degree")).toBeNull();
 });
 
 test("datesToInstall", () => {

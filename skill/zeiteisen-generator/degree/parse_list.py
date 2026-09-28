@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Read the codes and German names from an official faculty abbreviation list
 ("Abkürzungen" / Abkürzungsverzeichnis: columns Fachkürzel | Typ | Fach).
-This is step 1 of the degreeinformation task.
+This is step 1 of the degree task.
 
 Usage:
-    python3 degreeinformation/parse_list.py <list.pdf> [--outdir DIR]
+    python3 degree/parse_list.py <list.pdf> [--outdir DIR]
 
 What it does (rules: instructions.md in this folder, step 1):
   1. Reads word positions (pdftotext -bbox) and finds the three columns from
@@ -18,7 +18,7 @@ What it does (rules: instructions.md in this folder, step 1):
   4. Prints the rows per code, the chosen name, and ISSUES; writes
      <outdir>/list_<faculty>.json: {"faculty", "semester", "entries":
      [{"code", "de", "types"}]} in list order. This is a working file, not a
-     deliverable; the degreeinformation file is built from it.
+     deliverable; the .degree file is built from it.
 
 Exit code 0 = no issues, 2 = issues need a decision (usually a question for
 the user), 1 = not recognised.

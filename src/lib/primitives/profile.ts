@@ -57,6 +57,23 @@ export function timetableByName(
   return profile?.timetables.find((timetable) => timetable.name === name);
 }
 
+// "Duplicate" in the profile menu: another saved variant to tinker with,
+// starting from this one. Everything is copied — timetables, selection,
+// origins (catalog updates keep coming) and refused updates — but the copy is
+// unlocked: it exists to be changed. Timetables are immutable values, so
+// sharing them between the two profiles shares nothing that can change.
+export function duplicateProfile(profile: Profile, name: ProfileName): Profile {
+  return { ...profile, name, locked: false };
+}
+
+// The name the duplicate dialog suggests: "Plan A" → "Plan A 2".
+export function duplicateName(profiles: readonly Profile[], profile: Profile): ProfileName {
+  return uniqueName(
+    profiles.map((one) => one.name),
+    profile.name,
+  );
+}
+
 // One timetable per source, its name made unique in the profile ("Name 2").
 // The origin is copied along, so a catalog-born timetable keeps offering
 // catalog updates in its new profile.

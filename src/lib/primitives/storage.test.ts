@@ -8,7 +8,7 @@ import {
   loadBackup,
   loadCatalogCache,
   loadDates,
-  loadOwnDegreeInformation,
+  loadOwnDegrees,
   loadOwnLocations,
   loadProfiles,
   loadSources,
@@ -20,7 +20,7 @@ import {
   saveCatalogMode,
   saveCatalogUrl,
   saveDates,
-  saveOwnDegreeInformation,
+  saveOwnDegrees,
   saveOwnLocations,
   saveProfiles,
   type KeyValueStore,
@@ -132,14 +132,14 @@ test("saving null dates removes them", () => {
   expect(loadDates(store)).toBeNull();
 });
 
-test("own locations and degreeInformation: saved, cleared, broken reads as none", () => {
+test("own locations and degrees: saved, cleared, broken reads as none", () => {
   const store = memory();
   expect(loadOwnLocations(store)).toBeNull();
-  expect(loadOwnDegreeInformation(store)).toEqual([]);
+  expect(loadOwnDegrees(store)).toEqual([]);
   const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
-  const degreeInformation = [
+  const degrees = [
     {
-      name: "a.json",
+      name: "a",
       data: {
         subjects: [
           {
@@ -154,7 +154,7 @@ test("own locations and degreeInformation: saved, cleared, broken reads as none"
       },
     },
     {
-      name: "b.json",
+      name: "b",
       data: {
         subjects: [
           {
@@ -170,29 +170,27 @@ test("own locations and degreeInformation: saved, cleared, broken reads as none"
     },
   ];
   expect(saveOwnLocations(locations, store)).toBe(true);
-  expect(saveOwnDegreeInformation(degreeInformation, store)).toBe(true);
+  expect(saveOwnDegrees(degrees, store)).toBe(true);
   expect(loadOwnLocations(store)).toEqual(locations);
-  expect(loadOwnDegreeInformation(store)).toEqual(degreeInformation);
+  expect(loadOwnDegrees(store)).toEqual(degrees);
   saveOwnLocations(null, store);
   expect(loadOwnLocations(store)).toBeNull();
-  store.data.set(
-    "tt.degreeinformation.v1",
-    JSON.stringify([degreeInformation[0], degreeInformation[0]]),
-  );
-  expect(loadOwnDegreeInformation(store)).toEqual([]);
-  store.data.set(
-    "tt.degreeinformation.v1",
-    JSON.stringify([{ name: "a.json", data: { subjects: [{}] } }]),
-  );
-  expect(loadOwnDegreeInformation(store)).toEqual([]);
+  store.data.set("tt.degrees.v1", JSON.stringify([degrees[0], degrees[0]]));
+  expect(loadOwnDegrees(store)).toEqual([]);
+  store.data.set("tt.degrees.v1", JSON.stringify([{ name: "a", data: { subjects: [{}] } }]));
+  expect(loadOwnDegrees(store)).toEqual([]);
+  for (const name of ["", "a/b", "CON", "a:b", "a."]) {
+    store.data.set("tt.degrees.v1", JSON.stringify([{ ...degrees[0], name }]));
+    expect(loadOwnDegrees(store)).toEqual([]);
+  }
 });
 
 describe("backup", () => {
   const dates = { year: 2025, lectureStart: "2025-10-01", lectureEnd: "2026-01-31", events: [] };
   const locations = { locations: [{ code: "WE", name: "Wassertorstraße" }] };
-  const degreeInformation = [
+  const degrees = [
     {
-      name: "a.json",
+      name: "a",
       data: {
         subjects: [
           {
@@ -220,7 +218,7 @@ describe("backup", () => {
     saveActive("Q", store);
     saveDates(dates, store);
     saveOwnLocations(locations, store);
-    saveOwnDegreeInformation(degreeInformation, store);
+    saveOwnDegrees(degrees, store);
     saveCatalogMode("freeze", store);
     saveCatalogUrl(url, store);
     saveCatalogCache(emptyCatalogCache, store);
@@ -240,7 +238,7 @@ describe("backup", () => {
     expect(loadActive(target)).toBe("Q");
     expect(loadDates(target)).toEqual(dates);
     expect(loadOwnLocations(target)).toEqual(locations);
-    expect(loadOwnDegreeInformation(target)).toEqual(degreeInformation);
+    expect(loadOwnDegrees(target)).toEqual(degrees);
     expect(loadCatalogMode(target)).toBe("freeze");
     expect(loadCatalogUrl(target)).toBe(url);
     expect(loadSources(target)).toEqual(loadSources(filled()));
@@ -257,7 +255,7 @@ describe("backup", () => {
         "locations",
         "profiles",
         "sources",
-        "degreeInformation",
+        "degrees",
         "v",
       ].sort(),
     );
@@ -277,14 +275,14 @@ describe("backup", () => {
     const target = filled();
     const {
       locations: _,
-      degreeInformation: __,
+      degrees: __,
       catalogMode: ___,
       catalogUrl: ____,
       ...older
     } = JSON.parse(JSON.stringify(getBackupFile(loadBackup(filled()))));
     saveBackup(parseBackupFile(older)!, target);
     expect(loadOwnLocations(target)).toBeNull();
-    expect(loadOwnDegreeInformation(target)).toEqual([]);
+    expect(loadOwnDegrees(target)).toEqual([]);
     expect(loadCatalogMode(target)).toBe("auto");
     expect(loadCatalogUrl(target)).toBeNull();
   });

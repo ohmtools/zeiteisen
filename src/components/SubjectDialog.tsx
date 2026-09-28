@@ -39,7 +39,9 @@ import { OverridesContext } from "@/components/OverridesContext";
 import { SuggestInput, type Suggestion } from "@/components/SuggestInput";
 import {
   isDuplicate,
+  isIsoDate,
   Kind,
+  REPEAT_TYPES,
   sameSubject,
   type Day,
   type RepeatType,
@@ -47,10 +49,10 @@ import {
 import type { Timetable, TimetableSubjectExtra } from "@/lib/primitives/timetable";
 import type { Subjects } from "@/lib/primitives/subject";
 import { DAYS } from "@/lib/primitives/week";
+import { degreeTableOf } from "@/lib/primitives/overrides";
 import {
   draftOf,
   nextDate,
-  REPEAT_TYPES,
   slotEnd,
   subjectOfDraft,
   suggestionsFor,
@@ -123,8 +125,19 @@ function SubjectEditor({
     subject !== null && isDuplicate(timetable.subjects, subject, index ?? undefined);
   const unchanged = subject !== null && original !== null && sameSubject(subject, original);
   const problems = new Set(tried ? result.problems : []);
-  const { degreeInformation } = use(OverridesContext);
-  const suggestions = suggestionsFor(library, draft, Object.keys(degreeInformation));
+  const { degrees } = use(OverridesContext);
+  // Name hints come from the draft's own degree file only.
+  const table = degreeTableOf(draft.degreeProgram || undefined, degrees);
+  const suggestions = suggestionsFor(library, draft, Object.keys(table ?? {}));
+  // Every file on the device; the draft's own stays listed even when its file
+  // is not, so an edit never drops it silently.
+  const programs = [
+    ...new Set([...Object.keys(degrees), draft.degreeProgram].filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b));
+  const programItems = [
+    { value: null, label: m.subject_degree_program_none() },
+    ...programs.map((program) => ({ value: program, label: program })),
+  ];
 
   const change = (patch: Partial<SubjectDraft>) =>
     setDraft((previous) => ({ ...previous, ...patch }));
@@ -165,11 +178,30 @@ function SubjectEditor({
             value={draft.name}
             onValueChange={(name) => change({ name })}
             suggestions={suggestions.names.map((code) => {
-              const full = subjectName(code, degreeInformation);
+              const full = subjectName(code, draft.degreeProgram, degrees);
               return { value: code, hint: full === code ? undefined : full };
             })}
             aria-invalid={problems.has("name") || undefined}
           />
+        </Field>
+
+        <Field label={m.subject_degree_program()} htmlFor={id + "program"}>
+          <Select
+            value={draft.degreeProgram || null}
+            onValueChange={(program) => change({ degreeProgram: program ?? "" })}
+            items={programItems}
+          >
+            <SelectTrigger id={id + "program"} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {programItems.map((item) => (
+                <SelectItem key={item.value ?? ""} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
 
         <Field label={m.subject_kinds()} problem={problemOf(problems, "kinds")}>
@@ -569,9 +601,7 @@ function DatesEditor({
   const id = useId();
   const setRow = (i: number, patch: Partial<SubjectDraft["dates"][number]>) =>
     onChange(dates.map((one, j) => (j === i ? { ...one, ...patch } : one)));
-  const valid = dates
-    .filter((dated) => /^\d{4}-\d{2}-\d{2}$/.test(dated.date))
-    .map((dated) => parseISO(dated.date));
+  const valid = dates.filter((dated) => isIsoDate(dated.date)).map((dated) => parseISO(dated.date));
   return (
     <div className="flex flex-col gap-2">
       <Label className="text-muted-foreground">{m.subject_dates()}</Label>

@@ -74,8 +74,8 @@ export function fakeCatalog(files: Record<string, unknown>, hashes: Record<strin
     path,
     kind: path.startsWith("timetables/")
       ? "timetables"
-      : path.startsWith("degreeinformation/")
-        ? "degreeinformation"
+      : path.startsWith("degrees/")
+        ? "degrees"
         : path === "dates.json"
           ? "dates"
           : "locations",

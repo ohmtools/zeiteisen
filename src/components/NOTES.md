@@ -41,10 +41,13 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   with `settings`) = logo and name · note · "Data" menu · EN/DE. The Data menu
   holds: own files — dates and locations one item each ("Load own …" while the
   catalog's is in use, "Use catalog …" plus a trailing "own file" note while an
-  own file is, disabled while the catalog is ignored); degree information "Load
-  own …" / "Add own …" (several files, trailing "n own files") plus "Remove own
-  degree information…", a dialog listing the files in winning order (later over
-  earlier) with a remove button each and "Remove all"; removing is immediate
+  own file is, disabled while the catalog is ignored); degree programs "Load
+  own …" / "Add own …" (several `.degree` files, trailing "n own files"; after
+  picking, a dialog asks each checked file's name — the `degreeProgram`
+  subjects name, filled in with its file name without `.degree`, noting a name
+  that replaces a held file; cancel loads none) plus "Remove own degree
+  programs…", a dialog listing the files by name in upload order with a
+  remove button each and "Remove all"; removing is immediate
   (the user still has the file), the last one closes it. One hidden file input
   outside the menu, which unmounts its content on closing. Last in the group,
   always enabled (also with the catalog ignored): "Create own files with AI…"
@@ -73,10 +76,11 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Transient feedback is a toast, never a panel. Copying the link toasts too
   (user decision), on top of the button's inline "Copied".
 - Own file extensions, JSON inside (user decision, so users tell the files
-  apart): `.timetable`, `.profile`, `.backup`; the pickers accept only their
-  own. Downloads go out as `application/octet-stream` so no browser appends
-  `.json`. Catalog files and own dates / locations / degree information uploads
-  stay `.json`.
+  apart): `.timetable`, `.profile`, `.backup`, `.degree`; the pickers accept
+  only their own. Downloads go out as `application/octet-stream` so no browser appends
+  `.json`. Catalog dates / locations and own dates / locations uploads stay
+  `.json`. The `.degree` extension is never shown: a degree program is its
+  bare name everywhere in the UI.
 - `@/lib/ics` is only reached through `import()`, date pickers only through
   `LazyCalendar` — both stay out of the first load.
 
@@ -127,6 +131,10 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   2, 3, 6, 12 stacked at 1440 and 360px after touching it.
 - Partial selection per category, not per cell: `ClassPicker`, one row per
   slot (user decision), each with a pen that opens the subject editor.
+- Subject editor: an optional "Degree program" select (None + every
+  degree file on the device, by its bare name, after the name because it decides the name
+  hints). The draft's own value stays listed even when its file is not on the
+  device, so an edit never drops it silently.
 - No "select all / none" (user decision: redundant).
 - Lock applies to the profile: tree cells, pickers, rename, delete, removing a
   timetable, subject edits and update decisions are disabled; exports and

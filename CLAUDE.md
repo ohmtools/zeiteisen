@@ -50,7 +50,9 @@ semesters.
   `npm run dev` only) is optional and read-only: missing, broken or offline
   changes nothing; the user can also point it elsewhere or ignore it (Data
   menu). Building links and subject full names live ONLY there (or in the
-  user's own files uploaded in the Data menu).
+  user's own files uploaded in the Data menu); a subject's full name comes
+  only from the degree file its `degreeProgram` names (`B-EI` ->
+  `degrees/B-EI.degree`, flat), never merged.
   Re-run `npm run catalog -- ./srv/catalog` after editing it.
 - Global dates never go into a link, a profile file or anywhere but this
   device (and its backup).
@@ -85,7 +87,7 @@ Vite 8 + React 19 (React Compiler) + TypeScript + Tailwind v4. `zod/mini`
 npm run dev       # dev server
 npm run build     # messages -> tsc -b -> vite build
 npm run messages  # regenerate generated/paraglide/ after editing messages/*.json
-npm run schema    # JSON schemas (also :timetable :dates :locations :degreeinformation :catalog)
+npm run schema    # JSON schemas (also :timetable :dates :locations :degree :catalog)
 npm run catalog -- <dir>   # (re)write <dir>/index.json from its files
 npm run skill     # schemas + public/zeiteisen-generator.zip, after editing skill/
 npm run lint && npm run fmt

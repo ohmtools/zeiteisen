@@ -43,10 +43,9 @@ import { ExportButtons } from "@/components/ExportButtons";
 import { ProfileNameDialog } from "@/components/ProfileNameDialog";
 import { Section } from "@/components/Section";
 import type { ShareLink } from "@/hooks/useShareLink";
-import { duplicateName } from "@/lib/duplicate";
 import type { Catalog } from "@/lib/primitives/catalog";
 import type { SemesterDates } from "@/lib/primitives/meta";
-import { nameTaken, profileByName, type Profile } from "@/lib/primitives/profile";
+import { duplicateName, nameTaken, profileByName, type Profile } from "@/lib/primitives/profile";
 
 type Props = {
   className?: string;

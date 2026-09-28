@@ -1,18 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { dated, subject, timetable, weekly } from "@/lib/primitives/fixtures.test-util";
-import {
-  draftOf,
-  nextDate,
-  parseTime,
-  subjectOfDraft,
-  suggestionsFor,
-  withDates,
-} from "@/lib/edit";
+import { draftOf, nextDate, subjectOfDraft, suggestionsFor, withDates } from "@/lib/edit";
 
 describe("draft round trip", () => {
   it("gives back the very subject it was made from", () => {
     const weeklyOne = subject("M1", {
       group: { category: 2, index: 1 },
+      degreeProgram: "ee/BEI.json",
       note: "bring a laptop",
       repeat: weekly("tuesday", "G", { professor: "Koch", location: "WE.107" }),
     });
@@ -47,12 +41,6 @@ describe("draft round trip", () => {
     };
     expect(subjectOfDraft(draft).problems).toEqual(["name", "kinds", "group", "time"]);
     expect(subjectOfDraft({ ...draftOf(), name: "M1", type: "I" }).problems).toEqual(["dates"]);
-  });
-
-  it("reads times", () => {
-    expect(parseTime("08:15")).toEqual({ hour: 8, minute: 15 });
-    expect(parseTime("24:00")).toBeNull();
-    expect(parseTime("")).toBeNull();
   });
 });
 

@@ -15,11 +15,10 @@ import {
   kindNames,
   repeatName,
   slotLabel,
-  subjectInfoOf,
   subjectName,
   timeRangeLabel,
 } from "@/lib/subjects";
-import { buildingLinks } from "@/lib/buildings";
+import { buildingLinks, subjectInfoOf } from "@/lib/primitives/overrides";
 import { OverridesContext } from "@/components/OverridesContext";
 import { tintStyleOf } from "@/lib/tint";
 
@@ -86,8 +85,8 @@ export function SubjectBlock({
   // The popup spells both out: "I2" -> "Computer Science 2", "Pr" ->
   // "Laboratory". An unknown shortcut stays as it is stored in the subject.
   const overrides = use(OverridesContext);
-  const fullName = subjectName(subject.name, overrides.degreeInformation);
-  const info = subjectInfoOf(subject.name, overrides.degreeInformation);
+  const fullName = subjectName(subject.name, subject.degreeProgram, overrides.degrees);
+  const info = subjectInfoOf(subject.name, subject.degreeProgram, overrides.degrees);
   const fullKinds = kindNames(subject.kind);
   // "WE.105" carries the building shortcut; unknown rooms have no links.
   const links = buildingLinks(meeting.location, overrides.locations);

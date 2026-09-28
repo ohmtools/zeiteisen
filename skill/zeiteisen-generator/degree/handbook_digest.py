@@ -2,7 +2,7 @@
 """Shrink a module handbook PDF (Modulhandbuch) to a compact, readable digest.
 
 Usage:
-    python3 degreeinformation/handbook_digest.py <handbook.pdf> [--out FILE]
+    python3 degree/handbook_digest.py <handbook.pdf> [--out FILE]
 
 Module handbooks run 80-260 pages, mostly running headers/footers, layout
 whitespace and literature lists. Reading them raw costs far too many tokens.

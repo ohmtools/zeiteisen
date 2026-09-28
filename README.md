@@ -21,7 +21,7 @@ npm run schema               # every JSON schema at once
 npm run schema:timetable     # a timetable file (plain Subject[])
 npm run schema:dates         # global dates
 npm run schema:locations     # catalog locations.json
-npm run schema:degreeinformation # one catalog degreeinformation/*.json
+npm run schema:degree        # one catalog degrees/*.degree
 npm run schema:catalog       # catalog index.json
 
 npm run catalog -- <dir>     # (re)write <dir>/index.json from its files
@@ -50,7 +50,9 @@ reads, there is no API and nothing is ever sent.
 srv/catalog/           # the copy in this repo, dev only
   index.json           # generated: npm run catalog -- ./srv/catalog
   locations.json       # building shortcut -> name, maps link, site link
-  degreeinformation/*.json # subject shortcut -> name, sws, description, exam (de + en)
+  degrees/*.degree     # subject shortcut -> name, sws, description, exam (de + en);
+                       # flat (no subdirectories); a subject names its file
+                       # without extension in `degreeProgram` ("B-EI")
   dates.json           # the global dates, installed by the app on its own
   timetables/**/*.json # timetables offered in the timetable picker
 ```

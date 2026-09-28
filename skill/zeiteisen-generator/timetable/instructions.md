@@ -87,7 +87,8 @@ the boxes you see.
    layout differs, use its output only where it is clearly right and do the rest
    by hand (steps 1-4). Allowed kinds and repeat types are read from
    `schema.json`. Options `--prefixes`, `--kinds` and `--room-regex` adapt it to
-   other cell conventions once you know them (see `--help`).
+   other cell conventions once you know them (see `--help`);
+   `--degree-program <name>` sets `degreeProgram` on every entry (rule 10).
 1. Render the PDF at high resolution (e.g. `pdftoppm -r 300 -png`).
 2. Crop each day column (morning and afternoon separately) and inspect it.
    Rotate crops of boxes with rotated text (e.g. `-90`) to read them. Zoom
@@ -119,6 +120,7 @@ entry looks like this:
   "name": "MOD/B",
   "kind": ["SU"],
   "group": { "category": 2, "index": 2 },
+  "degreeProgram": "B-ABC",
   "onDemand": false
 }
 ```
@@ -258,6 +260,24 @@ intent (see "Layouts differ" above).
    - Ask when a cell mixes a repeat prefix with concrete dates, when dates
      are only partly readable, or when it is unclear whether a date belongs
      to this cell.
+
+10. `degreeProgram`: the degree file the timetable's subjects belong to,
+    as its bare name, without the `.degree` extension and without any
+    folder: `"B-ABC"` for the file `B-ABC.degree`. The app takes a
+    subject's full name and details ONLY from the degree file of exactly
+    this name (case included). It cannot be read from the PDF:
+    - If the user already named the degree file in their request, use its
+      name without `.degree`, don't ask again.
+    - If this same request also builds that programme's degree file
+      (`<major>.degree`, see SKILL.md), use its `<major>`.
+    - Otherwise ask the user for the name, together with the other open
+      questions (see SKILL.md), with the example above.
+    - Put the answer on every entry (`parse.py --degree-program <name>`).
+      Strip a `.degree` or `.json` extension or a leading folder the user
+      included; what is left follows the file name rules of SKILL.md.
+    - If the user doesn't know or says there is none, leave
+      `degreeProgram` out everywhere. Never guess it, never derive it from
+      the timetable code.
 
 When to ask instead of guessing (see SKILL.md): a box whose day or times you
 cannot determine confidently, text unreadable in both image and text layer,

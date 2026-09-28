@@ -87,17 +87,23 @@ parameter so tests run without a browser.
   every key except the catalog cache (the catalog hands it out again) and the
   iOS hint (about this device only): profiles in their stored shape incl.
   `locked` and `rejected`, active profile, dates, own locations and
-  degree information, sources, catalog mode and URL. Fields an older file lacks
+  degree files, sources, catalog mode and URL. Fields an older file lacks
   (own files, mode, URL) restore as their defaults. The
   language stays with the browser. `parseBackupFile` is STRICT, unlike the
   loaders: one broken profile, a repeated profile or timetable name or a bad
   field refuses the whole file, because a restore replaces everything.
 - `tt.locations.v1` = the user's own locations file, used INSTEAD of the
-  catalog's; `null` or missing = the catalog's. `tt.degreeinformation.v1` = the
-  user's own degree information files (each subject a `SubjectInformation`: name,
-  sws, lp, code, description, test; `mergeDegreeInformation` keeps the whole entry) (`OwnDegreeInformationFile[]`, unique file names,
-  upload order), MERGED OVER the catalog's, later files winning (user
-  decision). Present = "own", so `CatalogSources` carries no flag for them
+  catalog's; `null` or missing = the catalog's. `tt.degrees.v1` = the
+  user's own degree files (each subject a `SubjectInformation`: name,
+  sws, lp, code, description, test; `parseDegree` keeps the whole entry)
+  (`OwnDegreeFile[]`, unique names, upload order). Each is stored under the
+  name the user gives it on upload (the file name without `.degree`, a
+  `nameProblem`-valid name). An own file REPLACES the catalog file of that
+  name (user decision). Files are never merged: a subject names its file in
+  `Subject.degreeProgram` — the bare file name, `B-EI` for
+  `degrees/B-EI.degree` (`degreeProgramOf`), never a path and never with the
+  extension (user decision); without it,
+  or with the file not on the device, it shows its code only. Present = "own", so `CatalogSources` carries no flag for them
   (dates need `datesManual` because one key holds catalog and own dates
   alike).
 - `tt.catalogmode.v1` = `CatalogMode` (`catalog.ts`), default `auto`:
@@ -109,10 +115,28 @@ parameter so tests run without a browser.
   URL).
 - `tt.ioshint.v1` = the one-time "add to home screen" hint was shown.
 
+## Lookup tables (`overrides.ts`)
+
+`Overrides` = the locations and degree files as lookup tables, built by
+`overridesOf` from the cached catalog files (stale copies included: an older
+copy beats no names and no links) and the user's own files, which replace the
+catalog's as described under Storage. Every lookup (`subjectInfoOf`,
+`buildingLinks`, the app's `subjectName`, the editor's code suggestions) takes
+its table as an ARGUMENT, never module state: the React Compiler caches a
+lookup by its arguments, so a table it cannot see left old names and links on
+screen. A code with a variant ("TEG/B", `splitVariant`) is looked up whole
+first (keys like "CSEC1/1" hold a slash), then by the part in front of the
+last slash; nothing on either side of the slash = no variant. Building links
+and full names live only in the catalog or the user's own file, never in the
+app.
+
 ## Catalog (`catalog.ts`)
 
 A timetable entry's `hash` in `index.json` MUST be `Subjects.hash()` of its
 content (`scripts/catalog-index.mjs` computes it with this very code), so a
 timetable is matched without a download; loading re-checks the hash (stale
-index). Origin paths are relative to `timetables/`. `index.json` stays
+index). Origin paths are relative to `timetables/`. `degrees/` is flat
+(user decision): `*.degree` right in it, the index generator refuses a
+subdirectory; an entry in one or without `.degree` is ignored
+(`degreeProgramOf` = `null`). `index.json` stays
 `version: 1` while unreleased.

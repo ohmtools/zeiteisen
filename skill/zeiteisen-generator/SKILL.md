@@ -1,18 +1,18 @@
 ---
 name: "zeiteisen-generator"
-description: "Extract structured JSON data for a university timetable app (TH Nürnberg / Ohm) from: timetable PDFs (Stundenplan of any programme or faculty, codes like ABC3, saved as .timetable files); official faculty abbreviation lists (Abkürzungen: Fachkürzel, Typ, Fach) combined with module handbooks (Modulhandbuch) and study plans (Studienplan / Studienverlaufsplan with LP) into degree information (subject codes, German and English names, SWS, LP / ECTS credits, descriptions, exam forms); semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days); and campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list, module handbook or study plan PDF, even without any text, or asks for subjects, modules, SWS, credits, exams or degree information of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
+description: "Extract structured JSON data for a university timetable app (TH Nürnberg / Ohm) from: timetable PDFs (Stundenplan of any programme or faculty, codes like ABC3, saved as .timetable files); official faculty abbreviation lists (Abkürzungen: Fachkürzel, Typ, Fach) combined with module handbooks (Modulhandbuch) and study plans (Studienplan / Studienverlaufsplan with LP) into .degree files (subject codes, German and English names, SWS, LP / ECTS credits, descriptions, exam forms); semester dates pages (Termine im Überblick, Wintersemester/Sommersemester, lecture-free days); and campus location pages (Anfahrt / Standorte: building codes like WE, KA, BB). Use this skill whenever the user attaches a timetable, abbreviation list, module handbook or study plan PDF, even without any text, or asks for subjects, modules, SWS, credits, exams or degree information of a major, semester dates, or building locations, or links a th-nuernberg.de page for any of these. Also use it when several of these are requested at once."
 ---
 
 # Zeiteisen Generator
 
 This skill produces JSON data files for a timetable app. Timetables are saved
-with the extension `.timetable` (the content is still plain JSON); all other
-outputs are `.json` files. There are four tasks, each in its own folder:
+with the extension `.timetable`, degree files with `.degree` (the content is
+still plain JSON); all other outputs are `.json` files. There are four tasks, each in its own folder:
 
 | Folder | Input | Output |
 |---|---|---|
 | `timetable/` | Timetable PDF (Stundenplan) | Array of subjects, each with a `repeat` block (weekly day/time or individual dates, plus professor and room), group, kind and notes |
-| `degreeinformation/` | Official abbreviation list PDF, **and** the programme's module handbook PDF **and** study plan (Studienplan) PDF (or the programme's name, to find both online) | Per subject: code, German and English name, SWS per course type, credit points (LP / ECTS), description, exam form |
+| `degree/` | Official abbreviation list PDF, **and** the programme's module handbook PDF **and** study plan (Studienplan) PDF (or the programme's name, to find both online) | Per subject: code, German and English name, SWS per course type, credit points (LP / ECTS), description, exam form |
 | `dates/` | Semester dates webpage, or nothing | Year, lecture period and events |
 | `locations/` | Campus locations webpage, or nothing | Building codes with street, Maps URL and site URL |
 
@@ -27,13 +27,13 @@ Scripts:
 
 - `timetable/parse.py` drafts a `.timetable` from a timetable PDF and lists
   anything that needs a decision (see `timetable/instructions.md`, step 0).
-- `degreeinformation/parse_list.py` reads codes and German names from an
-  official abbreviation list PDF (see `degreeinformation/instructions.md`, step
+- `degree/parse_list.py` reads codes and German names from an
+  official abbreviation list PDF (see `degree/instructions.md`, step
   1).
-- `degreeinformation/parse_studyplan.py` reads the credit points (LP) per
+- `degree/parse_studyplan.py` reads the credit points (LP) per
   module from a study plan PDF and cross-checks them against its `Summe`
   lines (step 1b).
-- `degreeinformation/handbook_digest.py` shrinks a module handbook PDF to a
+- `degree/handbook_digest.py` shrinks a module handbook PDF to a
   compact digest with its table of contents (step 2).
 - `scripts/validate.py` checks an output file against a task's schema. It needs
   `jsonschema` (`pip install jsonschema --break-system-packages` if it reports
@@ -74,6 +74,10 @@ Examples of things that require asking:
 - a required field you can't fill from the source
 - text you can't read with confidence
 - an ambiguous major
+- a timetable's `degreeProgram` (the name, without `.degree`, of the degree
+  file its subjects belong to), unless the user already gave it or the same
+  request builds that degree file (`timetable/instructions.md`, rule 10);
+  otherwise it is always a question for a timetable, never guessed
 - a page whose layout no longer matches what the instructions describe
 
 ## Works for every programme and faculty
@@ -101,15 +105,15 @@ into the expected pattern.
      `Studienverlaufsplan` that has an `LP` column, is a **study plan** (its
      running page header may still say "Modulhandbuch"; the title page
      decides). Don't mix up `Studienplan` (study plan) and `Stundenplan`
-     (timetable). All three feed one **degreeinformation** task; if one is
-     missing, `degreeinformation/instructions.md` ("Inputs") says how to get
+     (timetable). All three feed one **degree** task; if one is
+     missing, `degree/instructions.md` ("Inputs") says how to get
      it.
    - "dates", "Termine", "semester schedule", or a link under
      `…/termine-im-ueberblick/` or `…/semester-schedule/` is a **dates** task.
    - "locations", "buildings", "Standorte", or a link under `…/anfahrt/` or
      `…/directions/` is a **locations** task.
    - "subjects / modules / degree information for major X" with no PDF is a
-     **degreeinformation** task: the handbook and study plan can come from the
+     **degree** task: the handbook and study plan can come from the
      website, the list must come from the user.
 
    If the user asks for a timetable but attached none, say so and stop that
@@ -134,11 +138,12 @@ into the expected pattern.
 3. **Extract.** Follow the task instructions (without a shell: `no-shell.md`)
    and write each result to a drafts folder (e.g.
    `/home/claude/drafts/<filename>`), using the file names and extensions below
-   (`.timetable` for timetables, `.json` for everything else). Keep them out of
+   (`.timetable` for timetables, `.degree` for degree files, `.json` for
+   everything else). Keep them out of
    `/mnt/user-data/outputs/` until nothing is open, so the user never sees a
    half-finished set.
 4. **Validate.** Run `python3 <skill-dir>/scripts/validate.py <task> <file>` on
-   every file (for degreeinformation add `--list <list_<faculty>.json>`: every
+   every file (for degree add `--list <list_<faculty>.json>`: every
    list code must be in the file, this matters most; and `--plan
    <plan_<major>.json>`: every `lp` must come from the study plan) (without a shell: check by
    hand as in `no-shell.md`, section 4). On failure, fix your output. You may
@@ -150,17 +155,18 @@ into the expected pattern.
    copy the files to `/mnt/user-data/outputs/` and present all valid files
    together (without a shell or file system: see `no-shell.md`, section 5). In
    chat, give a short summary per file (e.g. "ABC3, winter 2026: 58 subjects";
-   for degree information the counts listed in
-   `degreeinformation/instructions.md`, step 5). The code and semester go in
+   for a degree file the counts listed in
+   `degree/instructions.md`, step 5). The code and semester go in
    this summary and the file name, since the timetable file itself no longer
-   contains them.
+   contains them; for a timetable also name its `degreeProgram` (or that it
+   has none).
 
 ## Output format
 
 - Each file contains exactly one JSON value matching the schema: an array for
   timetables, an object for the other tasks. No Markdown fences, no comments and
-  no keys the schema doesn't define. A `.timetable` file is still plain JSON;
-  only the extension differs.
+  no keys the schema doesn't define. A `.timetable` or `.degree` file is still
+  plain JSON; only the extension differs.
 - Omit optional properties you have no value for, rather than sending empty
   strings, unless the task instructions say otherwise.
 - Everything meant for the user (summaries, questions, warnings) goes in the
@@ -170,13 +176,16 @@ into the expected pattern.
     `timetable_ABC3_winter2026.timetable`. `<code>`, `<half>` and `<year>` come
     from the PDF header (see `timetable/instructions.md`, rule 1). Use one file
     per timetable PDF. Never use `.json` for a timetable.
-  - `degreeinformation_<major>.json`, e.g. `degreeinformation_B-ABC.json`, one
-    file per programme (handbook). Use the major's short code from the handbook,
-    or a short slug of its name.
+  - `<major>.degree`, e.g. `B-ABC.degree`, one file per programme
+    (handbook). Use the major's short code from the handbook, or a short slug
+    of its name. The name without `.degree` is what a timetable's
+    `degreeProgram` names, so no prefix or suffix. Never use `.json` for a
+    degree file.
   - `dates.json`.
   - `locations.json`.
   - Every file name must save on Windows, macOS / iOS, Linux and Android, and a
-    timetable's file name (without `.timetable`) becomes its name in the app. So
+    timetable's or degree file's name (without its extension) becomes its
+    name in the app. So
     a name never contains `< > : " / \ | ? *` or control characters: replace
     each run of them in a code or slug with `-` (a code printed `ABC3/4` gives
     `timetable_ABC3-4_winter2026.timetable`) and mention the replacement in the

@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 import {
-  degreeInformationSchema,
+  degreeSchema,
   locationsSchema,
   semesterDatesSchema,
   type CatalogLocation,
@@ -10,6 +10,7 @@ import {
 import {
   subjectsFileSchema,
   subjectsHash,
+  type DegreeProgram,
   type Subject,
   type SubjectsHash,
   type SubjectsOrigin,
@@ -27,12 +28,12 @@ import type { TimetableName } from "./timetable";
 //     index.json            generated, lists every file below
 //     locations.json
 //     dates.json
-//     degreeinformation/*.json
+//     degrees/*.degree      flat, no subdirectories
 //     timetables/**/*.{json,timetable}  plain Subject[], named after the file
 
 export const CatalogKind = {
   Locations: "locations",
-  DegreeInformation: "degreeinformation",
+  Degrees: "degrees",
   Dates: "dates",
   Timetables: "timetables",
 } as const;
@@ -41,6 +42,11 @@ export type CatalogKind = (typeof CatalogKind)[keyof typeof CatalogKind];
 
 // A catalog origin's path is relative to this directory.
 export const TIMETABLES_DIR = "timetables/";
+
+// A degree file sits right in this directory, no subdirectories: a subject's
+// `degreeProgram` is its file name without `DEGREE_EXTENSION`.
+export const DEGREES_DIR = "degrees/";
+export const DEGREE_EXTENSION = ".degree";
 
 export type CatalogEntry = {
   // Relative to the catalog root.
@@ -103,6 +109,16 @@ export function timetableNameOf(entry: CatalogEntry): TimetableName {
 
 export function originOf(entry: CatalogEntry): SubjectsOrigin {
   return { kind: "catalog", path: entry.path.slice(TIMETABLES_DIR.length) };
+}
+
+// The `degreeProgram` that names a degree entry: its file name without the
+// extension, `null` for a path outside the flat `degrees/` or without
+// `.degree`.
+export function degreeProgramOf(entry: CatalogEntry): DegreeProgram | null {
+  const { path } = entry;
+  if (!path.startsWith(DEGREES_DIR) || !path.endsWith(DEGREE_EXTENSION)) return null;
+  const name = path.slice(DEGREES_DIR.length, -DEGREE_EXTENSION.length);
+  return name && !name.includes("/") ? name : null;
 }
 
 // One catalog index plus the way to read the files it lists.
@@ -174,7 +190,7 @@ export class Catalog {
   }
 }
 
-// --- offline cache of the small files (locations, degreeInformation, dates) ---
+// --- offline cache of the small files (locations, degrees, dates) ---
 
 // The last index plus the payload of every small file downloaded, keyed by path
 // with the hash it had. Timetables are not cached: a picked one is copied into
@@ -244,17 +260,13 @@ export function parseLocations(payload: unknown): Record<string, CatalogLocation
   );
 }
 
-// Every degreeInformation file merged into one table, subject code (upper case) ->
-// its whole entry. Later files win, so a program-specific file can override a
-// general one. Broken files are skipped.
-export function mergeDegreeInformation(payloads: unknown[]): Record<string, SubjectInformation> {
-  const table: Record<string, SubjectInformation> = {};
-  for (const payload of payloads) {
-    const parsed = degreeInformationSchema.safeParse(payload);
-    if (!parsed.success) continue;
-    for (const info of parsed.data.subjects) table[info.code.toUpperCase()] = info;
-  }
-  return table;
+// One degree file as a table, subject code (upper case) -> its whole entry,
+// or `null` when broken. Files are never merged: a subject names its own file
+// (`Subject.degreeProgram`).
+export function parseDegree(payload: unknown): Record<string, SubjectInformation> | null {
+  const parsed = degreeSchema.safeParse(payload);
+  if (!parsed.success) return null;
+  return Object.fromEntries(parsed.data.subjects.map((info) => [info.code.toUpperCase(), info]));
 }
 
 export function parseDates(payload: unknown): SemesterDates | null {
@@ -264,7 +276,7 @@ export function parseDates(payload: unknown): SemesterDates | null {
 
 // --- how the app uses the catalog ---
 
-// `auto` reads the catalog and keeps dates, locations and degreeInformation
+// `auto` reads the catalog and keeps dates, locations and degrees
 // current; `freeze` still reads the index (the picker lists it) but keeps what
 // the device has, downloading only what it has no copy of; `ignore` reads
 // nothing at all and uses none of the catalog's data.

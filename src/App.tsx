@@ -50,7 +50,7 @@ export default function App() {
   // Where the global dates came from, plus the footer switch.
   const sources = useCatalogSources();
   const dates = useSemesterDates(sources);
-  // The user's own locations and degreeInformation, in place of the catalog's.
+  // The user's own locations and degrees, in place of the catalog's.
   const own = useOwnData();
   // Current week during the lecture period, else the general grid.
   const [view, setView] = useState<View>(() => defaultView(dates.dates, new Date()));
@@ -59,7 +59,7 @@ export default function App() {
   const [day, setDay] = useState<Day>(() => dayOf(new Date()));
   // Only used to explain the catalog: nothing in the app needs the network.
   const online = useOnline();
-  // The optional static catalog: locations, degreeInformation, dates and ready-made
+  // The optional static catalog: locations, degrees, dates and ready-made
   // timetables fetched from `VITE_CATALOG_URL` or the user's URL. Missing or
   // offline changes nothing — the dates stay as they are and the picker
   // simply lists less. Ignored, it is not read at all.
@@ -75,7 +75,7 @@ export default function App() {
     onDates: dates.install,
     // Silent when another catalog is about to install its own dates.
     onDropDates: () => dates.removeCatalogDates({ quiet: sources.mode !== "ignore" }),
-    own: { locations: own.locations, degreeInformation: own.degreeInformation },
+    own: { locations: own.locations, degrees: own.degrees },
   });
   // Profiles own their timetables: there is no device-wide file store.
   const profiles = useProfiles();
@@ -154,9 +154,10 @@ export default function App() {
     ownLocations: own.locations !== null,
     onUploadLocations: (file) => void own.uploadLocations(file),
     onCatalogLocations: own.switchToCatalogLocations,
-    ownDegreeInformation: own.degreeInformation,
-    onUploadDegreeInformation: (files) => void own.uploadDegreeInformation(files),
-    onRemoveDegreeInformation: own.removeDegreeInformation,
+    ownDegrees: own.degrees,
+    onReadDegrees: own.readDegrees,
+    onAddDegrees: own.addDegrees,
+    onRemoveDegrees: own.removeDegrees,
     profileCount: profiles.profiles.length,
   };
 

@@ -1,6 +1,6 @@
 import * as z from "zod/mini";
 
-// Payloads of the optional catalog's `locations.json` and `degreeinformation/*.json`.
+// Payloads of the optional catalog's `locations.json` and `degrees/*.degree`.
 // Both are read-only lookup tables the app merges over its own defaults; the
 // zod mirrors live at the bottom of this file, the file layout in `CLAUDE.md`.
 
@@ -34,7 +34,7 @@ export type SWS = {
   laboratory: number;
 };
 
-export type DegreeInformation = {
+export type Degree = {
   subjects: SubjectInformation[];
 };
 
@@ -118,6 +118,6 @@ const subjectInformationSchema: z.ZodMiniType<SubjectInformation> = z.object({
   test: localizedSchema,
 });
 
-export const degreeInformationSchema: z.ZodMiniType<DegreeInformation> = z.object({
+export const degreeSchema: z.ZodMiniType<Degree> = z.object({
   subjects: z._default(z.array(subjectInformationSchema), []),
 });

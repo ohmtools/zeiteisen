@@ -1,4 +1,5 @@
-You are building one `degreeinformation` file per degree programme: every
+You are building one `.degree` file per degree programme (`<major>.degree`,
+plain JSON; see SKILL.md for the name): every
 subject with its code, German and English name, SWS per course type, credit
 points (LP / ECTS), a short description of what it teaches, and its exam form
 (`schema.json`).
@@ -86,7 +87,7 @@ user").
 ## Step 1: read the list
 
 ```text
-python3 <skill-dir>/degreeinformation/parse_list.py <list.pdf> --outdir <drafts-dir>
+python3 <skill-dir>/degree/parse_list.py <list.pdf> --outdir <drafts-dir>
 ```
 
 It rebuilds the table rows (including wrapped names), groups them by code,
@@ -126,7 +127,7 @@ List rules (already decided, don't ask):
 ## Step 1b: read the study plan
 
 ```text
-python3 <skill-dir>/degreeinformation/parse_studyplan.py <studyplan.pdf> --outdir <drafts-dir> --major <major>
+python3 <skill-dir>/degree/parse_studyplan.py <studyplan.pdf> --outdir <drafts-dir> --major <major>
 ```
 
 It finds every table with the header columns `SWS` and `LP`, rebuilds the
@@ -172,7 +173,7 @@ all; fields as label/value columns or as tables. Don't expect one pattern;
 find the pattern of the handbook in front of you.
 
 ```text
-python3 <skill-dir>/degreeinformation/handbook_digest.py <handbook.pdf> --out <drafts-dir>/<major>.digest.txt
+python3 <skill-dir>/degree/handbook_digest.py <handbook.pdf> --out <drafts-dir>/<major>.digest.txt
 ```
 
 It removes running headers/footers, literature lists, staff and contact
@@ -361,8 +362,8 @@ Don't infer the exam from the list's `Typ` column or general knowledge.
 ## Step 5: assemble, validate, summarise
 
 ```text
-python3 -c "import json,sys; print(json.dumps({'subjects': [json.loads(l) for l in open(sys.argv[1], encoding='utf-8') if l.strip()]}, ensure_ascii=False, indent=2))" <drafts-dir>/<major>.entries.jsonl > <drafts-dir>/degreeinformation_<major>.json
-python3 <skill-dir>/scripts/validate.py degreeinformation <drafts-dir>/degreeinformation_<major>.json --list <drafts-dir>/list_<faculty>.json --plan <drafts-dir>/plan_<major>.json
+python3 -c "import json,sys; print(json.dumps({'subjects': [json.loads(l) for l in open(sys.argv[1], encoding='utf-8') if l.strip()]}, ensure_ascii=False, indent=2))" <drafts-dir>/<major>.entries.jsonl > <drafts-dir>/<major>.degree
+python3 <skill-dir>/scripts/validate.py degree <drafts-dir>/<major>.degree --list <drafts-dir>/list_<faculty>.json --plan <drafts-dir>/plan_<major>.json
 ```
 
 The validator also checks unique codes, the 100-word limit and single-line plain

@@ -50,9 +50,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { CatalogMode } from "@/lib/primitives/catalog";
-import type { Backup, OwnDegreeInformationFile } from "@/lib/primitives/storage";
+import { DEGREE_EXTENSION, type CatalogMode } from "@/lib/primitives/catalog";
+import type { Backup, OwnDegreeFile } from "@/lib/primitives/storage";
 import { downloadBackup, readBackupFile, restoreBackup } from "@/lib/backup";
+import { nameProblemText } from "@/lib/names";
 import { toast } from "@/lib/toast";
 
 type Props = {
@@ -68,10 +69,13 @@ type Props = {
   ownLocations: boolean;
   onUploadLocations: (file: File) => void;
   onCatalogLocations: () => void;
-  // The own degreeInformation files, in upload order (later ones win).
-  ownDegreeInformation: OwnDegreeInformationFile[];
-  onUploadDegreeInformation: (files: File[]) => void;
-  onRemoveDegreeInformation: (names: string[]) => void;
+  // The own degree files, in upload order.
+  ownDegrees: OwnDegreeFile[];
+  // Reads and checks picked files, each under its file name without
+  // `.degree`; `onAddDegrees` stores them under the names the user gave.
+  onReadDegrees: (files: File[]) => Promise<OwnDegreeFile[]>;
+  onAddDegrees: (files: OwnDegreeFile[]) => void;
+  onRemoveDegrees: (names: string[]) => void;
   // How many profiles a restore would replace.
   profileCount: number;
 };
@@ -87,7 +91,7 @@ type TriggerProps = {
 
 // The footer's "Data" menu, and on phones the tab bar's settings menu:
 // everything about the data on this device that is no profile's business.
-// Where dates, locations and degreeInformation come from (the catalog or the
+// Where dates, locations and degrees come from (the catalog or the
 // user's own files), how the catalog is used and where it is read from, and
 // the backup of it all. Lives in the deferred chunk; App shows a disabled look-alike
 // trigger until it arrives.
@@ -103,34 +107,42 @@ export function DataMenu({
   ownLocations,
   onUploadLocations,
   onCatalogLocations,
-  ownDegreeInformation,
-  onUploadDegreeInformation,
-  onRemoveDegreeInformation,
+  ownDegrees,
+  onReadDegrees,
+  onAddDegrees,
+  onRemoveDegrees,
   profileCount,
   trigger,
   children,
   settings = false,
 }: Props & TriggerProps) {
   // One file input for every own file; `picking` says which kind it is for
-  // (degreeInformation take several files at once). It sits outside the menu,
+  // (degree files take several at once). It sits outside the menu,
   // which unmounts its content on closing.
   const ownInput = useRef<HTMLInputElement>(null);
   const picking = useRef<(files: File[]) => void>(() => {});
-  const pickOwn = (onFiles: (files: File[]) => void, multiple = false) => {
+  const pickOwn = (onFiles: (files: File[]) => void, degrees = false) => {
     const input = ownInput.current;
     if (!input) return;
     picking.current = onFiles;
-    input.multiple = multiple;
+    input.multiple = degrees;
+    input.accept = degrees ? DEGREE_EXTENSION : "application/json,.json";
     input.click();
   };
   const pickOne = (onFile: (file: File) => void) => pickOwn(([file]) => onFile(file));
   const [editingUrl, setEditingUrl] = useState(false);
-  const [removingDegreeInformation, setRemovingDegreeInformation] = useState(false);
+  const [removingDegrees, setRemovingDegrees] = useState(false);
+  // Files read and checked, waiting for their names.
+  const [placing, setPlacing] = useState<OwnDegreeFile[]>([]);
+  const pickDegrees = async (files: File[]) => {
+    const read = await onReadDegrees(files);
+    if (read.length > 0) setPlacing(read);
+  };
   const [skillOpen, setSkillOpen] = useState(false);
-  const ownCount = ownDegreeInformation.length;
+  const ownCount = ownDegrees.length;
   // The last file removed closes the dialog for good, not until the next
   // upload.
-  if (removingDegreeInformation && ownCount === 0) setRemovingDegreeInformation(false);
+  if (removingDegrees && ownCount === 0) setRemovingDegrees(false);
   // "Catalog" cycles a pending mode while the menu is open; it is applied when
   // the menu closes. Applied on every click, getting from freeze back to auto
   // would pass through ignore, which drops the cached catalog and its dates.
@@ -203,11 +215,12 @@ export function DataMenu({
               onLoad={() => pickOne(onUploadLocations)}
               onBack={onCatalogLocations}
             />
-            {/* Own degreeInformation merge over the catalog's, so there is always
-                room for one more file. */}
-            <DropdownMenuItem onClick={() => pickOwn(onUploadDegreeInformation, true)}>
+            {/* An own degree file replaces only the catalog file of the
+                name the user gives it, so there is always room for one more
+                file. */}
+            <DropdownMenuItem onClick={() => pickOwn((files) => void pickDegrees(files), true)}>
               <BookA data-icon="inline-start" />
-              {ownCount > 0 ? m.degreeinformation_add() : m.degreeinformation_manual()}
+              {ownCount > 0 ? m.degrees_add() : m.degrees_manual()}
               {ownCount > 0 && (
                 <Note>
                   {ownCount === 1 ? m.data_own_file() : m.data_own_files({ count: ownCount })}
@@ -215,9 +228,9 @@ export function DataMenu({
               )}
             </DropdownMenuItem>
             {ownCount > 0 && (
-              <DropdownMenuItem onClick={() => setRemovingDegreeInformation(true)}>
+              <DropdownMenuItem onClick={() => setRemovingDegrees(true)}>
                 <BookX data-icon="inline-start" />
-                {m.degreeinformation_manage()}
+                {m.degrees_manage()}
               </DropdownMenuItem>
             )}
             {/* Always there, even with the catalog ignored: the way to own
@@ -269,11 +282,18 @@ export function DataMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <OwnDegreeInformationDialog
-        open={removingDegreeInformation}
-        onOpenChange={setRemovingDegreeInformation}
-        files={ownDegreeInformation}
-        onRemove={onRemoveDegreeInformation}
+      <DegreeNamesDialog
+        files={placing}
+        held={ownDegrees}
+        onClose={() => setPlacing([])}
+        onAdd={onAddDegrees}
+      />
+
+      <OwnDegreesDialog
+        open={removingDegrees}
+        onOpenChange={setRemovingDegrees}
+        files={ownDegrees}
+        onRemove={onRemoveDegrees}
       />
 
       <SkillDialog open={skillOpen} onOpenChange={setSkillOpen} />
@@ -386,10 +406,9 @@ function ModeIcon({ mode }: { mode: CatalogMode }) {
   return <RefreshCw data-icon="inline-start" />;
 }
 
-// The own degreeInformation files in the order they win (later over earlier),
-// each removable on its own; the dialog closes once none is left. Removing is
+// The own degree files in upload order, each removable on its own; the dialog closes once none is left. Removing is
 // at once, no confirmation: the user still has the file.
-function OwnDegreeInformationDialog({
+function OwnDegreesDialog({
   open,
   onOpenChange,
   files,
@@ -397,15 +416,15 @@ function OwnDegreeInformationDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  files: OwnDegreeInformationFile[];
+  files: OwnDegreeFile[];
   onRemove: (names: string[]) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{m.degreeinformation_manage_title()}</DialogTitle>
-          <DialogDescription>{m.degreeinformation_manage_text()}</DialogDescription>
+          <DialogTitle>{m.degrees_manage_title()}</DialogTitle>
+          <DialogDescription>{m.degrees_manage_text()}</DialogDescription>
         </DialogHeader>
         <ul className="flex max-h-72 flex-col divide-y overflow-y-auto">
           {files.map((file) => (
@@ -413,14 +432,14 @@ function OwnDegreeInformationDialog({
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm">{file.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {m.degreeinformation_file_count({ count: file.data.subjects.length })}
+                  {m.degree_subject_count({ count: file.data.subjects.length })}
                 </span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                title={m.degreeinformation_remove_file({ file: file.name })}
-                aria-label={m.degreeinformation_remove_file({ file: file.name })}
+                title={m.degrees_remove_file({ file: file.name })}
+                aria-label={m.degrees_remove_file({ file: file.name })}
                 onClick={() => onRemove([file.name])}
               >
                 <Trash2 />
@@ -434,9 +453,94 @@ function OwnDegreeInformationDialog({
             className="sm:mr-auto"
             onClick={() => onRemove(files.map((file) => file.name))}
           >
-            {m.degreeinformation_remove_all()}
+            {m.degrees_remove_all()}
           </Button>
           <Button onClick={() => onOpenChange(false)}>{m.close()}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Picked degree files, each given its name (the `degreeProgram` subjects
+// name, `.degree` never shown), filled in with its file name. Open while there
+// are files; cancelling loads none of them.
+function DegreeNamesDialog({
+  files,
+  held,
+  onClose,
+  onAdd,
+}: {
+  files: OwnDegreeFile[];
+  // The own files already loaded: a name among them is replaced.
+  held: OwnDegreeFile[];
+  onClose: () => void;
+  onAdd: (files: OwnDegreeFile[]) => void;
+}) {
+  const [names, setNames] = useState(() => files.map((file) => file.name));
+  // Every new pick starts from the file names.
+  const [shown, setShown] = useState(files);
+  if (shown !== files) {
+    setShown(files);
+    setNames(files.map((file) => file.name));
+  }
+
+  const trimmed = files.map((_, i) => (names[i] ?? "").trim());
+  const problems = trimmed.map(
+    (name, i) =>
+      nameProblemText(name) ?? (trimmed.indexOf(name) !== i ? m.degree_name_duplicate() : null),
+  );
+  const invalid = trimmed.some((name, i) => !name || problems[i] !== null);
+  const add = () => {
+    if (invalid) return;
+    onAdd(files.map((file, i) => ({ ...file, name: trimmed[i] })));
+    onClose();
+  };
+
+  return (
+    <Dialog
+      open={files.length > 0}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{m.degree_names_title()}</DialogTitle>
+          <DialogDescription>{m.degree_names_text()}</DialogDescription>
+        </DialogHeader>
+        <div className="flex max-h-80 flex-col gap-4 overflow-y-auto">
+          {files.map((file, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <Label htmlFor={`degree-name-${i}`}>{m.degree_name_label({ file: file.name })}</Label>
+              <Input
+                id={`degree-name-${i}`}
+                value={names[i] ?? ""}
+                autoFocus={i === 0}
+                placeholder={m.degree_name_placeholder()}
+                aria-invalid={problems[i] !== null || undefined}
+                onChange={(event) => setNames(names.with(i, event.target.value))}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") add();
+                }}
+              />
+              {problems[i] ? (
+                <p className="text-sm text-destructive">{problems[i]}</p>
+              ) : (
+                held.some((own) => own.name === trimmed[i]) && (
+                  <p className="text-sm text-muted-foreground">{m.degree_name_replaces()}</p>
+                )
+              )}
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {m.cancel()}
+          </Button>
+          <Button disabled={invalid} onClick={add}>
+            {m.degree_names_confirm()}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

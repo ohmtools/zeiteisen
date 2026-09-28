@@ -273,6 +273,10 @@ def main():
         "--room-regex", help="regex for room codes (default: %s)" % ROOM.pattern
     )
     ap.add_argument("--code", help="timetable code, if the header cannot be parsed")
+    ap.add_argument(
+        "--degree-program",
+        help="name of the degree file without .degree (e.g. B-ABC), set on every entry",
+    )
     args = ap.parse_args()
     prefixes = tuple(args.prefixes.split(",")) if args.prefixes else PREFIXES
     kinds = tuple(args.kinds.split(",")) if args.kinds else KINDS
@@ -388,6 +392,8 @@ def main():
                 rep["location"] = room
             rep["startTime"], rep["endTime"] = start, end
             item = {"repeat": rep, **entry, "onDemand": od}
+            if args.degree_program:
+                item["degreeProgram"] = args.degree_program
             if brackets:
                 item["note"] = "; ".join(brackets)
             result.append(item)

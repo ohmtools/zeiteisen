@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Read the credit points (LP / ECTS) per module from a programme's study plan
 ("Studienplan", with the table "Studienverlaufsplan" and elective catalogues).
-This is step 1b of the degreeinformation task.
+This is step 1b of the degree task.
 
 Usage:
-    python3 degreeinformation/parse_studyplan.py <studyplan.pdf> [--outdir DIR] [--major SLUG]
+    python3 degree/parse_studyplan.py <studyplan.pdf> [--outdir DIR] [--major SLUG]
 
 What it does (rules: instructions.md in this folder, step 1b):
   1. Reads word positions (pdftotext -bbox) and finds every table whose header

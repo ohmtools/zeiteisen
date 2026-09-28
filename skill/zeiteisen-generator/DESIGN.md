@@ -48,7 +48,7 @@ a non-slot plan module.
 - `scripts/validate.py` checks what a JSON schema can't (unknown keys, real
   dates, URL format, unique codes, 100-word descriptions, plain text). A
   rule that can be checked mechanically belongs in the validator.
-- Codes are unique in a degreeinformation file. Never offer "two entries
+- Codes are unique in a degree file. Never offer "two entries
   with the same code" as an option.
 
 ## 4. Generic, not programme-specific
@@ -78,7 +78,7 @@ input layouts change between semesters.
 - Keep "Ask the user" sections short and limited to real conflicts
   (ambiguous names without a tie-breaker, two candidate modules, missing
   required data, broken layouts).
-- Current decided rules for degreeinformation (details in its
+- Current decided rules for degree files (details in its
   `instructions.md`):
   - A code takes precedence. A list code without its own handbook module
     takes a module with an **equal** name, even if that module has another
@@ -155,7 +155,7 @@ deciding when to ask).
 2. Keep all examples generic (see 4), including code comments.
 3. Don't touch the schemas (see 3).
 4. Test changed scripts on real input documents and run
-   `validate.py` (with `--list` and `--plan` for degreeinformation) on a
+   `validate.py` (with `--list` and `--plan` for degree) on a
    real output.
 5. Add a new design decision to section 5 or the relevant section here.
 6. Package the skill under its unchanged name (`zeiteisen-generator`) so the
@@ -163,6 +163,22 @@ deciding when to ask).
 
 ## 10. Change log
 
-- Schema change (user decision): `degreeinformation` entries have an
+- Schema change (user decision): the folder and task are renamed to
+  `degree`, its output is `<major>.degree` (plain JSON, like `.timetable`).
+  A timetable's `degreeProgram` is now the bare name of that file, without
+  `.degree` and never a path (`B-ABC` for `B-ABC.degree`): the app's
+  catalog keeps degree files flat in `degrees/`. `validate.py` checks it is
+  one value, a valid file name without extension.
+
+- Schema change (user decision): the folder and task are renamed to
+  `degreeinfo`. Timetable entries have an optional
+  `degreeProgram`: always the full path of their degreeinfo file relative
+  to `degreeinfo/` (user decision: never only the file name); the app reads
+  a subject's name and details only from that file. It is taken from the
+  user's request or asked from the user, never guessed (timetable rule 10);
+  `validate.py` checks it is one value, a `.json` path of valid file names.
+
+- Schema change (user decision): `degreeinfo` entries have an
   optional `lp` (credit points). Source: a third input, the programme's
-  study plan (Studienplan), read by `degreeinformation/parse_studyplan.py`.
+  study plan (Studienplan), read by `degreeinfo/parse_studyplan.py`
+  (now `degree/`).

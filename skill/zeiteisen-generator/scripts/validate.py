@@ -4,7 +4,7 @@
 Usage:
     python3 scripts/validate.py <task> <output file> [--list <list_<faculty>.json>] [--plan <plan_<major>.json>]
 
-<task> is one of: dates, degreeinformation, locations, timetable.
+<task> is one of: dates, degree, locations, timetable.
 
 Checks, in addition to the JSON schema itself:
   * no keys that the schema does not define (at any nesting level)
@@ -13,7 +13,11 @@ Checks, in addition to the JSON schema itself:
   * timetable: a group index is at most its category (group 2.3 does not
     exist), and every slot ends after it starts; the app refuses the first
     and cannot show the second
-  * degreeinformation: codes unique, descriptions at most 100 words per
+  * timetable: `degreeProgram`, if present, is one value on every entry, the
+    bare name of a degree file (`B-ABC` for `B-ABC.degree`): a valid file
+    name (below), no path, no extension; the app looks the degree file up by
+    exactly this name
+  * degree: codes unique, descriptions at most 100 words per
     language, texts single-line without Markdown; with --list (the working
     file of parse_list.py): every code of the abbreviation list is present,
     spelled exactly as in the list (this check is the most important one), and
@@ -27,7 +31,7 @@ Checks, in addition to the JSON schema itself:
     (CON, PRN, AUX, NUL, COM1-9, LPT1-9, also before an extension), at most
     255 bytes; and the extension the task uses.
 The output file must contain JSON, whatever its extension (timetables use
-`.timetable`, all other tasks `.json`).
+`.timetable`, degree files `.degree`, all other tasks `.json`).
 Exit code 0 = valid. Anything else = do NOT deliver the file.
 """
 
@@ -45,7 +49,9 @@ except ImportError:
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 VALIDATOR_CLS = jsonschema.Draft202012Validator
-TASKS = ("dates", "degreeinformation", "locations", "timetable")
+TASKS = ("dates", "degree", "locations", "timetable")
+# The extension each task's output file ends in.
+EXTENSIONS = {"timetable": ".timetable", "degree": ".degree"}
 MAX_DESCRIPTION_WORDS = 100
 
 # The app's own file name rule (`src/lib/primitives/name.ts`): Windows / FAT
@@ -56,22 +62,29 @@ RESERVED_NAME = re.compile(
 )
 
 
+def segment_problems(name):
+    """The app's file name rule for one name (a file, or a degreeProgram)."""
+    problems = []
+    if not name:
+        problems.append("is empty")
+    if FORBIDDEN_NAME.search(name):
+        problems.append('contains one of < > : " / \\ | ? * or a control character; use -')
+    if name.endswith((".", " ")):
+        problems.append("ends with a dot or space")
+    if RESERVED_NAME.match(name.split(".")[0].rstrip()):
+        problems.append("reserved on Windows")
+    if len(name.encode("utf-8")) > 255:
+        problems.append("longer than 255 bytes")
+    return problems
+
+
 def name_problems(output_path, task):
     name = Path(output_path).name
-    extension = ".timetable" if task == "timetable" else ".json"
+    extension = EXTENSIONS.get(task, ".json")
     problems = []
     if not name.endswith(extension):
         problems.append(f"file name {name!r}: must end in {extension}")
-    if FORBIDDEN_NAME.search(name):
-        problems.append(
-            f'file name {name!r}: contains one of < > : " / \\ | ? * or a control character; use -'
-        )
-    if name.endswith((".", " ")):
-        problems.append(f"file name {name!r}: ends with a dot or space")
-    if RESERVED_NAME.match(name.split(".")[0].rstrip()):
-        problems.append(f"file name {name!r}: reserved on Windows")
-    if len(name.encode("utf-8")) > 255:
-        problems.append(f"file name {name!r}: longer than 255 bytes")
+    problems += [f"file name {name!r}: {p}" for p in segment_problems(name)]
     return problems
 
 
@@ -138,6 +151,27 @@ def timetable_problems(data):
             else None
         )
 
+    programs = {
+        s["degreeProgram"]
+        for s in data
+        if isinstance(s, dict) and isinstance(s.get("degreeProgram"), str)
+    }
+    if programs and any(isinstance(s, dict) and "degreeProgram" not in s for s in data):
+        errors.append("degreeProgram: set on some entries only; set it on all or none")
+    if len(programs) > 1:
+        errors.append(
+            f"degreeProgram: differs between entries ({', '.join(sorted(programs))}); "
+            f"one timetable has one degree file"
+        )
+    for program in sorted(programs):
+        if program.endswith((".degree", ".json")):
+            errors.append(
+                f"degreeProgram {program!r}: the bare name, without extension "
+                f"({program.rsplit('.', 1)[0]!r})"
+            )
+        for problem in segment_problems(program):
+            errors.append(f"degreeProgram {program!r}: {problem} (a name, not a path)")
+
     for i, s in enumerate(data):
         if not isinstance(s, dict):
             continue
@@ -165,7 +199,7 @@ def timetable_problems(data):
 
 
 def degree_problems(data):
-    """Rules of degreeinformation/instructions.md that a JSON schema can't express."""
+    """Rules of degree/instructions.md that a JSON schema can't express."""
     errors, seen = [], {}
     subjects = data.get("subjects", []) if isinstance(data, dict) else []
     for i, s in enumerate(subjects):
@@ -320,7 +354,7 @@ def main():
     errors += name_problems(output_path, task)
     if task == "timetable":
         errors += timetable_problems(data)
-    if task == "degreeinformation":
+    if task == "degree":
         errors += degree_problems(data)
         if list_path:
             errors += list_coverage(data, list_path)

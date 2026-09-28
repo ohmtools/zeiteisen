@@ -1,13 +1,15 @@
 # scripts — notes
 
 - `scripts/json-schema.mjs` turn the primitives' zod mirrors (`subjectsFileSchema`,
-  `semesterDatesSchema`, `locationsSchema`, `degreeInformationSchema`,
+  `semesterDatesSchema`, `locationsSchema`, `degreeSchema`,
   `catalogIndexSchema`, zod/mini) into classic `z.toJSONSchema` (`io: "input"`,
   works across the shared core); `jiti` load the
   TypeScript directly. Primitives import only relative paths, zod and ohash, so no
   alias and no `npm run messages` first. `schema:timetable` = a plain `Subject[]`.
 - `scripts/catalog-index.mjs` (`npm run catalog -- <dir>`) walk `locations.json`,
-  `dates.json` (ONE file, like locations), `degreeinformation/*.json`,
+  `dates.json` (ONE file, like locations), `degrees/*.degree` (FLAT: a
+  subdirectory of `degrees/` is the one hard error — nothing is written, exit
+  1 — since a subject names its degree file by its bare name),
   `timetables/**/*.{json,timetable}` (subdirectories allowed; `.timetable` is
   the app's own download, dropped in as is) and write `<dir>/index.json`: per file `path`, `kind`,
   8-char `hash` and file mtime as `modified` (ISO, the "last changed" the picker
@@ -17,12 +19,12 @@
   match and re-check against; every other file get `shortHash` of its parsed
   JSON. Missing subdirectory, unreadable file, a file with another extension and a
   timetable that fail the schema are skipped with a `skipped …` line on
-  stderr, not fatal. DegreeInformation files are checked against
-  `degreeInformationSchema` (`meta.ts`, through jiti) and warned about, never
-  refused: a file not matching the format, and every code (upper case, as the
-  app compares) listed more than once across files or within one, naming the
-  file the app will use (the last in index order, i.e. path order). The
-  index is still written. Every path segment is checked against `nameProblem`
+  stderr, not fatal. Degree files are checked against
+  `degreeSchema` (`meta.ts`, through jiti) and warned about, never
+  refused: a file not matching the format, a timetable subject whose
+  `degreeProgram` names no `degrees/<name>.degree`, and one whose code (or the part
+  before its last slash) is not in that file. Files are never merged, so a
+  code in several files is fine. The index is still written. Every path segment is checked against `nameProblem`
   (`src/lib/primitives/name.ts`, through jiti) and a timetable whose file name the
   app would clean gets the name it will show; warnings, never refusals. Re-run after every catalog change — hash is
   what invalidate client cache. `--stdout` print instead of write. Args go
@@ -33,7 +35,7 @@
   shared by `json-schema.mjs` and `skill.mjs`, so both write the same bytes.
 - `scripts/skill.mjs` (`npm run skill`, part of `npm run build`) write the four
   `skill/zeiteisen-generator/<kind>/schema.json` (timetable, dates, locations,
-  degree information; git-ignored, identical to `npm run schema:<kind>`), then zip
+  degree; git-ignored, identical to `npm run schema:<kind>`), then zip
   `skill/zeiteisen-generator/` with `fflate` to `public/zeiteisen-generator.zip`
   (git-ignored, precached by the PWA). One top-level `zeiteisen-generator/`
   folder in the zip, as Claude's skill upload expects; dotfiles and

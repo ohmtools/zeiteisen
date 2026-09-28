@@ -33,6 +33,23 @@ export type RepeatType =
 // Every rhythm bound to a weekday instead of dates.
 export type WeeklyRepeatType = Exclude<RepeatType, "I">;
 
+// Every weekly rhythm, most common first, halves last: the order the subject
+// editor offers them in.
+export const WEEKLY_REPEAT_TYPES = [
+  "A",
+  "G",
+  "U",
+  "G1",
+  "G2",
+  "U1",
+  "U2",
+  "SH1",
+  "SH2",
+] as const satisfies readonly WeeklyRepeatType[];
+
+// Every rhythm, listed dates last.
+export const REPEAT_TYPES: readonly RepeatType[] = [...WEEKLY_REPEAT_TYPES, "I"];
+
 // Who teaches when and where: one meeting of a subject.
 export type Slot = {
   professor: string;
@@ -89,10 +106,41 @@ export function minutesOf(t: Time): number {
   return t.hour * 60 + t.minute;
 }
 
+// 8:05 -> "08:05".
+export function formatTime(time: Time): string {
+  return String(time.hour).padStart(2, "0") + ":" + String(time.minute).padStart(2, "0");
+}
+
+// "08:15" or "8:15" -> 8:15; anything else -> null.
+export function parseTime(value: string): Time | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return null;
+  return { hour, minute };
+}
+
+// Every slot, weekly or dated, ends after it starts: a zero or negative length
+// has no block in the grid and no valid calendar event.
+export function endsAfterStart(slot: { startTime: Time; endTime: Time }): boolean {
+  return minutesOf(slot.endTime) > minutesOf(slot.startTime);
+}
+
+// A real calendar date in ISO form, YYYY-MM-DD: what `DatedSlot.date` holds.
+export function isIsoDate(value: string): boolean {
+  return isoDateSchema.safeParse(value).success;
+}
+
+// Name of the subject's degree file without `.degree` (the catalog's flat
+// `degrees/` or an own file), not a path.
+export type DegreeProgram = string;
+
 export type Subject = {
   repeat: Repeat;
   name: string;
   kind: Kind[];
+  degreeProgram?: DegreeProgram;
   group?: Group;
   note?: string;
   onDemand: boolean;
@@ -440,24 +488,13 @@ const slotShape = {
   endTime: timeSchema,
 };
 
-// A slot ends after it starts: a zero or negative length has no block in the
-// grid and no valid calendar event. Reported on `endTime`.
-const endsAfterStart = z.refine<{ startTime: Time; endTime: Time }>(
-  (slot) => minutesOf(slot.endTime) > minutesOf(slot.startTime),
-  { message: "endTime must be after startTime", path: ["endTime"] },
-);
+// `endsAfterStart`, reported on `endTime`.
+const endsAfterStartCheck = z.refine<{ startTime: Time; endTime: Time }>(endsAfterStart, {
+  message: "endTime must be after startTime",
+  path: ["endTime"],
+});
 
-const weeklyRepeatTypes = [
-  "A",
-  "G",
-  "U",
-  "SH1",
-  "SH2",
-  "G1",
-  "G2",
-  "U1",
-  "U2",
-] as const satisfies readonly WeeklyRepeatType[];
+const isoDateSchema = z.iso.date();
 
 // ohash keeps array order, so the same dates listed in another order would
 // hash as different content: dates are stored sorted (by date first, since
@@ -473,22 +510,24 @@ export const repeatSchema: z.ZodMiniType<Repeat> = z.discriminatedUnion("type", 
   z.object({
     type: z.literal("I"),
     dates: z
-      .array(z.object({ date: z.iso.date(), ...slotShape }).check(endsAfterStart))
+      .array(z.object({ date: isoDateSchema, ...slotShape }).check(endsAfterStartCheck))
       .check(z.minLength(1), z.overwrite(canonicalDates)),
   }),
   z
     .object({
-      type: z.enum(weeklyRepeatTypes),
+      type: z.enum(WEEKLY_REPEAT_TYPES),
       day: z.enum(enumValues(Day)),
       ...slotShape,
     })
-    .check(endsAfterStart),
+    .check(endsAfterStartCheck),
 ]);
 
 export const subjectSchema: z.ZodMiniType<Subject> = z.object({
   repeat: repeatSchema,
   name: z.string().check(z.minLength(1)),
   kind: z.array(z.enum(enumValues(Kind))).check(z.minLength(1)),
+  // Only a lookup key into the loaded degree tables, never fetched.
+  degreeProgram: z.optional(z.string().check(z.minLength(1))),
   group: z.optional(groupSchema),
   onDemand: z._default(z.boolean(), false),
   note: z.optional(z.string()),

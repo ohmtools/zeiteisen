@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
-import { duplicateProfile } from "@/lib/duplicate";
 import { cleanTimetableName, withCleanNames } from "@/lib/names";
 import { requestPersistence } from "@/lib/persist";
 import { toast } from "@/lib/toast";
@@ -8,6 +7,7 @@ import { m } from "@/i18n";
 import { normalizeName, uniqueName } from "@/lib/primitives/name";
 import {
   addTimetables,
+  duplicateProfile,
   editSubjects,
   nameTaken,
   profileByName,

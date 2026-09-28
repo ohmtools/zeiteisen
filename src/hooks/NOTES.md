@@ -19,12 +19,16 @@ goes through primitives `storage.ts`.
   details (the Data menu has no panel). Only a successful write records where
   the dates came from, and only the user's own uploads ask for persistent
   storage — the catalog's first install must not trigger Firefox's prompt.
-- `useOwnData` — `tt.locations.v1` + `tt.degreeinformation.v1`. Own locations
+- `useOwnData` — `tt.locations.v1` + `tt.degrees.v1`. Own locations
   are used INSTEAD of the catalog's ("Use catalog locations" drops the file;
   the catalog's copy stays cached, never shown or toasted meanwhile). Own
-  degree information are several files merged OVER the catalog's (user decision):
-  a picked file with a held name replaces it and moves last, removing goes by
-  file name. Upload toasts say the catalog never touches
+  degree files are several files, each REPLACING the catalog file of the
+  same name, never merged (user decision; `useCatalog` builds one
+  table per file, keyed by `degreeProgram`):
+  `readDegrees` checks picked files without storing them, `addDegrees`
+  stores them under the names the user gave (Data menu dialog, file name
+  without `.degree` filled in); a held name is replaced and moves last,
+  removing goes by name. Upload toasts say the catalog never touches
   own files.
 - `useCatalogSources` — `tt.sources.v1` (where the dates came from,
   `datesManual`), `tt.catalogmode.v1` (the Data menu's cycling "Catalog":
@@ -38,7 +42,7 @@ goes through primitives `storage.ts`.
   one. `ignore` reads nothing and hands out `Catalog.empty`; switching to it
   or to another URL empties the cache and removes catalog-installed dates
   (user decision: `freeze` is the mode that keeps catalog data). Own files
-  always stay. A first download is no news (no toast). Locations and degree information
+  always stay. A first download is no news (no toast). Locations and degree files
   always read the newest copy on the device, even under an older hash: a
   failed or broken download keeps names and building links. Frozen, the copy
   on the device stays in use, however old. **Timetables are never

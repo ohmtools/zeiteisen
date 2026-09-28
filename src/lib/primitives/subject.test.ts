@@ -1,8 +1,11 @@
 import { expect, test } from "vitest";
 import { dated, subject } from "./fixtures.test-util";
 import {
+  formatTime,
   HASH_LENGTH,
   isDuplicate,
+  isIsoDate,
+  parseTime,
   sameSubject,
   subjectSchema,
   Subjects,
@@ -55,4 +58,19 @@ test("a slot must end after it starts, weekly and dated alike", () => {
   const [slot] = once.dates;
   const late = { ...once, dates: [{ ...slot, startTime: { hour: 10, minute: 0 } }] };
   expect(subjectSchema.safeParse({ ...weekly, repeat: late }).success).toBe(false);
+});
+
+test("times read and write as HH:MM", () => {
+  expect(parseTime("08:15")).toEqual({ hour: 8, minute: 15 });
+  expect(parseTime(" 8:15 ")).toEqual({ hour: 8, minute: 15 });
+  expect(parseTime("24:00")).toBeNull();
+  expect(parseTime("")).toBeNull();
+  expect(formatTime({ hour: 8, minute: 5 })).toBe("08:05");
+});
+
+test("isIsoDate takes real calendar dates only", () => {
+  expect(isIsoDate("2026-10-05")).toBe(true);
+  expect(isIsoDate("2026-02-30")).toBe(false);
+  expect(isIsoDate("5.10.2026")).toBe(false);
+  expect(isIsoDate("")).toBe(false);
 });

@@ -66,11 +66,11 @@ adjustments, since you can't render, crop or measure pixels:
    title (`G MOD1:Pr:10.2`); in the image it is red. Every box with a prefix
    in one source should have it in the other.
 
-## 3. Degree information by hand
+## 3. Degree files by hand
 
 ### The abbreviation list
 
-Follow `degreeinformation/instructions.md`, step 1 (all rules, including
+Follow `degree/instructions.md`, step 1 (all rules, including
 when to ask), reading the table from the text layer:
 
 - Skip page headers and footers: the title (`Abkürzungen`), the column header
@@ -87,7 +87,7 @@ when to ask), reading the table from the text layer:
 ### The study plan
 
 `parse_studyplan.py` can't run, so read the tables yourself, following step
-1b of `degreeinformation/instructions.md` (all rules):
+1b of `degree/instructions.md` (all rules):
 
 - Find every table with the columns `SWS` and `LP`: the semester plan
   ("Studienverlaufsplan") and the elective catalogues. Skip the change log
@@ -104,7 +104,7 @@ when to ask), reading the table from the text layer:
 ### The module handbook
 
 `handbook_digest.py` can't run, so read the handbook's text layer directly,
-following steps 2-4 of `degreeinformation/instructions.md`:
+following steps 2-4 of `degree/instructions.md`:
 
 - Start with the table of contents to build the module index, then read one
   module at a time. Skip literature lists, staff and contact fields.
@@ -125,7 +125,7 @@ following steps 2-4 of `degreeinformation/instructions.md`:
 - **File name:** exactly the pattern from SKILL.md; none of
   `< > : " / \ | ? *`, no trailing dot or space, no `CON`, `PRN`, `AUX`,
   `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9` before the first dot.
-- **Degreeinformation, most important:** go through the abbreviation list
+- **Degree file, most important:** go through the abbreviation list
   row by row and confirm every code is in the file, spelled exactly as
   printed, each exactly once, in list order and before any handbook-only
   entries.
@@ -137,8 +137,10 @@ following steps 2-4 of `degreeinformation/instructions.md`:
   as `YYYY-MM-DD` with real calendar dates; required strings not empty.
 - **Structure-specific:** for timetables, weekly `repeat` has `type`, `day`,
   `startTime`, `endTime` and no `dates`; individual-date `repeat` has `type`
-  `"I"` and a non-empty `dates` array and no `day`.
-- **Degree information:** every code only once; each description at most
+  `"I"` and a non-empty `dates` array and no `day`; `degreeProgram`, if
+  present, is the same on every entry, a bare name without extension or `/`
+  (`B-ABC`, not `B-ABC.degree`) that follows the file name rules above.
+- **Degree file:** every code only once; each description at most
   100 words per language (count them); all texts one line, no Markdown.
   `lp`, when present, is a number (not a string), equals the LP of the
   matched study plan module, and never comes from an elective slot; entries
@@ -158,7 +160,8 @@ SKILL.md; deliver only when everything is resolved.
 
 - **If you have a file-creation tool** (e.g. one that creates downloadable
   files or artifacts), create each file there with its exact file name and
-  extension from SKILL.md (`.timetable` for timetables).
+  extension from SKILL.md (`.timetable` for timetables, `.degree` for degree
+  files).
 - **If you can only answer in chat,** give each file as its own code block,
   preceded by its exact file name, and tell the user to save the block's
   content (without the fence lines) under that name. The fence is only for

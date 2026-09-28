@@ -2,17 +2,19 @@ import { addDays, format, parseISO } from "date-fns";
 import { groupName, parseGroupName } from "@/lib/primitives/group";
 import {
   Day,
+  endsAfterStart,
+  formatTime,
+  isIsoDate,
   kindLabel,
-  minutesOf,
+  parseTime,
   subjectSchema,
   type Kind,
   type RepeatType,
   type Slot,
   type Subject,
-  type Time,
 } from "@/lib/primitives/subject";
 import type { Timetable } from "@/lib/primitives/timetable";
-import { timeLabel } from "@/lib/subjects";
+import { meetingsOf } from "@/lib/primitives/week";
 
 // The subject editor's form: everything as the inputs hold it (times "HH:MM",
 // the group "2.1"), turned into a `Subject` by `subjectOfDraft` and checked
@@ -32,6 +34,8 @@ export type DatedDraft = SlotDraft & { date: string };
 export type SubjectDraft = {
   name: string;
   kinds: Kind[];
+  // The subject's degree file (its name), `""` = none.
+  degreeProgram: string;
   group: string;
   onDemand: boolean;
   note: string;
@@ -44,26 +48,12 @@ export type SubjectDraft = {
 // What stops a draft from becoming a subject, one code per broken field.
 export type DraftProblem = "name" | "kinds" | "group" | "time" | "dates" | "date";
 
-// In the order the form lists them, so rhythm and days read top to bottom.
-export const REPEAT_TYPES: readonly RepeatType[] = [
-  "A",
-  "G",
-  "U",
-  "G1",
-  "G2",
-  "U1",
-  "U2",
-  "SH1",
-  "SH2",
-  "I",
-];
-
 function slotDraft(slot: Slot): SlotDraft {
   return {
     professor: slot.professor,
     location: slot.location,
-    start: timeLabel(slot.startTime),
-    end: timeLabel(slot.endTime),
+    start: formatTime(slot.startTime),
+    end: formatTime(slot.endTime),
   };
 }
 
@@ -75,6 +65,7 @@ export function draftOf(subject?: Subject): SubjectDraft {
     return {
       name: "",
       kinds: ["SU"],
+      degreeProgram: "",
       group: "",
       onDemand: false,
       note: "",
@@ -88,6 +79,7 @@ export function draftOf(subject?: Subject): SubjectDraft {
   const common = {
     name: subject.name,
     kinds: [...subject.kind],
+    degreeProgram: subject.degreeProgram ?? "",
     group: subject.group ? groupName(subject.group) : "",
     onDemand: subject.onDemand,
     note: subject.note ?? "",
@@ -101,20 +93,10 @@ export function draftOf(subject?: Subject): SubjectDraft {
   return { ...common, day: repeat.day, slot: slotDraft(repeat), dates: [] };
 }
 
-// "08:15" -> 8:15; anything else -> null.
-export function parseTime(value: string): Time | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (hour > 23 || minute > 59) return null;
-  return { hour, minute };
-}
-
 function slotOf(draft: SlotDraft): Slot | null {
   const startTime = parseTime(draft.start);
   const endTime = parseTime(draft.end);
-  if (!startTime || !endTime || minutesOf(endTime) <= minutesOf(startTime)) return null;
+  if (!startTime || !endTime || !endsAfterStart({ startTime, endTime })) return null;
   return {
     professor: draft.professor.trim(),
     location: draft.location.trim(),
@@ -138,7 +120,7 @@ export function subjectOfDraft(draft: SubjectDraft): DraftResult {
   let repeat: Subject["repeat"] | null = null;
   if (draft.type === "I") {
     if (draft.dates.length === 0) problems.push("dates");
-    if (draft.dates.some((dated) => !/^\d{4}-\d{2}-\d{2}$/.test(dated.date))) problems.push("date");
+    if (draft.dates.some((dated) => !isIsoDate(dated.date))) problems.push("date");
     const slots = draft.dates.map(slotOf);
     if (slots.some((slot) => slot === null)) problems.push("time");
     repeat = {
@@ -156,6 +138,7 @@ export function subjectOfDraft(draft: SubjectDraft): DraftResult {
   // identity is `serialize`d, and a present `undefined` would tell two equal
   // subjects apart.
   const subject: Subject = { repeat, name, kind: draft.kinds, onDemand: draft.onDemand };
+  if (draft.degreeProgram) subject.degreeProgram = draft.degreeProgram;
   if (group) subject.group = group;
   if (draft.note.trim()) subject.note = draft.note.trim();
   const parsed = subjectSchema.safeParse(subject);
@@ -170,7 +153,7 @@ export function subjectOfDraft(draft: SubjectDraft): DraftResult {
 export function nextDate(draft: SubjectDraft, today: Date): DatedDraft {
   const last = draft.dates[draft.dates.length - 1];
   if (!last) return { ...draft.slot, date: format(today, "yyyy-MM-dd") };
-  const base = /^\d{4}-\d{2}-\d{2}$/.test(last.date) ? parseISO(last.date) : today;
+  const base = isIsoDate(last.date) ? parseISO(last.date) : today;
   return { ...last, date: format(addDays(base, 7), "yyyy-MM-dd") };
 }
 
@@ -188,7 +171,7 @@ export function withDates(draft: SubjectDraft, picked: readonly Date[]): DatedDr
 }
 
 // What the editor suggests, learnt from every timetable on the device and the
-// catalog's degreeInformation. Most used first; professors and rooms that the same
+// degree file the draft names. Most used first; professors and rooms that the same
 // subject already uses come before all others.
 export type Suggestions = {
   names: string[];
@@ -230,7 +213,7 @@ const SLOT_LIMIT = 8;
 export function suggestionsFor(
   timetables: readonly Timetable[],
   current: { name: string; kinds: readonly Kind[] },
-  // Every subject code the degree information spells out.
+  // Every subject code the draft's degree file spells out.
   codes: readonly string[] = [],
 ): Suggestions {
   const names = new Map<string, number>();
@@ -253,11 +236,10 @@ export function suggestionsFor(
           ownGroups.add(groupName(subject.group));
         }
       }
-      const meetings = subject.repeat.type === "I" ? subject.repeat.dates : [subject.repeat];
-      for (const slot of meetings) {
+      for (const slot of meetingsOf(subject.repeat)) {
         count(professors, slot.professor);
         count(locations, slot.location);
-        count(slots, timeLabel(slot.startTime) + "-" + timeLabel(slot.endTime));
+        count(slots, formatTime(slot.startTime) + "-" + formatTime(slot.endTime));
         if (same) {
           ownPeople.add(slot.professor);
           ownRooms.add(slot.location);
