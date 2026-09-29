@@ -26,7 +26,7 @@ npm run schema:catalog       # catalog index.json
 
 npm run catalog -- <dir>     # (re)write <dir>/index.json from its files
 
-npm run upload               # rsync the project (minus .gitignore'd files) to the server
+npm run upload               # bundle the committed main, clone it fresh on the server
 npm run publish              # build on the server (no upload), replace the served site
 npm run catalog-remote # rewrite the server catalog's index.json (no upload)
 ```
@@ -35,9 +35,10 @@ The server scripts reach the server as `root` over ssh (port 2222; `npm run
 remote -- '<cmd>'` runs one command there). The project lives in
 `/home/caddy/.config/containers/zeiteisen`, the site is served from
 `…/containers/srv/zeiteisen/site` and the catalog from
-`…/containers/srv/zeiteisen/catalog`. Every copy uses `rsync --delete`, so
-files gone locally are gone remotely; `node_modules` is gitignored, so the
-server runs `npm ci` itself before building or indexing.
+`…/containers/srv/zeiteisen/catalog`. `upload` sends a `git bundle` of `main`
+(committed changes only) and replaces the project directory with a fresh clone
+of it, so anything else there is gone; the server runs `npm ci` itself before
+building or indexing.
 
 ## Optional catalog
 

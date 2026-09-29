@@ -84,7 +84,7 @@ export function TimetableGrid({
       // No placeholder for the all-day row in the general view (user
       // decision): the grid starts right below the toolbar, the hours move
       // down when the week view adds that row.
-      className="flex flex-1 touch-pan-y flex-col gap-4 text-sm md:flex-row desktop:flex-none"
+      className="flex flex-1 touch-pan-y flex-col gap-4 text-sm md:flex-row"
       onPointerDown={(event) => {
         if (event.pointerType === "mouse") return;
         swipeStart.current = { x: event.clientX, y: event.clientY };
@@ -140,20 +140,17 @@ export function TimetableGrid({
 
         {/* Hour rows draw the grid lines; the subjects sit in an overlay of
               the same columns so they can span and share a slot freely. */}
-        {/* Below `desktop` the hours share the height left over (one
-              viewport, no page scroll), down to a 24px floor (the hour label
-              still fits) so common phones need no scrolling; desktop scrolls. */}
-        <div className="relative flex flex-1 flex-col desktop:flex-none">
+        {/* The hours share the height left over (one viewport, no page
+              scroll), down to a 24px floor (the hour label still fits), so
+              common phones and a landscape tablet under its browser bars need
+              no scrolling; below the floor the grid scrolls. */}
+        <div className="relative flex flex-1 flex-col">
           {/* Grid lines and hour labels only: the blocks say their own time. */}
           {hours.map((hour, index) => (
             <div
               key={hour}
               aria-hidden
-              className={cn(
-                COLUMNS,
-                "min-h-6 flex-1 desktop:h-14 desktop:flex-none",
-                index < hours.length - 1 && "border-b",
-              )}
+              className={cn(COLUMNS, "min-h-6 flex-1", index < hours.length - 1 && "border-b")}
             >
               <div className="flex items-center justify-center px-2 text-muted-foreground tabular-nums">
                 {String(hour).padStart(2, "0")}:00
@@ -207,10 +204,12 @@ export function TimetableGrid({
       {/* `other`: what the hour grid cannot hold (weekends, `other` classes,
             dates and SH1/SH2 in the general view, anything outside the grid
             hours) as a plain list in time order, not aligned to the hours.
-            As tall as the grid (phones: the space it leaves), scrolls inside itself. */}
+            As tall as the grid (phones: the space it leaves), scrolls inside itself.
+            A third narrower below `xl` (tablets, small laptops), where the
+            weekdays need the room. */}
       <div
         className={cn(
-          "flex flex-1 flex-col border md:w-48 md:flex-none",
+          "flex flex-1 flex-col border md:w-32 md:flex-none xl:w-48",
           !showOther && "hidden md:flex",
         )}
       >

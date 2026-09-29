@@ -9,6 +9,9 @@ import {
   Download,
   ListPlus,
   Plus,
+  Square,
+  SquareCheck,
+  SquareMinus,
   Trash2,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
@@ -45,9 +48,18 @@ import {
   type TimetableName,
   type TimetableSubjectExtra,
 } from "@/lib/primitives/timetable";
-import { buildTree, stateOf, type TimetableNode } from "@/lib/primitives/tree";
+import { buildTree, stateOf, type CategoryNode, type TimetableNode } from "@/lib/primitives/tree";
 import { warningsFor } from "@/lib/primitives/warnings";
 import { downloadTimetable } from "@/lib/download";
+import {
+  categoryState,
+  groupKey,
+  toggleCategory,
+  toggleGroup,
+  usedGroups,
+  type Kept,
+  type Toggle,
+} from "@/lib/groupToggle";
 import type { Highlight, SubjectRef } from "@/lib/link";
 import { tintStyleOf, tintSteps } from "@/lib/tint";
 import { warningLines } from "@/lib/warnings";
@@ -290,6 +302,18 @@ function TimetableTree({
     setSeenFlash(flash.nonce);
     setOpen(true);
   }
+  // What each group (by `groupKey`) had picked when a switch turned it off,
+  // for this session only.
+  const [kept, setKept] = useState<ReadonlyMap<string, Kept>>(new Map());
+  const apply = (toggle: Toggle) => {
+    if (toggle.indexes.length > 0) onSetEnabled(toggle.indexes, toggle.enabled);
+    const next = new Map(kept);
+    for (const [key, value] of toggle.kept) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    setKept(next);
+  };
   // The name being typed while renaming; `null` while not renaming.
   const [draft, setDraft] = useState<string | null>(null);
   const trimmed = draft === null ? "" : normalizeName(draft);
@@ -413,16 +437,24 @@ function TimetableTree({
                   ? m.tree_no_group()
                   : m.tree_category({ category: category.category })}
               </span>
-              {/* Also for a single subject: its pen is the way to edit it. */}
-              {!locked && (
-                <ClassPicker
-                  timetableName={name}
+              <div className="flex items-center gap-1">
+                <CategoryToggle
                   category={category}
-                  subjects={timetable.subjects}
-                  onSetEnabled={onSetEnabled}
-                  onEdit={onEdit}
+                  state={categoryState(timetable.subjects, category)}
+                  locked={locked}
+                  onToggle={() => apply(toggleCategory(timetable.subjects, category, kept))}
                 />
-              )}
+                {/* Also for a single subject: its pen is the way to edit it. */}
+                {!locked && (
+                  <ClassPicker
+                    timetableName={name}
+                    category={category}
+                    subjects={timetable.subjects}
+                    onSetEnabled={onSetEnabled}
+                    onEdit={onEdit}
+                  />
+                )}
+              </div>
             </div>
             {/* The row is a ruler, not a list of buttons: group
               `category.index` owns the slice [(index-1)/n, index/n] of the full
@@ -488,7 +520,9 @@ function TimetableTree({
                   locked={locked}
                   flashing={flash !== null && group.indexes.includes(flash.index)}
                   onHighlight={(on) => onHighlight(on ? group.indexes : null)}
-                  onSetAll={(enabled) => onSetEnabled(group.indexes, enabled)}
+                  onToggle={() =>
+                    apply(toggleGroup(timetable.subjects, group, kept.get(groupKey(group))))
+                  }
                 />
               ))}
             </div>
@@ -506,6 +540,42 @@ function TimetableTree({
         </ul>
       )}
     </div>
+  );
+}
+
+// Switches all groups of a category at once, drawn as a tri-state checkbox:
+// checked while every group has a pick. Only where there is more than one
+// group to switch; a single one is its own cell.
+function CategoryToggle({
+  category,
+  state,
+  locked,
+  onToggle,
+}: {
+  category: CategoryNode;
+  state: ReturnType<typeof categoryState>;
+  locked: boolean;
+  onToggle: () => void;
+}) {
+  if (category.category === null || usedGroups(category).length < 2) return null;
+  const label =
+    state === "all"
+      ? m.tree_deselect_all({ category: category.category })
+      : m.tree_select_all({ category: category.category });
+  const Icon = state === "all" ? SquareCheck : state === "some" ? SquareMinus : Square;
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="-my-1 size-6"
+      disabled={locked}
+      aria-pressed={state === "some" ? "mixed" : state === "all"}
+      title={label}
+      aria-label={label}
+      onClick={onToggle}
+    >
+      <Icon />
+    </Button>
   );
 }
 

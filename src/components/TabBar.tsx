@@ -1,33 +1,23 @@
-import type { ReactNode } from "react";
-import { CalendarDays, ListChecks } from "lucide-react";
+import { CalendarDays, ListChecks, Settings } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
 import { Button } from "@/components/ui/button";
 
-export type Tab = "timetable" | "groups";
+export type Tab = "timetable" | "groups" | "settings";
 
-// One slot of the bar: icon over label. The settings menu's trigger (deferred
-// chunk) uses it too, so all three slots look alike.
-export const TAB_ITEM =
+// One slot of the bar: icon over label.
+const TAB_ITEM =
   "relative h-14 min-w-0 flex-1 flex-col gap-1 text-xs text-muted-foreground aria-[current=page]:text-foreground";
 
-// Below the `desktop` variant the app shows one of its two columns at a time:
-// the grid with its dock, or profiles + group tree. This bar, fixed to the
-// bottom of the screen, switches between them; its last slot opens the
-// settings menu, which holds what the desktop footer shows. Desktop shows
-// both columns and no bar.
-export function TabBar({
-  value,
-  onChange,
-  settings,
-}: {
-  value: Tab;
-  onChange: (tab: Tab) => void;
-  settings: ReactNode;
-}) {
+// Below the `desktop` variant the app shows one page at a time: the grid with
+// its dock, profiles + group tree, or the settings (what the desktop footer
+// shows). This bar, fixed to the bottom of the screen, switches between them.
+// Desktop shows both columns, the footer and no bar.
+export function TabBar({ value, onChange }: { value: Tab; onChange: (tab: Tab) => void }) {
   const tabs: { tab: Tab; label: string; Icon: typeof CalendarDays }[] = [
     { tab: "timetable", label: m.tab_timetable(), Icon: CalendarDays },
     { tab: "groups", label: m.tab_groups(), Icon: ListChecks },
+    { tab: "settings", label: m.tab_settings(), Icon: Settings },
   ];
   return (
     <nav
@@ -51,7 +41,6 @@ export function TabBar({
           {label}
         </Button>
       ))}
-      {settings}
     </nav>
   );
 }

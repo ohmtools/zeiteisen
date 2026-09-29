@@ -6,12 +6,13 @@
   primitives.
 - **First paint = the grid.** `App.tsx` statically imports only the shell (view
   switch, week nav, day toggle, grid, footer, tab bar), the state hooks and what
-  they need. Sidebar, dialogs, toaster and the footer's "Data" menu come from
+  they need. Sidebar, dialogs, toaster, the footer's "Data" menu and the
+  phones' Settings page come from
   ONE deferred chunk: `components/deferred.ts` re-exports them and App `lazy()`s
   each through the same `import()`. Anything new that is not the grid goes
   behind that import. Fallbacks never shift the layout (sidebar: `null`, fixed
-  column; Data menu and the tab bar's Settings slot: a disabled look-alike
-  button). `vite.config.ts` names only a `react` chunk group, no catch-all
+  column; Settings page: `null`, its own tab; Data menu: a disabled
+  look-alike button). `vite.config.ts` names only a `react` chunk group, no catch-all
   `vendor`, so `ics`, `react-day-picker` and base-ui dialogs stay next to their
   only user.
 - A tab left open across a deploy asks for chunk names that no longer exist

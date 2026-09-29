@@ -35,6 +35,9 @@ re-implements primitive logic.
   `endsAfterStart`, `REPEAT_TYPES`) live in primitives.
   Time chips: the university's six 90-minute blocks (08:00 … 17:30-19:00)
   always, plus slots the device's timetables use often (double blocks).
+- `groupToggle.ts` — what a group cell or a category's "all" icon switches,
+  and the pick a partial group remembers while off (kept with its subjects,
+  so an entry whose subject moved is dropped).
 - `library.ts` — the picker's rows. ONE ROW PER SOURCE, never merged or hidden
   (user decision): each catalog file, every profile's copy, uploads, new empty
   timetables. A profile row copies its timetable WITH its `enabled` flags and

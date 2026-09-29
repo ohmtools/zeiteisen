@@ -17,7 +17,8 @@ type Props = {
   // Keyboard focus lights up the cell's blocks in the grid (hover is the
   // row's job).
   onHighlight?: (on: boolean) => void;
-  onSetAll: (selected: boolean) => void;
+  // Switches the group off, or back on with the classes it had picked.
+  onToggle: () => void;
 };
 
 // One slice of the category ruler (the row in `GroupTree` owns the proportion:
@@ -38,7 +39,7 @@ export function GroupCell({
   locked,
   flashing = false,
   onHighlight,
-  onSetAll,
+  onToggle,
 }: Props) {
   const name = group.group ? groupName(group.group) : m.tree_no_group();
   const variant = state === "all" ? "default" : state === "partial" ? "secondary" : "outline";
@@ -72,7 +73,7 @@ export function GroupCell({
       aria-pressed={state === "partial" ? "mixed" : state === "all"}
       aria-label={name}
       title={name}
-      onClick={() => onSetAll(state !== "all")}
+      onClick={onToggle}
       // Keyboard focus only: a tap focuses the button too (iPad Safari), and
       // would dim the grid until the focus moves on.
       onFocus={(event) => {

@@ -22,7 +22,7 @@
     "catalog": "node scripts/catalog-index.mjs",
     "skill": "node scripts/skill.mjs",
     "remote": "ssh -p 2222 root@server.example.org \"sudo -i -u caddy --\"",
-    "upload": "git ls-files -z | rsync -avz --delete --chown caddy:caddy --from0 --files-from=- -e 'ssh -p 2222' ./ root@[server.example.org]:/home/caddy/.config/containers/zeiteisen/",
+    "upload": "git bundle create - HEAD main | ssh -p 2222 root@server.example.org 'b=$(mktemp) && cat > $b && chmod 644 $b && rm -rf /home/caddy/.local/state/zeiteisen && sudo -u caddy git clone -q $b /home/caddy/.local/state/zeiteisen; s=$?; rm -f $b; exit $s'",
     "publish": "npm run remote -- 'just zeiteisen publish'",
     "catalog-remote": "npm run remote -- 'just zeiteisen catalog'"
   },

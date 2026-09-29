@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ComponentProps } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { startOfDay } from "date-fns";
-import { ChevronDown, Database, Settings } from "lucide-react";
+import { ChevronDown, Database } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
 import { DayToggle } from "@/components/DayToggle";
@@ -8,10 +8,11 @@ import { Brand } from "@/components/Brand";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { SubjectInformation } from "@/lib/primitives/meta";
 import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
-import { TAB_ITEM, TabBar, type Tab } from "@/components/TabBar";
+import { TabBar, type Tab } from "@/components/TabBar";
 import { ViewSwitch, type View } from "@/components/ViewSwitch";
 import { WeekNav } from "@/components/WeekNav";
 import { OverridesContext } from "@/components/OverridesContext";
+import type { DataProps } from "@/components/DataControls";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useCatalogSources } from "@/hooks/useCatalogSources";
@@ -44,6 +45,7 @@ const AppDialogs = lazy(() => deferred().then((d) => ({ default: d.AppDialogs })
 const SubjectInfoDialog = lazy(() => deferred().then((d) => ({ default: d.SubjectInfoDialog })));
 const AppToaster = lazy(() => deferred().then((d) => ({ default: d.AppToaster })));
 const DataMenu = lazy(() => deferred().then((d) => ({ default: d.DataMenu })));
+const SettingsPage = lazy(() => deferred().then((d) => ({ default: d.SettingsPage })));
 
 export default function App() {
   // "Now" ticks every minute, so a page left open moves on with the clock.
@@ -124,9 +126,9 @@ export default function App() {
   const share = useShareLink(profiles.active, importing);
   const timetables = profiles.timetables;
   const hasTimetables = timetables.length > 0;
-  // Phones show one column at a time (`TabBar`). An empty profile starts on
-  // its groups, where timetables are added; anything else on the grid. Not
-  // persisted.
+  // Phones show one page at a time (`TabBar`): grid, groups or settings. An
+  // empty profile starts on its groups, where timetables are added; anything
+  // else on the grid. Not persisted.
   const [tab, setTab] = useState<Tab>(() => (hasTimetables ? "timetable" : "groups"));
   const switchTab = (next: Tab) => {
     setTab(next);
@@ -155,7 +157,8 @@ export default function App() {
   // Offline the catalog can hand over nothing, so it offers nothing.
   const offerCatalog = online ? catalog : Catalog.empty;
 
-  const dataMenu: DataMenuProps = {
+  // The desktop footer's Data menu and the phones' Settings page.
+  const dataMenu: DataProps = {
     catalogMode: sources.mode,
     onCatalogMode: sources.setMode,
     catalogUrl: sources.url,
@@ -200,8 +203,8 @@ export default function App() {
           viewport tall and the subject section takes whatever height the
           fixed-height profile section leaves. Phones (and any viewport too
           short, see the `desktop` variant in index.css): the Timetable tab is
-          one viewport tall too, the grid stretches to fill it; the Groups tab
-          keeps the ordinary page scroll. Phones keep room for the fixed tab
+          one viewport tall too, the grid stretches to fill it; the Groups and
+          Settings tabs keep the ordinary page scroll. Phones keep room for the fixed tab
           bar. */}
       <div
         className={cn(
@@ -296,6 +299,13 @@ export default function App() {
             </div>
             <Footer data={dataMenu} />
           </div>
+
+          {/* Phones only: the desktop footer's content as a page. */}
+          <div className={cn("flex-col desktop:hidden", tab === "settings" ? "flex" : "hidden")}>
+            <Suspense fallback={null}>
+              <SettingsPage {...dataMenu} />
+            </Suspense>
+          </div>
         </main>
 
         <Suspense fallback={null}>
@@ -319,50 +329,15 @@ export default function App() {
           <AppToaster />
         </Suspense>
 
-        <TabBar
-          value={tab}
-          onChange={switchTab}
-          settings={
-            // The footer's content, behind the bar's last slot. Until the
-            // deferred chunk arrives a disabled look-alike holds the slot.
-            <Suspense fallback={<SettingsFallback />}>
-              <DataMenu
-                {...dataMenu}
-                trigger={<Button variant="ghost" className={TAB_ITEM} />}
-                settings
-              >
-                <SettingsTriggerContent />
-              </DataMenu>
-            </Suspense>
-          }
-        />
+        <TabBar value={tab} onChange={switchTab} />
       </div>
     </OverridesContext>
   );
 }
 
-type DataMenuProps = Omit<ComponentProps<typeof DataMenu>, "trigger" | "children" | "settings">;
-
-function SettingsTriggerContent() {
-  return (
-    <>
-      <Settings className="size-5" />
-      {m.settings_menu()}
-    </>
-  );
-}
-
-function SettingsFallback() {
-  return (
-    <Button variant="ghost" className={TAB_ITEM} disabled>
-      <SettingsTriggerContent />
-    </Button>
-  );
-}
-
 // Logo and name · note · Data menu · language. The menu comes with the deferred chunk; until
 // then a disabled look-alike holds its place, so nothing shifts.
-function Footer({ data }: { data: DataMenuProps }) {
+function Footer({ data }: { data: DataProps }) {
   return (
     <footer className="hidden border-t desktop:block">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 py-3 text-sm text-muted-foreground">

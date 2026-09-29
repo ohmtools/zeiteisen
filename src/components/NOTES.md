@@ -6,25 +6,30 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 ## Shell
 
 - Full width, no max-width container. No header (user decision): logo and
-  name (`Brand`) sit in the desktop footer and the phone's Settings menu; an
+  name (`Brand`) sit in the desktop footer and the phone's Settings page; an
   `sr-only` h1 keeps the page titled.
 - **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 600px) is exactly
   one viewport tall, the page never scrolls.** Left column 24rem:
-  `ProfileSection` (constant height) and `GroupTree` (takes the rest; only its
+  `ProfileSection` (height set by its content) and `GroupTree` (takes the rest; only its
   trees scroll, the "Add timetables" button stays in view). Right column:
   toolbar, grid, footer at its bottom. Anything that only cares about width
   keeps `lg:` / `md:`.
 - **Below `desktop` (phones AND short laptop screens): a fixed bottom tab bar
   "Timetable | Groups | Settings"** (user decision). Timetable = grid plus a
   dock of view switch, week nav and day toggle, all at the bottom within
-  thumb reach (user decision). Groups = profiles, group tree. Settings is no
-  tab: it opens the footer's content (Data menu items, language, note) as a
-  menu upwards (user decision: no footer on phones). The active tab is marked
+  thumb reach (user decision). Groups = profiles, group tree. Settings =
+  `SettingsPage`, the footer's content as a page (user decision: no footer on
+  phones; was a menu upwards out of the bar): one `Section` each for language
+  (first, user decision), own files, catalog, backup and reset, about (name
+  and note), every one with its title. Items are full-width outline buttons (the Data menu's items, from
+  the same `useDataControls`), the catalog mode a vertical toggle group applied
+  on pick (nothing passes through ignore, so no pending mode), the language a
+  toggle group of the languages named in themselves. The active tab is marked
   by a primary line on the bar's divider, not a filled button. Start tab:
   Groups when the active profile has no timetables, else Timetable; not
   persisted. The page keeps bottom padding for the bar, toasts sit above it.
 - The Timetable tab is exactly one viewport tall on phones, no page scroll
-  (user decision; Groups keeps page scroll). Top to bottom: grid (the hour
+  (user decision; Groups and Settings keep page scroll). Top to bottom: grid (the hour
   rows share the leftover height, floor 24px so common phones need no
   scroll (user decision, was 36px); below that the
   grid scrolls inside itself), week nav (an empty row of the same height in
@@ -33,15 +38,22 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   clock unless the user picked one that still lasts (`src/lib/NOTES.md`,
   `view.ts`). The dock is the same element as the
   desktop toolbar, last in the timetable column; `desktop:` puts it back
-  above the grid as one row (switch left, week nav right) with fixed 56px
-  hours. `WeekNav` stays one row (short range label below `sm`).
+  above the grid as one row (switch left, week nav right). The hour rows share
+  the leftover height on desktop too, same 24px floor (user decision, was fixed
+  56px: a landscape tablet under its browser bars had to scroll). `WeekNav`
+  stays one row (short range label below `sm`).
 - **No boxes** (user decision): sections are split by divider lines, `Section`
   is shadcn's `Card` minus background, shadow and ring. One spacing unit
   (24px) around every divider — change the paddings together so edges stay
   aligned.
-- Footer (desktop only; phones: the tab bar's Settings menu, same `DataMenu`
-  with `settings`) = logo and name · note · "Data" menu · EN/DE. The Data menu
-  holds: own files — dates and locations one item each ("Load own …" while the
+- Footer (desktop only; phones: the Settings tab, same content as a page) =
+  logo and name · note · "Data" menu · EN/DE. `useDataControls`
+  (`DataControls.tsx`) holds the menu's state, dialogs (`DataDialogs.tsx`) and
+  hidden inputs and hands both `DataMenu` and `SettingsPage` the items as
+  `DataAction`s. The Data menu has three groups, each headed by a
+  `DropdownMenuLabel` (user decision): "Own files", "Catalog", "Backup and
+  reset". Explanations between items are plain muted text, not group labels:
+  Base UI names a group by its last `GroupLabel`. Own files — dates and locations one item each ("Load own …" while the
   catalog's is in use, "Use catalog …" plus a trailing "own file" note while an
   own file is, disabled while the catalog is ignored); degree programs "Load
   own …" / "Add own …" (several `.degree` files, trailing "n own files"; after
@@ -60,7 +72,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   shipped `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative:
   share links open the app on `/s/`). While any own file is in use a muted line
   says how they combine with the catalog and that it never updates them. Then
-  the catalog — "Catalog" cycles ignore → auto-update → freeze on click WITHOUT
+  the catalog — "Mode" cycles ignore → auto-update → freeze on click WITHOUT
   closing the menu (`closeOnClick={false}`), the mode as trailing note and its
   explanation as a muted line below (phones have no tooltips). The cycle is only
   a pending choice: the mode shown when the menu closes is applied then (user
@@ -106,6 +118,8 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (below `md` instead of it, picked like a day) with weekend events, `other`
   classes, SH1/SH2 and dates in the general view, and anything outside the
   hours.
+  The list is 8rem wide from `md`, 12rem from `xl` (user decision: tablets
+  and small laptops need the room for the weekdays).
 - Below `md` one day at a time (`DayToggle` in the dock, defaults to today; App
   owns the day), other columns hidden with CSS; horizontal touch swipe changes
   the day. The overlay is `pointer-events-none` so swipes work; a pointer that
@@ -155,7 +169,17 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   on the device, by its bare name, after the name because it decides the name
   hints). The draft's own value stays listed even when its file is not on the
   device, so an edit never drops it silently.
-- No "select all / none" (user decision: redundant).
+- A group cell is an on/off switch that keeps the manual pick (user
+  decision): switching off a partial group remembers its picked classes,
+  switching it on brings them back (all classes when nothing is remembered or
+  the remembered subjects moved). Session memory only, in `TimetableTree`
+  (`@/lib/groupToggle`); a reload forgets it.
+- At the right end of each category line with two or more used groups, just
+  left of the `ClassPicker` (user decision), a tri-state checkbox icon
+  switches all its groups (user decision, replacing "no select all / none"):
+  every group on → all off, each remembering a partial pick; otherwise the
+  groups that are off come back on with their pick, the others stay as they
+  are. Disabled while locked.
 - Screen readers: each category ruler is a `group` labelled by its category
   line; a cell with some of its classes picked is `aria-pressed="mixed"`. The
   heading's icon buttons name their timetable ("Download BEI3"), the class
@@ -170,6 +194,10 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 
 ## Profiles
 
+- Header: the lock button floats right and title and description flow around
+  it (user decision; the card grid kept a column free under the button). The
+  description starts exactly at the button's bottom, so its lines run full
+  width. No "profile is locked" line (user decision): the button says it.
 - Profile dropdown: profiles · Add · Duplicate · Rename · Delete. Duplicate
   copies the whole profile unlocked and works while the source is locked; its
   name is asked with "Name 2" suggested. A taken name is refused, never

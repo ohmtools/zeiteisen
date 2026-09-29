@@ -112,7 +112,7 @@ npm test          # vitest, `src/**/*.test.ts`, pure logic only
   Settings", with the grid's controls docked just above it.
 - One spacing unit around every divider: 24px.
 - Dark mode and language follow the browser; the only language controls are
-  the desktop footer switcher and its copy in the phone's Settings menu.
+  the desktop footer switcher and its copy on the phone's Settings page.
 - Check every visible change at 360px and 400px, German and English, and at
   1440px desktop; dark mode where colours are involved.
 
@@ -134,6 +134,10 @@ web-shot -c http://localhost:5173/    # console output only
   (and `PARAGLIDE_LOCALE`) and renders `/` in a full-size iframe (a
   `location.href` redirect hangs headless chromium with a populated profile).
   Open menus render unreliably inside that iframe: shoot `/` directly for them.
+  Without `srv/catalog/` (gitignored, may be missing): a `<script
+  type="module">` in the seed page can import
+  `/src/lib/primitives/fixtures.test-util.ts` and `storage.ts` and
+  `saveProfiles` a profile built with `subject` / `timetable` / `profile`.
 - German: `localStorage.setItem("PARAGLIDE_LOCALE","de")` before loading `/`;
   after `npm run messages` restart the dev server or it has no effect.
 - Dark mode: temporarily force `classList.toggle("dark", true)` in

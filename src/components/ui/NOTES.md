@@ -32,7 +32,7 @@ Style `base-sera` (Base UI primitives, not Radix), theme and font (Inter) pick d
   switch. Keep both. **No theme toggle** (user decision).
 - Language follow browser too (paraglide strategy localStorage -> preferredLanguage).
   Only override: small EN/DE ghost buttons in the desktop footer, a language
-  radio group in the phone's Settings menu; nothing language- or
+  toggle group on the phone's Settings page; nothing language- or
   theme-related in header.
 - base-sera `Button` set no `data-variant`, so `ButtonGroupText`'s outline-border selector
   never match; pass `className="border-border"` if use it.

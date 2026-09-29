@@ -97,10 +97,16 @@ export function ProfileSection({
 
   return (
     <Section className={className}>
-      <CardHeader>
-        <CardTitle>{m.groups_profile()}</CardTitle>
-        <CardDescription>{m.profile_description()}</CardDescription>
-        <CardAction>
+      {/* Title and description flow around the lock button instead of
+          keeping a column free under it: floated, and first so it floats to
+          the top. `flow-root` keeps the float inside the header; `mt-1.5` is
+          the grid gap the other sections' headers have. `flex` keeps the float
+          as tall as the button (36px) and `mb-2` takes it past the
+          description's first line (it starts at 34px: 28px title + 6px), so
+          that line wraps beside the button and only the lines under it run
+          full width, a line height below the button. */}
+      <CardHeader className="flow-root">
+        <CardAction className="float-right mb-2 ml-4 flex">
           <Button
             variant={locked ? "default" : "outline"}
             size="sm"
@@ -111,6 +117,8 @@ export function ProfileSection({
             {locked ? m.groups_unlock() : m.groups_lock()}
           </Button>
         </CardAction>
+        <CardTitle>{m.groups_profile()}</CardTitle>
+        <CardDescription className="mt-1.5">{m.profile_description()}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         <div className="flex gap-2">
@@ -168,7 +176,6 @@ export function ProfileSection({
             {m.groups_import()}
           </Button>
         </div>
-        {locked && <CardDescription>{m.profile_locked_hint()}</CardDescription>}
         <ExportButtons dates={dates} profile={active} share={share} catalog={catalog} />
       </CardContent>
 
