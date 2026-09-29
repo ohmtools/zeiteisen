@@ -43,11 +43,17 @@
   `__pycache__` skipped; a fixed entry date, so an unchanged skill gives the
   same zip. Optional positional = other output path; `parseArgs` strict, `-h`.
   The skill's own texts live in `skill/`; edit them there and re-run.
-- `scripts/touch-icon.mjs` (`node scripts/touch-icon.mjs`, by hand after a
-  logo change) renders `public/logo.svg` full-bleed (square backdrop, no rim:
-  iOS rounds corners itself and paints transparency black) to
-  `public/apple-touch-icon.png`, 180×180, committed; `index.html` links it,
-  the service worker skips it (iOS reads it once, on "Add to Home Screen").
+- `scripts/app-icons.mjs` (`node scripts/app-icons.mjs`, by hand after a
+  logo change) renders `public/logo.svg` to the app icons, all committed:
+  `apple-touch-icon.png` 180×180 full-bleed (square backdrop, no rim: iOS
+  rounds corners itself and paints transparency black; `index.html` links it,
+  iOS never reads the manifest's icons), `icon-192.png` / `icon-512.png` as
+  drawn with transparent corners (the manifest's PNGs next to the SVG, for
+  Android browsers that take no SVG) and `icon-maskable-512.png` full-bleed
+  (Android crops to its own shape; without it, the icon shrinks onto a white
+  plate). The watch stays inside the maskable safe zone (circle of 40%
+  radius) as drawn: check that after a logo change. The service worker skips
+  all four (read once, at install).
 - `scripts/og/card.mjs` (`node scripts/og/card.mjs`, by hand) write the link
   preview cards `og.svg` / `og-share.svg` from one template (favicon watch,
   mini Mo–Fr grid in the favicon's and timetable tints' reds, Inter from

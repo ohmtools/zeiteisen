@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useStorageSync } from "@/hooks/useStorageSync";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
 import {
   cached,
   Catalog,
-  CatalogKind,
   datesToInstall,
   emptyCatalogCache,
   parseDates,
@@ -16,9 +16,19 @@ import {
   type FetchJson,
 } from "@/lib/primitives/catalog";
 import type { Locations, SemesterDates } from "@/lib/primitives/meta";
-import { loadCatalogCache, saveCatalogCache, type OwnDegreeFile } from "@/lib/primitives/storage";
-import { catalogFetcher, degreesUpdated } from "@/lib/catalog";
-import { dropsCatalog, refreshScheduler, type RefreshStart } from "@/lib/refresh";
+import {
+  CATALOG_KEY,
+  loadCatalogCache,
+  saveCatalogCache,
+  type OwnDegreeFile,
+} from "@/lib/primitives/storage";
+import { catalogFetcher, catalogNews } from "@/lib/catalog";
+import {
+  dropsCatalog,
+  refreshScheduler,
+  type CatalogSetting,
+  type RefreshStart,
+} from "@/lib/refresh";
 import { overridesOf, type Overrides } from "@/lib/primitives/overrides";
 
 type Options = {
@@ -32,9 +42,9 @@ type Options = {
   sources: CatalogSources;
   // Handed the catalog's dates file whenever it should be installed.
   onDates: (dates: SemesterDates, entry: CatalogEntry, options?: { quiet?: boolean }) => void;
-  // The catalog was switched to `ignore` or another URL: the dates it
-  // installed go with it.
-  onDropDates: () => void;
+  // The catalog is being switched to `next`, `ignore` or another URL: the
+  // dates it installed go with it.
+  onDropDates: (next: CatalogSetting) => void;
   // The user's own files (`useOwnData`). Own locations are used instead of
   // the catalog's (still cached, never shown or announced); an own degree
   // file replaces the catalog file of the same name.
@@ -48,6 +58,18 @@ type Options = {
 const REFRESH_EVERY = 5 * 60 * 1000;
 const FRESH_FOR = 60 * 1000;
 
+// What changed in a catalog file in use (`catalogNews`), said in a toast. Fixed
+// ids: a tab that takes over another tab's copy while its own refresh brings
+// the same change says it once.
+function announce(news: { locations: boolean; degrees: boolean }) {
+  if (news.locations) {
+    toast.success(m.toast_catalog_locations_updated(), { id: "catalog-locations" });
+  }
+  if (news.degrees) {
+    toast.success(m.toast_catalog_degrees_updated(), { id: "catalog-degrees" });
+  }
+}
+
 // Owns `tt.catalog.v1`: the optional read-only catalog of locations, subject
 // degrees, global dates and ready-made timetables served as static JSON
 // next to the app (or at the user's URL). Starts from the cached copy, then
@@ -55,7 +77,8 @@ const FRESH_FOR = 60 * 1000;
 // the page is visible, when it becomes visible again or comes back online,
 // when the mode or URL changes, and whenever `refresh` is called (the dialogs
 // that offer catalog timetables do on opening). No catalog, a partial one or
-// no network at all changes nothing about how the app works.
+// no network at all changes nothing about how the app works. A copy another
+// tab wrote is taken over at once and announced here too.
 //
 // Timetables are never pushed anywhere: they are offered in the picker and in
 // the update dialog, and only a user's click ever copies one into a profile.
@@ -65,6 +88,8 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   refresh: () => void;
   // Reads the current catalog, for the Data menu's "Use catalog dates".
   fetchJson: FetchJson;
+  // Called right before the Data menu changes mode or URL to `next`.
+  dropFor: (next: CatalogSetting) => void;
   // The lookup tables of names and building links (`OverridesContext`).
   overrides: Overrides;
 } {
@@ -75,8 +100,19 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   useEffect(() => {
     optionsRef.current = { mode, fetchJson, sources, onDates, onDropDates, own, cache };
   });
-  // Set by the effect below; a no-op until it ran and after unmount.
+  // Another tab refreshed (or dropped) the cache: show its copy right away,
+  // say what changed as that tab did, and let this tab's next refresh start
+  // from it instead of downloading the same files again or writing an older
+  // copy back.
+  useStorageSync([CATALOG_KEY], () => {
+    const next = loadCatalogCache();
+    const { cache: before, own: mine } = optionsRef.current;
+    setCache(next);
+    announce(catalogNews(before, next, mine));
+  });
+  // Set by the effect below; no-ops until it ran and after unmount.
   const startRef = useRef<RefreshStart>(() => {});
+  const cancelRef = useRef(() => {});
 
   const ignored = mode === "ignore";
   const catalog = useMemo(
@@ -105,20 +141,11 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
       setCache((previous) => ({ ...previous, index }));
 
       const { mode: current, cache: before } = optionsRef.current;
-      const { cache: next, updated } = await refreshCache(before, fresh, current === "auto");
+      const { cache: next } = await refreshCache(before, fresh, current === "auto");
       if (stale()) return;
       setCache(next);
       saveCatalogCache(next);
-      // Only a file the device already had and that really changed is news,
-      // and only while it is in use: own locations hide the catalog's, an own
-      // degree file the catalog file of its name.
-      const { own: mine } = optionsRef.current;
-      if (updated.has(CatalogKind.Locations) && !mine.locations) {
-        toast.success(m.toast_catalog_locations_updated());
-      }
-      if (degreesUpdated(fresh, before, next, mine.degrees)) {
-        toast.success(m.toast_catalog_degrees_updated());
-      }
+      announce(catalogNews(before, next, optionsRef.current.own));
 
       // The catalog's dates file is the one thing it installs by itself: when
       // the device has none, or (auto-update) when the file changed — unless
@@ -140,6 +167,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     });
     const start = scheduler.start;
     startRef.current = start;
+    cancelRef.current = scheduler.cancel;
 
     const onVisible = () => {
       if (document.visibilityState === "visible") start();
@@ -155,27 +183,40 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
     return () => {
       scheduler.stop();
       startRef.current = () => {};
+      cancelRef.current = () => {};
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
     };
   }, []);
 
-  // The first read of the page, and every change of mode or URL. Switching to
-  // `ignore` or to another catalog drops what the device holds of the old
-  // one: its cached files and the dates it installed (`freeze` is the mode
-  // that keeps them). Own files are the user's and stay.
-  const previous = useRef({ mode, url });
+  // The first read of the page, and every change of mode or URL, whichever
+  // tab made it.
   useEffect(() => {
-    const before = previous.current;
-    previous.current = { mode, url };
-    if (dropsCatalog(before, { mode, url })) {
-      setCache(emptyCatalogCache);
-      saveCatalogCache(emptyCatalogCache);
-      optionsRef.current.onDropDates();
-    }
     startRef.current({ restart: true });
   }, [mode, url]);
 
-  return { catalog, refresh: () => startRef.current({ force: true }), fetchJson, overrides };
+  // Switching to `ignore` or to another catalog drops what the device holds
+  // of the old one: its cached files and the dates it installed (`freeze` is
+  // the mode that keeps them). Own files are the user's and stay. Done once,
+  // in the tab where the user switches, before the setting is written: the
+  // other tabs take the empty cache and the removed dates over through
+  // storage, then the setting, and must not drop what the new catalog has
+  // brought meanwhile. The running refresh is dropped first, so the old
+  // catalog's result cannot land after the drop.
+  const dropFor = (next: CatalogSetting) => {
+    if (!dropsCatalog({ mode, url }, next)) return;
+    cancelRef.current();
+    setCache(emptyCatalogCache);
+    saveCatalogCache(emptyCatalogCache);
+    onDropDates(next);
+  };
+
+  return {
+    catalog,
+    refresh: () => startRef.current({ force: true }),
+    fetchJson,
+    dropFor,
+    overrides,
+  };
 }

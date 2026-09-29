@@ -5,8 +5,12 @@ primitives compute. Pure, no React. Never defines a domain type or
 re-implements primitive logic.
 
 - `catalog.ts` — the ONE fetcher (`VITE_CATALOG_URL`, default `catalog/`),
-  shared by every hook that reads the catalog. `degreesUpdated`: whether a
-  refresh changed a degree file in use (`refreshCache` names kinds only).
+  shared by every hook that reads the catalog. `catalogNews`: which catalog
+  files in use a cache change brought a new version of (not a first download,
+  not a drop, not a file an own one replaces), for this tab's refresh and
+  another tab's alike. `catalogDatesNews`: another tab installed newer
+  catalog dates (not a first install, a removal or a switch from or to own
+  dates).
 - `layout.ts` — grid blocks (`Entry`: timetable name + subject index, since
   `SubjectID` is not unique). Hours fixed 8–20, Mon–Fri columns; `other` is a
   list, not a column (user decision). Listed dates with the same slot merge
@@ -56,15 +60,16 @@ re-implements primitive logic.
   on `/s/` the built-in `catalog/` would miss.
   `MAX_SHARE_LENGTH` 1500; four real-size timetables stay far below.
 - `download.ts` — Blob URL downloads. The URL is revoked after 10s: revoking
-  right after `click()` cancels the download in Chromium.
+  in the same task as `click()` cancels the download in Chromium when several
+  files are saved in one go.
 - `names.ts` — glue over the name rule in `primitives/name.ts` (every name a
   valid file name everywhere, unique regardless of case): `nameProblemText`
   words a typed name's problem (all four name inputs: profile rename/duplicate,
   new profile, link import, timetable rename refuse it); `cleanTimetableName` /
   `withCleanNames` repair names that arrive untyped (uploads, profile files,
   catalog files, a link's copies), applied in `upload.ts`, `finalNames` and
-  again in `useProfiles` as the guard. Stored names with forbidden characters
-  stay (no migrations); `safeFilename` cleans them on download.
+  again in `useProfiles` as the guard. Names stored before the rule are not
+  rewritten in storage; `safeFilename` cleans them on download.
 - `ics.ts` — ONE `.ics` per profile (user decision), calendar name = profile
   name, `SUMMARY` = "M1 (SU) · BEI3". Expanded single VEVENTs, never RRULE
   (`G1`/`U2` have no RRULE form); Europe/Berlin wall clock written as UTC
@@ -120,8 +125,9 @@ re-implements primitive logic.
   recomputed on every tick of `useNow`.
 - `refresh.ts` — `useCatalog`'s scheduling as plain code: one refresh at a
   time, not again within a minute unless forced, a restart (mode or URL
-  changed) makes the running one stale (`refreshScheduler`); `dropsCatalog`
-  says which change drops the old catalog's cache and dates.
+  changed) makes the running one stale (`refreshScheduler`), `cancel` does
+  so without starting one (right before a drop); `dropsCatalog` says which
+  change drops the old catalog's cache and dates.
 - `profileState.ts` — `useProfiles`' state moves: load, another tab's write
   (keep this tab's active profile, follow a rename, else the first, else a
   fresh default), rename, delete.

@@ -8,7 +8,7 @@ Style `base-sera` (Base UI primitives, not Radix), theme and font (Inter) pick d
 - **Use shadcn defaults. Avoid custom styling** until user ask customize pass.
   Tailwind classes in app components for layout (flex/grid/gap/width) plus semantic
   tokens (`text-muted-foreground`, `border`); no colors, radii, shadows, custom CSS. Only
-  sanctioned override: `Section` (see Layout).
+  sanctioned override: `Section` (`src/components/NOTES.md`, Shell).
 - Add components with `npx shadcn@latest add <name>` into `src/components/ui/`. No
   hand-edit those files unless necessary.
 - Base UI, not Radix: composition `render={<Button />}`, not `asChild`. `ToggleGroup`
@@ -24,7 +24,7 @@ Style `base-sera` (Base UI primitives, not Radix), theme and font (Inter) pick d
   corner, so without it title and wrapping description run into the button. Every dialog
   in the app use this header, so fix belong here, not per dialog.
 - `cn` come from `cn` package (shadcn's clsx + tailwind-merge replacement), not local
-  helper.
+  helper. `src/lib/utils.ts` only re-export it for the shadcn CLI (`components.json`).
 - Dark mode = shadcn's `.dark` class, set by `ThemeProvider`
   (`src/components/theme-provider.tsx`, wrap `App` in `main.tsx`) from
   `prefers-color-scheme`, live. Blocking `public/dark.js` (not inline: CSP without hashes)

@@ -31,7 +31,8 @@
   render may be named `use…` unless it is a hook: the compiler then skips the
   whole component, silently (App was, over `useCatalogDates`).
 - `App.tsx` holds shell state: view, week, phone tab, tree ↔ grid highlight
-  and jump, and which of its three dialogs is open (picker, update, import).
+  and jump, and which of its four dialogs is open (picker, update, import, subject
+  info).
   Dialogs sit outside the sidebar because they belong to no section, and the
   import one must work before a profile holds anything. A link opened
   directly is read on the first render; `useShareLink` strips the URL when
@@ -46,6 +47,10 @@
 - `src/i18n.ts` is the ONLY importer of paraglide; components do
   `import { m } from "@/i18n"`. `localized()` picks a `{ de, en }` value from
   catalog / dates files, never a message.
+- Another tab's language switch reloads this tab too
+  (`followLocaleOfOtherTabs`, from `main.tsx`), as `setLocale` reloads its
+  own: paraglide reads the locale anew on every message, so the next render
+  would otherwise mix both languages.
 - A `{count}` that can be 1 is a plural variant (`declarations`,
   `countPlural=one` / `other`, see `picker_added`), not a second message.
 - A profile or timetable name inside a sentence is quoted in the message

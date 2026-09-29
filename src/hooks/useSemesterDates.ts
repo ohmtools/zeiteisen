@@ -59,7 +59,8 @@ export function useSemesterDates(sources: Sources) {
     // toast when it replaces dates that came from the catalog before.
     install: (next: SemesterDates, entry: CatalogEntry, options?: { quiet?: boolean }) => {
       if (!apply(next, false)) return;
-      if (!options?.quiet) toast.success(m.toast_catalog_dates_updated());
+      // The same id as the other tabs' toast (`useCatalogSources`).
+      if (!options?.quiet) toast.success(m.toast_catalog_dates_updated(), { id: "catalog-dates" });
       sources.markDates(entry);
     },
 

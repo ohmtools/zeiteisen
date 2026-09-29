@@ -4,10 +4,11 @@ import "./index.css";
 import App from "./App.tsx";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/theme-provider";
-import { getLocale } from "@/i18n";
+import { followLocaleOfOtherTabs, getLocale } from "@/i18n";
 
 // Screen readers and translation offers read the page's language from here.
 document.documentElement.lang = getLocale();
+followLocaleOfOtherTabs();
 
 // A lazy chunk that fails to load after a deploy (an open tab asking for the
 // old file names): start again on the new version, at most once a minute so

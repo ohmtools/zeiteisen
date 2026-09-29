@@ -22,7 +22,7 @@ export function TabBar({ value, onChange }: { value: Tab; onChange: (tab: Tab) =
   return (
     <nav
       aria-label={m.tab_label()}
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background pb-[env(safe-area-inset-bottom)] desktop:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] desktop:hidden"
     >
       {tabs.map(({ tab, label, Icon }) => (
         <Button

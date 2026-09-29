@@ -7,7 +7,9 @@ import type { CatalogMode } from "@/lib/primitives/catalog";
 // drops the running one instead and starts at once: its result belongs to the
 // old setting, and `stale()` tells it so. `skip` (the catalog is ignored)
 // starts nothing, but a restart still drops the running refresh, whose result
-// would bring back the cache and the dates just dropped.
+// would bring back the cache and the dates just dropped. `cancel` drops the
+// running one without starting another: the setting is about to change, and
+// the restart follows once it has.
 
 export type RefreshStart = (options?: { force?: boolean; restart?: boolean }) => void;
 
@@ -22,18 +24,20 @@ export function refreshScheduler({
   skip: () => boolean;
   freshFor: number;
   now?: () => number;
-}): { start: RefreshStart; stop: () => void } {
+}): { start: RefreshStart; cancel: () => void; stop: () => void } {
   let stopped = false;
   let running = false;
   let generation = 0;
   let last = -Infinity;
 
+  const cancel = () => {
+    generation += 1;
+    running = false;
+  };
+
   const start: RefreshStart = ({ force = false, restart = false } = {}) => {
     if (stopped) return;
-    if (restart) {
-      generation += 1;
-      running = false;
-    }
+    if (restart) cancel();
     if (skip() || running) return;
     if (!force && !restart && now() - last < freshFor) return;
     running = true;
@@ -46,17 +50,18 @@ export function refreshScheduler({
 
   return {
     start,
+    cancel,
     stop: () => {
       stopped = true;
     },
   };
 }
 
-type Setting = { mode: CatalogMode; url: string | null };
+export type CatalogSetting = { mode: CatalogMode; url: string | null };
 
 // Whether a change of mode or URL drops what the device holds of the old
 // catalog, its cached files and the dates it installed: another URL, or
 // switching to `ignore`. `freeze` is the mode that keeps them.
-export function dropsCatalog(before: Setting, after: Setting): boolean {
+export function dropsCatalog(before: CatalogSetting, after: CatalogSetting): boolean {
   return before.url !== after.url || (after.mode === "ignore" && before.mode !== "ignore");
 }

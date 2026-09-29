@@ -11,7 +11,7 @@ Stack: Vite + TypeScript + React (React Compiler) + TailwindCSS v4,
 
 ```sh
 npm run dev       # dev server
-npm run build     # compile messages, typecheck, build
+npm run build     # compile messages, typecheck, AI skill zip, build
 npm run messages  # regenerate generated/paraglide/ from messages/*.json
 npm run lint      # oxlint
 npm run fmt       # oxfmt
@@ -25,10 +25,11 @@ npm run schema:degree        # one catalog degrees/*.degree
 npm run schema:catalog       # catalog index.json
 
 npm run catalog -- <dir>     # (re)write <dir>/index.json from its files
+npm run skill                # AI skill schemas + public/zeiteisen-generator.zip
 
 npm run upload               # bundle the committed main, clone it fresh on the server
 npm run publish              # build on the server (no upload), replace the served site
-npm run catalog-remote # rewrite the server catalog's index.json (no upload)
+npm run catalog-remote       # rewrite the server catalog's index.json (no upload)
 ```
 
 The server scripts reach the server as `root` over ssh (port 2222; `npm run
@@ -114,7 +115,10 @@ websites that were not opened for 7 days.
 - `messages/{en,de}.json` — UI strings; `src/i18n.ts` is the only importer of
   the compiled output in `generated/paraglide/` (generated, gitignored).
 - `project.inlang/` — paraglide/inlang project settings.
-- `scripts/` — JSON schema and catalog index generators.
+- `scripts/` — JSON schema, catalog index, AI skill zip, app icon and
+  link preview card generators.
+- `skill/zeiteisen-generator/` — the AI skill offered in the "Data" menu,
+  which turns university PDFs and pages into the app's files.
 
 Each directory with its own logic carries a `NOTES.md` with the reasons and
 decisions behind it.

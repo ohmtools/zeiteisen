@@ -28,6 +28,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   by a primary line on the bar's divider, not a filled button. Start tab:
   Groups when the active profile has no timetables, else Timetable; not
   persisted. The page keeps bottom padding for the bar, toasts sit above it.
+  Page, bar and toasts also pad by `env(safe-area-inset-*)` (home indicator,
+  landscape notch); that needs `viewport-fit=cover` in `index.html`, without
+  it iOS reports 0 and an installed PWA's bar sat under the home indicator.
 - The Timetable tab is exactly one viewport tall on phones, no page scroll
   (user decision; Groups and Settings keep page scroll). Top to bottom: grid (the hour
   rows share the leftover height, floor 24px so common phones need no

@@ -76,6 +76,20 @@ describe("refreshScheduler", () => {
     expect(runs).toHaveLength(1);
   });
 
+  it("cancel drops the running refresh and starts none", async () => {
+    const { start, cancel, runs } = setup();
+    start();
+    cancel();
+    expect(runs).toHaveLength(1);
+    expect(runs[0].stale()).toBe(true);
+    // The slot is free again: the restart after the change runs at once.
+    start({ restart: true });
+    expect(runs).toHaveLength(2);
+    runs[0].finish();
+    await settle();
+    expect(runs[1].stale()).toBe(false);
+  });
+
   it("stop makes the running refresh stale and starts nothing more", () => {
     const { start, stop, runs } = setup();
     start();

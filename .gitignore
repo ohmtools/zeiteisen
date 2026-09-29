@@ -28,8 +28,8 @@ dist-ssr
 generated
 dev-dist
 
-# throwaway German-locale redirect used for screenshot checks (see CLAUDE.md)
-public/_de.html
+# throwaway pages for screenshot checks (see CLAUDE.md)
+public/_*.html
 
 # claude code: worktrees + personal settings
 .claude/worktrees

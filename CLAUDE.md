@@ -4,10 +4,15 @@ Client-only PWA (static hosting, **no backend, no API calls ever** — the only
 network read is the optional static catalog). Purpose: try out group
 combinations for a personal university timetable.
 
-Status: **feature complete, still in development, nothing deployed.** That
-means **no storage migrations and no version bumps** of localStorage keys or
-payload versions (`tt.*.v1`, share `v: 1`, backup `v: 1`) when a shape
-changes; old data that no longer parses reads as empty.
+Status: **released.** Real user data lives in browsers, backups, share
+links, profile and timetable files and cached catalog indexes. A change after
+which the app no longer reads what is already out there — the shape behind a
+localStorage key (`tt.*.v1`), the share link (`v: 1`), the backup (`v: 1`),
+the `.profile` / `.timetable` / `.degree` / dates / locations files, the
+catalog index (`version: 1`) — is a **breaking change**. Before making one,
+**ask the user whether to implement a migration** (and bump the version),
+every time. Never decide it yourself, either way: not "no migration needed",
+not "migrate anyway".
 
 ## Domain
 
@@ -85,7 +90,7 @@ Vite 8 + React 19 (React Compiler) + TypeScript + Tailwind v4. `zod/mini`
 
 ```sh
 npm run dev       # dev server
-npm run build     # messages -> tsc -b -> vite build
+npm run build     # messages -> tsc -b -> skill -> vite build
 npm run messages  # regenerate generated/paraglide/ after editing messages/*.json
 npm run schema    # JSON schemas (also :timetable :dates :locations :degree :catalog)
 npm run catalog -- <dir>   # (re)write <dir>/index.json from its files

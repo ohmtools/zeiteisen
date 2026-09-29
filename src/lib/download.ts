@@ -13,13 +13,13 @@ export function downloadText(
   link.download = filename;
   link.click();
   // Revoking in the same task cancels the download in Chromium when several
-  // files are saved in one go (one .ics per semester), so the URL is released
+  // files are saved in one go, so the URL is released
   // after the browser has picked it up.
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 // Profile and timetable names become file names. Names the app accepts are
-// valid already (`@/lib/filename`) and come through unchanged, so an upload
+// valid already (`@/lib/primitives/name`) and come through unchanged, so an upload
 // gets the very name back; this only catches names stored before that rule.
 export function safeFilename(name: string): string {
   return cleanName(name, "profile");

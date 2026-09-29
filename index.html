@@ -4,9 +4,13 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- iOS takes the home screen icon from here, never from the manifest;
-         `scripts/touch-icon.mjs` renders it from `public/logo.svg`. -->
+         `scripts/app-icons.mjs` renders it from `public/logo.svg`. -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- `viewport-fit=cover`: without it iOS reports every safe-area inset as
+         0, so the tab bar sat under the home indicator of an installed PWA.
+         The app pads by `env(safe-area-inset-*)` itself (App, TabBar,
+         AppToaster). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />

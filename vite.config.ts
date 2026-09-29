@@ -105,18 +105,23 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
+      // The manifest's icons would be precached regardless of `globIgnores`
+      // below; they are read at install time only (`logo.svg` still comes
+      // along through `globPatterns`).
+      includeManifestIcons: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,zip}"],
         // Inter's other scripts: German and English never hit their
         // `unicode-range`, so the browser never asks for them either.
         // The link preview cards are for crawlers only, never shown in the app;
-        // iOS reads the touch icon once, when the app is added to the home
-        // screen (online).
+        // the app icons are read when the app is installed (online), never by
+        // the app itself.
         globIgnores: [
           "**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2",
           "og.png",
           "og-share.png",
           "apple-touch-icon.png",
+          "icon-*.png",
         ],
         // The catalog is served next to the app but is not part of the build,
         // so it cannot be precached. Network first keeps it fresh online and
@@ -147,12 +152,19 @@ export default defineConfig({
         background_color: "#c10007",
         display: "standalone",
         start_url: "/",
+        // The SVG for browsers that take one; PNGs for Android browsers that
+        // do not; a full-bleed maskable one, or Android shrinks the icon onto
+        // a white plate. iOS ignores these (`apple-touch-icon` in
+        // `index.html`). All rendered by `scripts/app-icons.mjs`.
         icons: [
+          { src: "logo.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+          { src: "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
           {
-            src: "logo.svg",
-            sizes: "any",
-            type: "image/svg+xml",
-            purpose: "any",
+            src: "icon-maskable-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },

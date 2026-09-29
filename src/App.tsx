@@ -82,6 +82,7 @@ export default function App() {
     catalog,
     refresh: refreshCatalog,
     fetchJson: fetchCatalogJson,
+    dropFor: dropCatalogFor,
     overrides,
   } = useCatalog({
     mode: sources.mode,
@@ -89,7 +90,7 @@ export default function App() {
     sources: sources.sources,
     onDates: dates.install,
     // Silent when another catalog is about to install its own dates.
-    onDropDates: () => dates.removeCatalogDates({ quiet: sources.mode !== "ignore" }),
+    onDropDates: (next) => dates.removeCatalogDates({ quiet: next.mode !== "ignore" }),
     own: { locations: own.locations, degrees: own.degrees },
   });
   // Profiles own their timetables: there is no device-wide file store.
@@ -160,10 +161,16 @@ export default function App() {
   // The desktop footer's Data menu and the phones' Settings page.
   const dataMenu: DataProps = {
     catalogMode: sources.mode,
-    onCatalogMode: sources.setMode,
+    onCatalogMode: (mode) => {
+      dropCatalogFor({ mode, url: sources.url });
+      sources.setMode(mode);
+    },
     catalogUrl: sources.url,
     defaultCatalogUrl: DEFAULT_CATALOG_URL,
-    onCatalogUrl: sources.setUrl,
+    onCatalogUrl: (url) => {
+      dropCatalogFor({ mode: sources.mode, url });
+      sources.setUrl(url);
+    },
     datesManual: dates.manual,
     onUploadDates: (file) => void dates.upload(file),
     onCatalogDates: () => void dates.switchToCatalogDates(fetchCatalogJson),
@@ -205,10 +212,10 @@ export default function App() {
           short, see the `desktop` variant in index.css): the Timetable tab is
           one viewport tall too, the grid stretches to fill it; the Groups and
           Settings tabs keep the ordinary page scroll. Phones keep room for the fixed tab
-          bar. */}
+          bar and, in landscape, for the notch. */}
       <div
         className={cn(
-          "flex flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] desktop:h-dvh desktop:min-h-0 desktop:overflow-hidden desktop:pb-0",
+          "flex flex-col pr-[env(safe-area-inset-right)] pb-[calc(3.5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] desktop:h-dvh desktop:min-h-0 desktop:overflow-hidden desktop:pb-0",
           tab === "timetable" ? "h-dvh overflow-hidden" : "min-h-screen",
         )}
       >

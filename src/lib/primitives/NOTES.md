@@ -81,9 +81,10 @@ parameter so tests run without a browser.
 
 ## Storage (`storage.ts`)
 
-- Keys stay `.v1` while in development: no migrations, anything that no
-  longer parses reads as empty. Reads never throw; a refused write returns
-  `false`.
+- Keys are `.v1` and released: a change that no longer reads the stored
+  shape is breaking, and whether it gets a migration (and a new version) is
+  the user's call, asked every time (`CLAUDE.md`). Anything that does not
+  parse reads as empty. Reads never throw; a refused write returns `false`.
 - Profiles parse one at a time: a broken one is dropped alone, a repeated name
   keeps the first.
 - Backup (`loadBackup` / `getBackupFile` / `parseBackupFile` / `saveBackup`) =
@@ -105,10 +106,10 @@ parameter so tests run without a browser.
   name (user decision). Files are never merged: a subject names its file in
   `Subject.degreeProgram` — the bare file name, `B-EI` for
   `degrees/B-EI.degree` (`degreeProgramOf`), never a path and never with the
-  extension (user decision); without it,
-  or with the file not on the device, it shows its code only. Present = "own", so `CatalogSources` carries no flag for them
-  (dates need `datesManual` because one key holds catalog and own dates
-  alike).
+  extension (user decision); without it, or with the file not on the device,
+  it shows its code only. Present = "own", so `CatalogSources` carries no flag
+  for them (dates need `datesManual` because one key holds catalog and own
+  dates alike).
 - `tt.catalogmode.v1` = `CatalogMode` (`catalog.ts`), default `auto`:
   `ignore` reads nothing and uses none of the catalog's data, `freeze` reads
   the index but keeps what the device has (`refreshCache` / `datesToInstall`
@@ -141,8 +142,10 @@ timetable is matched without a download; `Catalog.subjects` re-checks the
 hash on every load (a pick, a link, an accepted update), so a stale index
 hands out nothing rather than other content. `httpFetcher` gives each request
 `FETCH_TIMEOUT_MS` (15 s, body included), then reads it as missing: a stalled
-connection must not hold the one running refresh or a dialog's download. Origin paths are relative to `timetables/`. `degrees/` is flat
-(user decision): `*.degree` right in it, the index generator refuses a
+connection must not hold the one running refresh or a dialog's download.
+Origin paths are relative to `timetables/`. `degrees/` is flat (user
+decision): `*.degree` right in it, the index generator refuses a
 subdirectory; an entry in one or without `.degree` is ignored
-(`degreeProgramOf` = `null`). `index.json` stays
-`version: 1` while unreleased.
+(`degreeProgramOf` = `null`). `index.json` is `version: 1`; installed clients
+reject any other version (`z.literal(1)`) and treat the catalog as missing,
+so a bump is a breaking change: ask the user first, like a migration.

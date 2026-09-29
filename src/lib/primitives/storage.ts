@@ -20,8 +20,9 @@ import { timetableFromJSON, timetableJSONSchema, type Timetable } from "./timeta
 // Reads never throw: a missing, unparseable or invalid value reads as empty,
 // and a refused write (quota, private mode) returns false.
 //
-// All keys stay `.v1` while the app is in development: no migrations, a
-// value that no longer parses reads as empty.
+// All keys are `.v1`. The app is released: a change that no longer reads the
+// stored shape is breaking; ask the user whether to migrate (CLAUDE.md). A
+// value that does not parse reads as empty.
 
 // Profiles, each with its own timetables.
 export const PROFILES_KEY = "tt.profiles.v1";

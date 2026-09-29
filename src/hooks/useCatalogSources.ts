@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
+import { m } from "@/i18n";
+import { catalogDatesNews } from "@/lib/catalog";
+import { toast } from "@/lib/toast";
 import type { CatalogEntry, CatalogMode, CatalogSources } from "@/lib/primitives/catalog";
 import {
   CATALOG_MODE_KEY,
@@ -23,8 +26,14 @@ export function useCatalogSources() {
   const [mode, setModeState] = useState<CatalogMode>(loadCatalogMode);
   const [url, setUrlState] = useState<string | null>(loadCatalogUrl);
   // Changed in another tab: this one's next write would undo it otherwise.
+  // New catalog dates installed there are said here too, as they were there
+  // (`useSemesterDates` takes the dates themselves over).
   useStorageSync([SOURCES_KEY, CATALOG_MODE_KEY, CATALOG_URL_KEY], () => {
-    setSources(loadSources());
+    const next = loadSources();
+    if (catalogDatesNews(sources, next)) {
+      toast.success(m.toast_catalog_dates_updated(), { id: "catalog-dates" });
+    }
+    setSources(next);
     setModeState(loadCatalogMode());
     setUrlState(loadCatalogUrl());
   });
