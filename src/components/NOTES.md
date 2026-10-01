@@ -59,7 +59,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   landscape tablet under its browser bars had to scroll). `WeekNav` stays one
   row: prev · relative label ("This week", opens the week picker) · next, then
   the range as plain text above the week number (short range below `sm`) (user
-  decision: the range was its own picker button).
+  decision: the range was its own picker button). The week picker ends in a
+  "This week" button under a divider (user request), disabled while this week
+  is shown.
 - **No boxes** (user decision): sections are split by divider lines, `Section`
   is shadcn's `Card` minus background, shadow and ring. One spacing unit
   (24px) around every divider — change the paddings together so edges stay

@@ -76,7 +76,7 @@ export function WeekNav({ value, onChange }: WeekNavProps) {
             <ChevronRight />
           </Button>
         </ButtonGroup>
-        <PopoverContent className="w-auto p-0">
+        <PopoverContent className="w-auto gap-0 p-0">
           <LazyCalendar
             mode="range"
             defaultMonth={value}
@@ -86,6 +86,22 @@ export function WeekNav({ value, onChange }: WeekNavProps) {
               setPickerOpen(false);
             }}
           />
+          {/* The way back after browsing far off, without paging month by
+              month. Disabled while this week is already shown. */}
+          <div className="border-t p-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={value.getTime() === startOfISOWeek(now).getTime()}
+              onClick={() => {
+                onChange(startOfISOWeek(now));
+                setPickerOpen(false);
+              }}
+            >
+              {m.week_this()}
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
 
