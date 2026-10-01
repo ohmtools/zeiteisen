@@ -66,10 +66,15 @@ parameter so tests run without a browser.
 - The profile file is a plain array of timetables without `rejected`, no
   profile name (the file's name is it), no `locked`.
 - No semesters: week counting comes from the calendar alone, never from
-  `SemesterDates` or today. A week belongs to the semester of the last
-  01.10. / 15.03. on or before its Sunday (`semesterBegin`): a week containing
-  a begin is already week 1 of the new semester (user decision). An export
-  across a begin switches the rhythm there.
+  `SemesterDates` or today. Two counts (user decision): G/U (even/odd) follow
+  the ISO-8601 calendar week (`isoWeek`; ISO week 53 and the following week 1
+  are both odd). G1/G2/U1/U2 follow the university's own count
+  (`semesterWeek`, `cycleCode`): a week belongs to the semester of the last
+  01.10. / 15.03. on or before its Sunday (`semesterBegin`), a week containing
+  a begin is already week 1 of the new semester, weeks 1/2/3/4 are
+  U1/G1/U2/G2. An export across a begin switches the four-week rhythm there.
+  The UI shows the ISO week and the cycle code, never the university's week
+  number (user decision).
 - `Repeat` is a union on `type` (not `kind`, which means SU/Pr): weekly
   rhythms carry `day` + one slot, `I` carries dated slots (the university's
   `N` is `I` with one date). Codes are bare strings, no named constants (user

@@ -27,7 +27,7 @@ import { Catalog, CatalogKind, degreeProgramOf } from "@/lib/primitives/catalog"
 import { isKnownSharedProfile } from "@/lib/primitives/profile";
 import type { Day } from "@/lib/primitives/subject";
 import type { TimetableName } from "@/lib/primitives/timetable";
-import { dayOf, eventsForWeek, semesterWeek } from "@/lib/primitives/week";
+import { dayOf, eventsForWeek } from "@/lib/primitives/week";
 import { generalEntries, weekEntries } from "@/lib/layout";
 import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
@@ -188,10 +188,6 @@ export default function App() {
     profileCount: profiles.profiles.length,
   };
 
-  // The week's number in its own semester (`semesterWeek`): the calendar
-  // alone decides, not the dates file and not today.
-  const weekNumber = semesterWeek(weekStart);
-
   let week: WeekView | null = null;
   // Visible = the enabled subjects of this profile's timetables.
   let entries = generalEntries(timetables);
@@ -200,7 +196,7 @@ export default function App() {
     const today = dayOf(now);
     const events = eventsForWeek(dates.dates, weekStart);
     week = { ...events, today: containsToday && today !== "other" ? today : null };
-    entries = weekEntries(timetables, weekNumber, weekStart, events);
+    entries = weekEntries(timetables, weekStart, events);
   }
 
   return (
@@ -283,9 +279,7 @@ export default function App() {
             <div className="order-last flex flex-col gap-2 border-t px-6 py-3 desktop:order-none desktop:flex-row desktop:flex-wrap desktop:items-center desktop:justify-between desktop:border-0 desktop:pt-6 desktop:pb-0">
               {/* Stays in the general view, empty, so the grid keeps its height. */}
               <div className="flex h-8 items-center desktop:order-last">
-                {view === "week" && (
-                  <WeekNav value={weekStart} onChange={pickWeek} semesterWeek={weekNumber} />
-                )}
+                {view === "week" && <WeekNav value={weekStart} onChange={pickWeek} />}
               </div>
               <DayToggle value={day} onChange={pickDay} className="md:hidden" />
               <ViewSwitch value={view} onChange={setView} />

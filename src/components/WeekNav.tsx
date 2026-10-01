@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LazyCalendar } from "@/components/LazyCalendar";
+import { cycleCode, isoWeek } from "@/lib/primitives/week";
 import { useNow } from "@/hooks/useNow";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -34,11 +35,9 @@ type WeekNavProps = {
   // Monday of the shown week.
   value: Date;
   onChange: (weekStart: Date) => void;
-  // Semester week of `value`, from 1 up.
-  semesterWeek: number;
 };
 
-export function WeekNav({ value, onChange, semesterWeek }: WeekNavProps) {
+export function WeekNav({ value, onChange }: WeekNavProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   // "This week" moves on by itself on a page left open past Sunday.
   const now = useNow();
@@ -93,8 +92,10 @@ export function WeekNav({ value, onChange, semesterWeek }: WeekNavProps) {
         </PopoverContent>
       </Popover>
 
+      {/* The ISO week (G/U) and the four-week code (G1/G2/U1/U2), never the
+          university's own week number. */}
       <Badge variant="secondary" className="shrink-0">
-        {m.week_label({ number: semesterWeek })}
+        {m.week_label({ number: isoWeek(value), cycle: cycleCode(value) })}
       </Badge>
     </div>
   );

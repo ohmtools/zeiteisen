@@ -5,29 +5,31 @@ import type { Catalog } from "./catalog";
 import type { Profile } from "./profile";
 import type { TimetableName, TimetableSource } from "./timetable";
 
-// The rhythm codes of the university's timetables. Weeks count from 01.10.
-// (winter) / 15.03. (summer), week 1 is odd; see `week.ts`.
+// The rhythm codes of the university's timetables. Two week counts are in
+// play (`week.ts`): G/U count ISO-8601 calendar weeks, the four-week rhythms
+// G1/G2/U1/U2 count the university's own weeks from 01.10. (winter) / 15.03.
+// (summer), week 1 odd.
 export type RepeatType =
   // Only on the listed dates (the university's "N" for one date and "I" for
   // several irregular ones)
   | "I"
   // Every week
   | "A"
-  // Every even week ("gerade")
+  // Every even ISO week ("gerade")
   | "G"
-  // Every odd week ("ungerade")
+  // Every odd ISO week ("ungerade")
   | "U"
   // The first half of the semester
   | "SH1"
   // The second half of the semester
   | "SH2"
-  // Every four weeks from the first even week
+  // Every four weeks from the first even university week (week 2)
   | "G1"
-  // Every four weeks from the second even week
+  // Every four weeks from the second even university week (week 4)
   | "G2"
-  // Every four weeks from the first odd week
+  // Every four weeks from the first odd university week (week 1)
   | "U1"
-  // Every four weeks from the second odd week
+  // Every four weeks from the second odd university week (week 3)
   | "U2";
 
 // Every rhythm bound to a weekday instead of dates.

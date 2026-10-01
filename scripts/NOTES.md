@@ -60,3 +60,17 @@
   `node_modules`) and render them with `web-shot` to `public/og.png` /
   `public/og-share.png`, 1200×630, both committed. PNG because WhatsApp
   refuses SVG; keep each under 300 KB (WhatsApp's limit).
+- `scripts/bump-version.mjs`, run by `.githooks/pre-commit` (`npm install`
+  points `core.hooksPath` there through `prepare` → `npm run hooks`): bumps
+  the patch version in `package.json` and `package-lock.json` on every commit
+  whose staged `package.json` version equals HEAD's, so the version `Brand`
+  shows tells deploys apart (user decision). A version changed by hand is
+  kept, and the lockfile is synced to it. The staged and working copies are
+  rewritten separately (index blob via `update-index --cacheinfo`), so
+  unstaged edits stay unstaged. `--amend` (read from the parent `git commit`
+  process: `/proc`, else `ps`) compares against `HEAD~1`, or every amend
+  would bump again. `git commit <paths>` commits from a temporary
+  `next-index-*.lock`; `index.lock`, the real index afterwards, gets the
+  bump too, or the index ends up a version behind HEAD. The first commit,
+  `SKIP_VERSION_BUMP=1` and `--no-verify` skip it; a version that is not
+  `major.minor.patch` is warned about and left alone.

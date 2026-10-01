@@ -5,9 +5,13 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 
 ## Shell
 
-- Full width, no max-width container. No header (user decision): logo and
-  name (`Brand`) sit in the desktop footer and the phone's Settings page; an
-  `sr-only` h1 keeps the page titled.
+- Full width, no max-width container. No header (user decision): logo,
+  name and version (`Brand`) sit in the desktop footer and the phone's
+  Settings page; an `sr-only` h1 keeps the page titled. The version is
+  `package.json`'s, put in at build time as `__APP_VERSION__` (`define` in
+  `vite.config.ts`, declared in `src/env.d.ts`), so the user can tell which
+  deploy a browser runs; the pre-commit hook bumps its patch
+  (`scripts/NOTES.md`).
 - **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 600px) is exactly
   one viewport tall, the page never scrolls.** Left column 24rem:
   `ProfileSection` (height set by its content) and `GroupTree` (takes the rest; only its

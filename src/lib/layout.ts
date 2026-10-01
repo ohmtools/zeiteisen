@@ -94,13 +94,12 @@ export function generalEntries(timetables: readonly Timetable[]): Entry[] {
 // The current-week grid: one block per meeting in the week, in its own column.
 export function weekEntries(
   timetables: readonly Timetable[],
-  week: number,
   weekStart: Date,
   events: WeekEvents,
 ): Entry[] {
   return enabledOf(timetables).flatMap((enabled) => {
     const { repeat } = enabled.subject;
-    return meetingsInWeek(repeat, week, weekStart, events).map((meeting, n) =>
+    return meetingsInWeek(repeat, weekStart, events).map((meeting, n) =>
       entryOf(
         enabled,
         n,

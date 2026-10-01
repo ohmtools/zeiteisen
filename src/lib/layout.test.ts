@@ -25,7 +25,7 @@ test("in a week, weekend dates come Saturday before Sunday", () => {
     subject("WED", { repeat: dated("2026-09-23") }),
   ]);
   const weekStart = new Date("2026-09-21T00:00:00");
-  const entries = weekEntries([t], 1, weekStart, eventsForWeek(null, weekStart));
+  const entries = weekEntries([t], weekStart, eventsForWeek(null, weekStart));
   const { grid, list } = byDay(entries);
   expect(grid.wednesday.map((p) => p.entry.subject.name)).toEqual(["WED"]);
   expect(list.map((e) => e.subject.name)).toEqual(["SAT", "SUN"]);

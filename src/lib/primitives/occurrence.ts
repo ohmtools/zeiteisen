@@ -1,7 +1,7 @@
 import { addWeeks, isAfter, isBefore, parseISO, startOfDay, startOfISOWeek } from "date-fns";
 import type { SemesterDates } from "./meta";
 import type { Subject, Time } from "./subject";
-import { eventsForWeek, meetingsInWeek, semesterWeek, type Meeting } from "./week";
+import { eventsForWeek, meetingsInWeek, type Meeting } from "./week";
 
 // The dates a subject is actually taught on, for the calendar export. Built on
 // the same week rules as the current-week view (`meetingsInWeek`), so what the
@@ -25,8 +25,8 @@ export type Occurrence = { subject: Subject; index: number; meeting: Meeting; da
 // Every date inside `range` (both ends included) each subject is taught on.
 // A weekly `Day.other` has no weekday and therefore no date: it never occurs;
 // listed dates on a weekend do. Each week counts in its own semester
-// (`semesterWeek`), so a range across a semester begin switches the rhythm
-// there, like the week view does.
+// (`cycleCode`), so a range across a semester begin switches the four-week
+// rhythms there, like the week view does.
 export function occurrencesOf(
   subjects: readonly Subject[],
   range: DateRange,
@@ -41,10 +41,9 @@ export function occurrencesOf(
     !isAfter(weekStart, to);
     weekStart = addWeeks(weekStart, 1)
   ) {
-    const week = semesterWeek(weekStart);
     const events = eventsForWeek(dates, weekStart);
     subjects.forEach((subject, index) => {
-      for (const meeting of meetingsInWeek(subject.repeat, week, weekStart, events)) {
+      for (const meeting of meetingsInWeek(subject.repeat, weekStart, events)) {
         if (meeting.date === null) continue;
         const date = parseISO(meeting.date);
         if (isBefore(date, from) || isAfter(date, to)) continue;

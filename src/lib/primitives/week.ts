@@ -1,6 +1,7 @@
 import {
   addDays,
   differenceInCalendarWeeks,
+  getISOWeek,
   isAfter,
   isWithinInterval,
   parseISO,
@@ -29,36 +30,48 @@ export function semesterBegin(weekStart: Date): Date {
   return past[past.length - 1];
 }
 
-// Week 1 is the Mon-Sun week containing its semester's begin, so every week
-// has a number from 1 up.
+// The university's own count, used ONLY by G1/G2/U1/U2: week 1 is the
+// Mon-Sun week containing its semester's begin, so every week has a number
+// from 1 up. Never shown; the UI shows `isoWeek` and `cycleCode`.
 export function semesterWeek(weekStart: Date): number {
   const begin = semesterBegin(weekStart);
   return differenceInCalendarWeeks(weekStart, startOfISOWeek(begin), { weekStartsOn: 1 }) + 1;
 }
 
+// The ISO-8601 calendar week ("KW"): what G/U (even/odd) count by.
+export function isoWeek(weekStart: Date): number {
+  return getISOWeek(weekStart);
+}
+
 // Proper modulo, so weeks before week 1 keep a consistent rhythm.
 const mod = (n: number, d: number) => ((n % d) + d) % d;
 
-// Week 1 is odd. G = gerade (even), U = ungerade (odd); G1/G2 start at the
-// 1st/2nd even week (weeks 2/4), U1/U2 at the 1st/2nd odd week (weeks 1/3).
-export function repeatMatches(type: WeeklyRepeatType, week: number): boolean {
+export type CycleCode = "U1" | "G1" | "U2" | "G2";
+
+// Which of the four-week rhythms meets in the week of `weekStart`, by the
+// university's count (`semesterWeek`): week 1 is odd, so weeks 1/2/3/4 are
+// U1/G1/U2/G2 (the 1st/2nd odd and even week), then it repeats.
+export function cycleCode(weekStart: Date): CycleCode {
+  const codes = ["U1", "G1", "U2", "G2"] as const;
+  return codes[mod(semesterWeek(weekStart) - 1, 4)];
+}
+
+// G = gerade (even), U = ungerade (odd) ISO week; G1/G2/U1/U2 by `cycleCode`.
+export function repeatMatches(type: WeeklyRepeatType, weekStart: Date): boolean {
   switch (type) {
     case "A":
     case "SH1":
     case "SH2":
       return true;
     case "G":
-      return mod(week, 2) === 0;
+      return mod(isoWeek(weekStart), 2) === 0;
     case "U":
-      return mod(week, 2) === 1;
+      return mod(isoWeek(weekStart), 2) === 1;
     case "G1":
-      return mod(week - 2, 4) === 0;
     case "G2":
-      return mod(week - 4, 4) === 0;
     case "U1":
-      return mod(week - 1, 4) === 0;
     case "U2":
-      return mod(week - 3, 4) === 0;
+      return cycleCode(weekStart) === type;
   }
 }
 
@@ -173,24 +186,18 @@ export function generalColumn(repeat: Repeat): Day {
   return repeat.day;
 }
 
-// The meetings of a subject in the week starting `weekStart` (semester week
-// `week`). A weekly rhythm meets when it matches the week and its column is
+// The meetings of a subject in the week starting `weekStart`. A weekly rhythm meets when it matches the week and its column is
 // neither a no-lectures day nor outside the lecture period. A listed date wins
 // over both: it meets whenever it falls inside the week. The single filter for
 // the week view AND the export.
-export function meetingsInWeek(
-  repeat: Repeat,
-  week: number,
-  weekStart: Date,
-  events: WeekEvents,
-): Meeting[] {
+export function meetingsInWeek(repeat: Repeat, weekStart: Date, events: WeekEvents): Meeting[] {
   if (repeat.type === "I") {
     const first = isoDay(weekStart);
     const last = isoDay(addDays(weekStart, 6));
     return meetingsOf(repeat).filter(({ date }) => date !== null && date >= first && date <= last);
   }
   if (
-    !repeatMatches(repeat.type, week) ||
+    !repeatMatches(repeat.type, weekStart) ||
     events.noLectures.has(repeat.day) ||
     events.outsidePeriod.has(repeat.day)
   ) {

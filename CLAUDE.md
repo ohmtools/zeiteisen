@@ -97,6 +97,7 @@ npm run catalog -- <dir>   # (re)write <dir>/index.json from its files
 npm run skill     # schemas + public/zeiteisen-generator.zip, after editing skill/
 npm run lint && npm run fmt
 npm test          # vitest, `src/**/*.test.ts`, pure logic only
+npm run hooks     # point git at .githooks/ (also run by npm install)
 ```
 
 - Imports use the `@/` alias without extensions. Only `src/i18n.ts` imports

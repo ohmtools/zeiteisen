@@ -85,8 +85,17 @@ function shareCard(): Plugin {
   };
 }
 
+// Shown next to the name (`Brand`), so a bug report tells which deploy the
+// user's service worker serves. Bump `version` in `package.json` per release.
+const APP_VERSION: string = JSON.parse(
+  fs.readFileSync(path.resolve(import.meta.dirname, "package.json"), "utf8"),
+).version;
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   plugins: [
     devCatalog(),
     shareCard(),
