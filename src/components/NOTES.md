@@ -14,73 +14,75 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (`scripts/NOTES.md`).
 - **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 600px) is exactly
   one viewport tall, the page never scrolls.** Left column 24rem:
-  `ProfileSection` (height set by its content) and `GroupTree` (takes the rest; only its
-  trees scroll, the "Add timetables" button stays in view). Right column:
-  toolbar, grid, footer at its bottom. Anything that only cares about width
-  keeps `lg:` / `md:`.
+  `ProfileSection` (height set by its content) and `GroupTree` (takes the rest;
+  only its trees scroll, the "Add timetables" button stays in view). Right
+  column: toolbar, grid, footer at its bottom. Anything that only cares about
+  width keeps `lg:` / `md:`.
 - **Below `desktop` (phones AND short laptop screens): a fixed bottom tab bar
   "Timetable | Groups | Settings"** (user decision). Timetable = grid plus a
-  dock of view switch, week nav and day toggle, all at the bottom within
-  thumb reach (user decision). Groups = profiles, group tree. Settings =
+  dock of view switch, week nav and day toggle, all at the bottom within thumb
+  reach (user decision). Groups = profiles, group tree. Settings =
   `SettingsPage`, the footer's content as a page (user decision: no footer on
   phones; was a menu upwards out of the bar): one `Section` each for language
-  (first, user decision), own files, catalog, backup and reset, about (name
-  and note), every one with its title. Items are full-width outline buttons (the Data menu's items, from
-  the same `useDataControls`), the catalog mode a vertical toggle group applied
-  on pick (nothing passes through ignore, so no pending mode), the language a
-  toggle group of the languages named in themselves. The active tab is marked
-  by a primary line on the bar's divider, not a filled button. Start tab:
-  Groups when the active profile has no timetables, else Timetable; not
-  persisted. The page keeps bottom padding for the bar, toasts sit above it.
-  Page, bar and toasts also pad by `env(safe-area-inset-*)` (home indicator,
-  landscape notch); that needs `viewport-fit=cover` in `index.html`, without
-  it iOS reports 0 and an installed PWA's bar sat under the home indicator.
-- The Timetable tab is exactly one viewport tall on phones, no page scroll
-  (user decision; Groups and Settings keep page scroll). Top to bottom: grid (the hour
-  rows share the leftover height, floor 24px so common phones need no
-  scroll (user decision, was 36px); below that the
-  grid scrolls inside itself), week nav (an empty row of the same height in
-  General, so the grid keeps its height), day toggle, view
-  switch, tab bar (user decision). The shown week and day move on with the
-  clock unless the user picked one that still lasts (`src/lib/NOTES.md`,
-  `view.ts`). The dock is the same element as the
-  desktop toolbar, last in the timetable column; `desktop:` puts it back
-  above the grid as one row (switch left, week nav right). The hour rows share
-  the leftover height on desktop too, same 24px floor (user decision, was fixed
-  56px: a landscape tablet under its browser bars had to scroll). `WeekNav`
-  stays one row (short range label below `sm`).
+  (first, user decision), own files, catalog, backup and reset, about (name and
+  note), every one with its title. Items are full-width outline buttons (the
+  Data menu's items, from the same `useDataControls`), the catalog mode a
+  vertical toggle group applied on pick (nothing passes through ignore, so no
+  pending mode), the language a toggle group of the languages named in
+  themselves. The active tab is marked by a primary line on the bar's divider,
+  not a filled button. Start tab: Groups when the active profile has no
+  timetables, else Timetable; not persisted. The page keeps bottom padding for
+  the bar, toasts sit above it. Page, bar and toasts also pad by
+  `env(safe-area-inset-*)` (home indicator, landscape notch); that needs
+  `viewport-fit=cover` in `index.html`, without it iOS reports 0 and an
+  installed PWA's bar sat under the home indicator.
+- The Timetable tab is exactly one viewport tall on phones, no page scroll (user
+  decision; Groups and Settings keep page scroll). Top to bottom: grid (the hour
+  rows share the leftover height, floor 24px so common phones need no scroll
+  (user decision, was 36px); below that the grid scrolls inside itself), week
+  nav (an empty row of the same height in General, so the grid keeps its
+  height), day toggle, view switch, tab bar (user decision). The shown week and
+  day move on with the clock unless the user picked one that still lasts
+  (`src/lib/NOTES.md`, `view.ts`). The dock is the same element as the desktop
+  toolbar, last in the timetable column; `desktop:` puts it back above the grid
+  as one row (switch left, week nav right). The hour rows share the leftover
+  height on desktop too, same 24px floor (user decision, was fixed 56px: a
+  landscape tablet under its browser bars had to scroll). `WeekNav` stays one
+  row: prev · relative label ("This week", opens the week picker) · next, then
+  the range as plain text above the week number (short range below `sm`) (user
+  decision: the range was its own picker button).
 - **No boxes** (user decision): sections are split by divider lines, `Section`
   is shadcn's `Card` minus background, shadow and ring. One spacing unit
   (24px) around every divider — change the paddings together so edges stay
   aligned.
-- Footer (desktop only; phones: the Settings tab, same content as a page) =
-  logo and name · note · "Data" menu · EN/DE. `useDataControls`
-  (`DataControls.tsx`) holds the menu's state, dialogs (`DataDialogs.tsx`) and
-  hidden inputs and hands both `DataMenu` and `SettingsPage` the items as
-  `DataAction`s. The Data menu has three groups, each headed by a
-  `DropdownMenuLabel` (user decision): "Own files", "Catalog", "Backup and
-  reset". Explanations between items are plain muted text, not group labels:
-  Base UI names a group by its last `GroupLabel`. Own files — dates and locations one item each ("Load own …" while the
-  catalog's is in use, "Use catalog …" plus a trailing "own file" note while an
-  own file is, disabled while the catalog is ignored); degree programs "Load
-  own …" / "Add own …" (several `.degree` files, trailing "n own files"; after
-  picking, a dialog asks each checked file's name — the `degreeProgram`
-  subjects name, filled in with its file name without `.degree`, stored NFC
-  like every typed name, unique in any case, noting a name that replaces a
-  held file, else one that replaces a catalog file (named, in the catalog's
-  spelling, which the file then takes); cancel loads none) plus "Remove own degree
-  programs…", a dialog listing the files by name in upload order with a
-  remove button each and "Remove all"; removing is immediate
-  (the user still has the file), the last one closes it. One hidden file input
-  outside the menu, which unmounts its content on closing. Last in the group,
-  always enabled (also with the catalog ignored): "Create own files with AI…"
-  opens `SkillDialog` — what the AI skill makes, how to get it into Claude /
-  other skill apps / a chat, a check-the-results hint, and a download of the
-  shipped `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative:
-  share links open the app on `/s/`). While any own file is in use a muted line
-  says how they combine with the catalog and that it never updates them. Then
-  the catalog — "Mode" cycles ignore → auto-update → freeze on click WITHOUT
-  closing the menu (`closeOnClick={false}`), the mode as trailing note and its
+- Footer (desktop only; phones: the Settings tab, same content as a page) = logo
+  and name · note · "Data" menu · EN/DE. `useDataControls` (`DataControls.tsx`)
+  holds the menu's state, dialogs (`DataDialogs.tsx`) and hidden inputs and
+  hands both `DataMenu` and `SettingsPage` the items as `DataAction`s. The Data
+  menu has three groups, each headed by a `DropdownMenuLabel` (user decision):
+  "Own files", "Catalog", "Backup and reset". Explanations between items are
+  plain muted text, not group labels: Base UI names a group by its last
+  `GroupLabel`. Own files — dates and locations one item each ("Load own …"
+  while the catalog's is in use, "Use catalog …" plus a trailing "own file" note
+  while an own file is, disabled while the catalog is ignored); degree programs
+  "Load own …" / "Add own …" (several `.degree` files, trailing "n own files";
+  after picking, a dialog asks each checked file's name — the `degreeProgram`
+  subjects name, filled in with its file name without `.degree`, stored NFC like
+  every typed name, unique in any case, noting a name that replaces a held file,
+  else one that replaces a catalog file (named, in the catalog's spelling, which
+  the file then takes); cancel loads none) plus "Remove own degree programs…", a
+  dialog listing the files by name in upload order with a remove button each and
+  "Remove all"; removing is immediate (the user still has the file), the last
+  one closes it. One hidden file input outside the menu, which unmounts its
+  content on closing. Last in the group, always enabled (also with the catalog
+  ignored): "Create own files with AI…" opens `SkillDialog` — what the AI skill
+  makes, how to get it into Claude / other skill apps / a chat, a
+  check-the-results hint, and a download of the shipped
+  `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative: share
+  links open the app on `/s/`). While any own file is in use a muted line says
+  how they combine with the catalog and that it never updates them. Then the
+  catalog — "Mode" cycles ignore → auto-update → freeze on click WITHOUT closing
+  the menu (`closeOnClick={false}`), the mode as trailing note and its
   explanation as a muted line below (phones have no tooltips). The cycle is only
   a pending choice: the mode shown when the menu closes is applied then (user
   decision), so passing through ignore (freeze → auto) never drops the catalog
@@ -89,12 +91,11 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   backup, Load backup. Load validates first (broken → error toast, nothing
   touched), then confirms ("Profiles now: N, in the backup: M") with "Save
   current backup first" in the dialog; restoring replaces everything but the
-  catalog cache.
-  Last "Delete data…" (destructive): the reset for when storage breaks the
-  app. Its dialog ticks parts (profiles; dates, locations and degree programs;
-  catalog cache; settings; offline app files — `@/lib/reset`, list in
-  `DataParts`), none at first, offers "Save current backup first", then
-  removes the keys and reloads.
+  catalog cache. Last "Delete data…" (destructive): the reset for when storage
+  breaks the app. Its dialog ticks parts (profiles; dates, locations and degree
+  programs; catalog cache; settings; offline app files — `@/lib/reset`, list in
+  `DataParts`), none at first, offers "Save current backup first", then removes
+  the keys and reloads.
 - Error screen (`ErrorBoundary`, first chunk): title, text, Reload. Below it
   `ErrorTools` from the deferred chunk (loaded right after the first paint,
   so a tab failing later holds it): "Save backup" and "Delete data…" as an
@@ -153,6 +154,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Hovering a block with the mouse gives every block of the same subject name
   (across timetables) a faint ring (user decision: subtle, nothing dimmed).
   Mouse only, so a tap leaves nothing behind.
+- The now-line (Current week, today's column) is `--foreground` with a dot at
+  the column's left edge, above the blocks: a `--primary` line vanished over
+  the blocks (all tints of `--primary`) and looked like a rendering glitch.
 - Screen readers: a block in the hour grid carries its day (or date) and time
   as `sr-only` text, every block its timetable (the tint's stand-in; the
   visible popup still names none). Hour rows are `aria-hidden`, the now-line

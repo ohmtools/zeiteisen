@@ -44,42 +44,39 @@ export function WeekNav({ value, onChange }: WeekNavProps) {
 
   return (
     <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-4">
-      <ButtonGroup className="min-w-0 flex-1 sm:flex-none">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label={m.week_prev()}
-          onClick={() => onChange(addWeeks(value, -1))}
-        >
-          <ChevronLeft />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="min-w-0 flex-1 sm:min-w-32"
-          onClick={() => onChange(startOfISOWeek(new Date()))}
-        >
-          <span className="truncate">{relativeWeekLabel(value, now)}</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label={m.week_next()}
-          onClick={() => onChange(addWeeks(value, 1))}
-        >
-          <ChevronRight />
-        </Button>
-      </ButtonGroup>
-
       <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-        <PopoverTrigger
-          render={<Button variant="outline" size="sm" title={m.week_pick()} className="shrink-0" />}
-        >
-          <CalendarDays data-icon="inline-start" />
-          <span className="sm:hidden">{weekRangeLabel(value, true)}</span>
-          <span className="hidden sm:inline">{weekRangeLabel(value)}</span>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <ButtonGroup className="min-w-0 flex-1 sm:flex-none">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={m.week_prev()}
+            onClick={() => onChange(addWeeks(value, -1))}
+          >
+            <ChevronLeft />
+          </Button>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                title={m.week_pick()}
+                className="min-w-0 flex-1 sm:min-w-32"
+              />
+            }
+          >
+            <CalendarDays data-icon="inline-start" />
+            <span className="truncate">{relativeWeekLabel(value, now)}</span>
+          </PopoverTrigger>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={m.week_next()}
+            onClick={() => onChange(addWeeks(value, 1))}
+          >
+            <ChevronRight />
+          </Button>
+        </ButtonGroup>
+        <PopoverContent className="w-auto p-0">
           <LazyCalendar
             mode="range"
             defaultMonth={value}
@@ -92,11 +89,18 @@ export function WeekNav({ value, onChange }: WeekNavProps) {
         </PopoverContent>
       </Popover>
 
-      {/* The ISO week (G/U) and the four-week code (G1/G2/U1/U2), never the
+      {/* Range above week number, so the pair takes little width. The ISO
+          week (G/U) and the four-week code (G1/G2/U1/U2), never the
           university's own week number. */}
-      <Badge variant="secondary" className="shrink-0">
-        {m.week_label({ number: isoWeek(value), cycle: cycleCode(value) })}
-      </Badge>
+      <div className="flex shrink-0 flex-col items-end">
+        <Badge variant="secondary">
+          <span className="sm:hidden">{weekRangeLabel(value, true)}</span>
+          <span className="hidden sm:inline">{weekRangeLabel(value)}</span>
+        </Badge>
+        <Badge variant="secondary">
+          {m.week_label({ number: isoWeek(value), cycle: cycleCode(value) })}
+        </Badge>
+      </div>
     </div>
   );
 }
