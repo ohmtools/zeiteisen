@@ -153,6 +153,10 @@ export function GroupTree({
       (editing.subject !== null &&
         editing.index < editTimetable.subjects.length &&
         sameSubject(editTimetable.subjects.getSubject(editing.index), editing.subject)));
+  // An editor waiting to be confirmed: any subject change ends a catalog
+  // timetable's catalog updates, so the user is asked before the editor
+  // opens, not after filling it in.
+  const [asking, setAsking] = useState<typeof editing>(null);
   const editTarget: SubjectTarget | null =
     editing && editTimetable && stillThere && !locked
       ? { timetable: editTimetable, index: editing.index }
@@ -189,13 +193,15 @@ export function GroupTree({
               onUpdate={() => onUpdate(node.timetable.name)}
               onRename={(to) => onRename(node.timetable.name, to)}
               onRemove={() => setRemoving(node.timetable.name)}
-              onEdit={(index) =>
-                setEditing({
+              onEdit={(index) => {
+                const open = {
                   name: node.timetable.name,
                   index,
                   subject: index === null ? null : node.timetable.subjects.getSubject(index),
-                })
-              }
+                };
+                if (node.timetable.origin.kind === "catalog") setAsking(open);
+                else setEditing(open);
+              }}
               flash={flash?.timetableName === node.timetable.name ? flash : null}
               onHighlight={(indexes) =>
                 onHighlight?.(indexes ? { timetableName: node.timetable.name, indexes } : null)
@@ -221,6 +227,43 @@ export function GroupTree({
           if (editing) onEditSubjects(editing.name, subjects);
         }}
       />
+
+      <AlertDialog
+        open={asking !== null && !locked}
+        onOpenChange={(open) => {
+          if (!open) setAsking(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {asking?.index === null
+                ? m.subject_catalog_add_title()
+                : m.subject_catalog_edit_title()}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {asking?.index === null
+                ? m.subject_catalog_add_text({ timetable: asking.name })
+                : m.subject_catalog_edit_text({ timetable: asking?.name ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                // Opened as it was when asked: a subject another tab moved
+                // meanwhile closes the editor instead of opening another one.
+                setEditing(asking);
+                setAsking(null);
+              }}
+            >
+              {asking?.index === null
+                ? m.subject_catalog_add_confirm()
+                : m.subject_catalog_edit_confirm()}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={removing !== null}

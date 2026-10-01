@@ -17,33 +17,32 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   `ProfileSection` (height set by its content) and `GroupTree` (takes the rest;
   only its trees scroll, the "Add timetables" button stays in view). Right
   column: toolbar, grid, notes, footer at its bottom. The notes are a strip
-  (user decision): a title row ("Notes" folds it to that row; upload and download on
-  the right) over the text. Its top edge drags its height (or
-  arrow keys on it; double click = default), 144px by default, kept between
-  112px and 60% of the screen. Folded by default (user decision); height and
-  folding persist on the device (`tt.notesstrip.v1`). App sets the wrapper's height, so the grid does not
-  jump when the deferred chunk arrives. Anything that only cares about
-  width keeps `lg:` / `md:`.
+  (user decision): a title row ("Notes" folds it to that row; upload and
+  download on the right) over the text. Its top edge drags its height (or arrow
+  keys on it; double click = default), 144px by default, kept between 112px and
+  60% of the screen. Folded by default (user decision); height and folding
+  persist on the device (`tt.notesstrip.v1`). App sets the wrapper's height, so
+  the grid does not jump when the deferred chunk arrives. Anything that only
+  cares about width keeps `lg:` / `md:`.
 - **Below `desktop` (phones AND short laptop screens): a fixed bottom tab bar
-  "Timetable | Groups | Notes | Settings"** (user decision). Timetable = grid plus a
-  dock of view switch, week nav and day toggle, all at the bottom within thumb
-  reach (user decision). Groups = profiles, group tree. Notes = the same
+  "Timetable | Groups | Notes | Settings"** (user decision). Timetable = grid
+  plus a dock of view switch, week nav and day toggle, all at the bottom within
+  thumb reach (user decision). Groups = profiles, group tree. Notes = the same
   `NotesSection` element as on desktop (it sits in the timetable column; the
-  notes tab hides dock and grid), titled, filling the page, one viewport
-  tall like the Timetable tab. Settings =
-  `SettingsPage`, the footer's content as a page (user decision: no footer on
-  phones; was a menu upwards out of the bar): one `Section` each for language
-  (first, user decision), own files, catalog, backup and reset, about (name and
-  note), every one with its title. Items are full-width outline buttons (the
-  Data menu's items, from the same `useDataControls`), the catalog mode a
-  vertical toggle group applied on pick (nothing passes through ignore, so no
-  pending mode), the language a toggle group of the languages named in
-  themselves. The active tab is marked by a primary line on the bar's divider,
-  not a filled button. Start tab: Groups when the active profile has no
-  timetables, else Timetable; not persisted. The page keeps bottom padding for
-  the bar, toasts sit above it. Page, bar and toasts also pad by
-  `env(safe-area-inset-*)` (home indicator, landscape notch); that needs
-  `viewport-fit=cover` in `index.html`, without it iOS reports 0 and an
+  notes tab hides dock and grid), titled, filling the page, one viewport tall
+  like the Timetable tab. Settings = `SettingsPage`, the footer's content as a
+  page (user decision: no footer on phones; was a menu upwards out of the bar):
+  one `Section` each for language (first, user decision), own files, catalog,
+  backup and reset, about (name and note), every one with its title. Items are
+  full-width outline buttons (the Data menu's items, from the same
+  `useDataControls`), the catalog mode a vertical toggle group applied on pick
+  (nothing passes through ignore, so no pending mode), the language a toggle
+  group of the languages named in themselves. The active tab is marked by a
+  primary line on the bar's divider, not a filled button. Start tab: Groups when
+  the active profile has no timetables, else Timetable; not persisted. The page
+  keeps bottom padding for the bar, toasts sit above it. Page, bar and toasts
+  also pad by `env(safe-area-inset-*)` (home indicator, landscape notch); that
+  needs `viewport-fit=cover` in `index.html`, without it iOS reports 0 and an
   installed PWA's bar sat under the home indicator.
 - The Timetable tab is exactly one viewport tall on phones, no page scroll (user
   decision; Groups and Settings keep page scroll). Top to bottom: grid (the hour
@@ -104,9 +103,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   current backup first" in the dialog; restoring replaces everything but the
   catalog cache. Last "Delete data…" (destructive): the reset for when storage
   breaks the app. Its dialog ticks parts (profiles; notes; dates, locations and
-  degree programs; catalog cache; settings; offline app files — `@/lib/reset`, list in
-  `DataParts`), none at first, offers "Save current backup first", then removes
-  the keys and reloads.
+  degree programs; catalog cache; settings; offline app files — `@/lib/reset`,
+  list in `DataParts`), none at first, offers "Save current backup first", then
+  removes the keys and reloads.
 - Error screen (`ErrorBoundary`, first chunk): title, text, Reload. Below it
   `ErrorTools` from the deferred chunk (loaded right after the first paint,
   so a tab failing later holds it): "Save backup" and "Delete data…" as an
@@ -224,6 +223,11 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   on the device, by its bare name, after the name because it decides the name
   hints). The draft's own value stays listed even when its file is not on the
   device, so an edit never drops it silently.
+- Any subject change turns a catalog timetable local (no more updates), so
+  for one the user is asked first, on the `+` or the pen, before the editor
+  opens (user decision: never after the changes are made). Adding suggests an
+  empty timetable instead; the pen's question covers editing and deleting. A
+  local timetable is never asked about.
 - A group cell is an on/off switch that keeps the manual pick (user
   decision): switching off a partial group remembers its picked classes,
   switching it on brings them back (all classes when nothing is remembered or

@@ -79,8 +79,9 @@ type Props = {
 const KINDS = Object.values(Kind);
 
 // One dialog to add, edit and delete a subject. It never saves a subject the
-// timetable already holds in exactly that form, and warns first that editing
-// a catalog timetable ends its catalog updates.
+// timetable already holds in exactly that form. That any change ends a
+// catalog timetable's catalog updates was asked about before it opened, in
+// `GroupTree`.
 export function SubjectDialog({ target, library, onOpenChange, onSave }: Props) {
   return (
     <Dialog open={target !== null} onOpenChange={onOpenChange}>
@@ -331,7 +332,7 @@ function SubjectEditor({
       </form>
 
       <div className="flex flex-col gap-4">
-        {timetable.origin.kind === "catalog" && (
+        {timetable.origin.kind === "catalog" && index !== null && (
           <Notice>{m.subject_catalog_warning({ timetable: timetable.name })}</Notice>
         )}
         {duplicate && <Notice destructive>{m.subject_error_duplicate()}</Notice>}
