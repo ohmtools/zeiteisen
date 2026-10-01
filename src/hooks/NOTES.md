@@ -66,6 +66,11 @@ goes through primitives `storage.ts`.
   Frozen, the copy
   on the device stays in use, however old. **Timetables are never
   auto-updated**: the catalog only offers, on the user's click.
+- `useNotes` — `tt.notes.v1`, written on every change (no debounce: a few
+  KB of text). A refused write toasts once until a write succeeds again.
+- `useNotesStrip` — `tt.notesstrip.v1`. A drag previews the height without
+  writing (every pointer move would reach the other tabs) and saves on
+  release. A refused write only loses the layout: no toast.
 - `useOnline` — owns nothing; only explains the catalog, nothing waits on it.
 - `useShareLink` — builds the link button's URL and strips the address bar on
   mount: the URL never mirrors state.

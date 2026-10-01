@@ -59,8 +59,8 @@ semesters.
   only from the degree file its `degreeProgram` names (`B-EI` ->
   `degrees/B-EI.degree`, flat), never merged.
   Re-run `npm run catalog -- ./srv/catalog` after editing it.
-- Global dates never go into a link, a profile file or anywhere but this
-  device (and its backup).
+- Global dates and the notes never go into a link, a profile file or anywhere
+  but this device (and its backup).
 - All UI strings via paraglide (`messages/en.json` + `messages/de.json`,
   then `npm run messages`), imported from `@/i18n`. Catalog / dates texts are
   `{ de, en }` rendered with `localized()`.
@@ -115,7 +115,7 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
 - Desktop (`desktop:` variant = width ≥ 64rem AND height ≥ 600px): the whole
   app in one viewport, no page scroll, sections scroll inside themselves.
   Below it (phones, short laptops): a bottom tab bar "Timetable | Groups |
-  Settings", with the grid's controls docked just above it.
+  Notes | Settings", with the grid's controls docked just above it.
 - One spacing unit around every divider: 24px.
 - Dark mode and language follow the browser; the only language controls are
   the desktop footer switcher and its copy on the phone's Settings page.

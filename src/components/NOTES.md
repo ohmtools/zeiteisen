@@ -16,12 +16,21 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   one viewport tall, the page never scrolls.** Left column 24rem:
   `ProfileSection` (height set by its content) and `GroupTree` (takes the rest;
   only its trees scroll, the "Add timetables" button stays in view). Right
-  column: toolbar, grid, footer at its bottom. Anything that only cares about
+  column: toolbar, grid, notes, footer at its bottom. The notes are a strip
+  (user decision): a title row ("Notes" folds it to that row; upload and download on
+  the right) over the text. Its top edge drags its height (or
+  arrow keys on it; double click = default), 144px by default, kept between
+  112px and 60% of the screen. Folded by default (user decision); height and
+  folding persist on the device (`tt.notesstrip.v1`). App sets the wrapper's height, so the grid does not
+  jump when the deferred chunk arrives. Anything that only cares about
   width keeps `lg:` / `md:`.
 - **Below `desktop` (phones AND short laptop screens): a fixed bottom tab bar
-  "Timetable | Groups | Settings"** (user decision). Timetable = grid plus a
+  "Timetable | Groups | Notes | Settings"** (user decision). Timetable = grid plus a
   dock of view switch, week nav and day toggle, all at the bottom within thumb
-  reach (user decision). Groups = profiles, group tree. Settings =
+  reach (user decision). Groups = profiles, group tree. Notes = the same
+  `NotesSection` element as on desktop (it sits in the timetable column; the
+  notes tab hides dock and grid), titled, filling the page, one viewport
+  tall like the Timetable tab. Settings =
   `SettingsPage`, the footer's content as a page (user decision: no footer on
   phones; was a menu upwards out of the bar): one `Section` each for language
   (first, user decision), own files, catalog, backup and reset, about (name and
@@ -92,8 +101,8 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   touched), then confirms ("Profiles now: N, in the backup: M") with "Save
   current backup first" in the dialog; restoring replaces everything but the
   catalog cache. Last "Delete data…" (destructive): the reset for when storage
-  breaks the app. Its dialog ticks parts (profiles; dates, locations and degree
-  programs; catalog cache; settings; offline app files — `@/lib/reset`, list in
+  breaks the app. Its dialog ticks parts (profiles; notes; dates, locations and
+  degree programs; catalog cache; settings; offline app files — `@/lib/reset`, list in
   `DataParts`), none at first, offers "Save current backup first", then removes
   the keys and reloads.
 - Error screen (`ErrorBoundary`, first chunk): title, text, Reload. Below it
@@ -119,6 +128,39 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   bare name everywhere in the UI.
 - `@/lib/ics` is only reached through `import()`, date pickers only through
   `LazyCalendar` — both stay out of the first load.
+
+## Notes
+
+- Plain text in `tt.notes.v1`, never shared (no link, no profile file; the
+  backup holds it). At most `MAX_NOTES_LENGTH` characters (1,000,000, user
+  decision), a count shows from 90% on.
+- Two faces of the same text (user decision): a read view where http(s) and
+  `www.` links open in a new tab and `- [ ]` / `- [x]` lines (GitHub's task
+  syntax, `*` too, indented too) are checkboxes that tick the text itself
+  (`@/lib/notes`); the text area while editing. No edit or save button (user
+  decision): every keystroke is saved. Tab onto the view opens the text area
+  with the caret at the end (links and checkboxes are out of the Tab order,
+  they would vanish under it); a click on the view's text
+  opens the text area with the caret on that character (`caretAt`, each
+  piece carries its offset as `data-start`); a drag selection stays a
+  selection for copying. Leaving the text area returns to the view. Empty
+  notes are the text area alone (its placeholder explains links, tasks and
+  N). The view copies the text area's box and type so no line moves. No
+  underline on either, focused or not (user decision).
+- N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
+  the notes with the caret at the end, unfolding the strip, on phones
+  switching to the tab first (`flushSync`, the text area has to be on screen
+  to take the focus). Escape in the text area goes back to the grid (desktop;
+  the grid's scroll box takes the focus).
+- Download: `zeiteisen-notes-<date>.txt` (localized), `text/plain`.
+- Upload: any `.txt` (`notesFromFile`): UTF-8 only, BOM dropped, CRLF made
+  `\n`; not text or over `MAX_NOTES_LENGTH` = a toast, nothing changes. It
+  REPLACES the notes (no merging); with notes there that differ, an alert
+  dialog asks first and offers "Save current notes first", like the backup
+  restore. A folded strip unfolds to show the new text. Plain text has no
+  schema, so no zod here.
+- Android's keyboard resizes the page instead of covering it
+  (`interactive-widget=resizes-content` in `index.html`).
 
 ## Grid
 

@@ -8,6 +8,8 @@ import {
   loadBackup,
   loadCatalogCache,
   loadDates,
+  loadNotes,
+  loadNotesStrip,
   loadOwnDegrees,
   loadOwnLocations,
   loadProfiles,
@@ -20,6 +22,8 @@ import {
   saveCatalogMode,
   saveCatalogUrl,
   saveDates,
+  saveNotes,
+  saveNotesStrip,
   saveOwnDegrees,
   saveOwnLocations,
   saveProfiles,
@@ -122,6 +126,30 @@ test("active profile, catalog mode and URL", () => {
   expect(loadCatalogUrl(store)).toBeNull();
 });
 
+test("notes round trip, anything but a string reads as none", () => {
+  const store = memory();
+  expect(loadNotes(store)).toBe("");
+  expect(saveNotes("Room 3.14\n\nBring the lab coat", store)).toBe(true);
+  expect(loadNotes(store)).toBe("Room 3.14\n\nBring the lab coat");
+  store.data.set("tt.notes.v1", "42");
+  expect(loadNotes(store)).toBe("");
+});
+
+test("notes strip: default, round trip, broken reads as the default", () => {
+  const store = memory();
+  expect(loadNotesStrip(store)).toEqual({ height: null, collapsed: true });
+  expect(saveNotesStrip({ height: 180, collapsed: false }, store)).toBe(true);
+  expect(loadNotesStrip(store)).toEqual({ height: 180, collapsed: false });
+  store.data.set("tt.notesstrip.v1", JSON.stringify({ height: -1, collapsed: false }));
+  expect(loadNotesStrip(store)).toEqual({ height: null, collapsed: true });
+});
+
+test("the notes strip stays out of the backup", () => {
+  const store = memory();
+  saveNotesStrip({ height: 180, collapsed: true }, store);
+  expect(JSON.stringify(getBackupFile(loadBackup(store)))).not.toContain("180");
+});
+
 test("saving null dates removes them", () => {
   const store = memory();
   saveDates(
@@ -222,6 +250,7 @@ describe("backup", () => {
     saveCatalogMode("freeze", store);
     saveCatalogUrl(url, store);
     saveCatalogCache(emptyCatalogCache, store);
+    saveNotes("Room\nmoved", store);
     return store;
   }
 
@@ -241,6 +270,7 @@ describe("backup", () => {
     expect(loadOwnDegrees(target)).toEqual(degrees);
     expect(loadCatalogMode(target)).toBe("freeze");
     expect(loadCatalogUrl(target)).toBe(url);
+    expect(loadNotes(target)).toBe("Room\nmoved");
     expect(loadSources(target)).toEqual(loadSources(filled()));
   });
 
@@ -256,6 +286,7 @@ describe("backup", () => {
         "profiles",
         "sources",
         "degrees",
+        "notes",
         "v",
       ].sort(),
     );
@@ -271,13 +302,14 @@ describe("backup", () => {
     expect(loadDates(target)).toBeNull();
   });
 
-  test("an older backup restores own files, catalog mode and URL as the defaults", () => {
+  test("an older backup restores own files, catalog mode, URL and notes as the defaults", () => {
     const target = filled();
     const {
       locations: _,
       degrees: __,
       catalogMode: ___,
       catalogUrl: ____,
+      notes: _____,
       ...older
     } = JSON.parse(JSON.stringify(getBackupFile(loadBackup(filled()))));
     saveBackup(parseBackupFile(older)!, target);
@@ -285,6 +317,7 @@ describe("backup", () => {
     expect(loadOwnDegrees(target)).toEqual([]);
     expect(loadCatalogMode(target)).toBe("auto");
     expect(loadCatalogUrl(target)).toBeNull();
+    expect(loadNotes(target)).toBe("");
   });
 
   test("refuses a broken file whole", () => {
@@ -307,5 +340,6 @@ describe("backup", () => {
     expect(parseBackupFile({ ...good, profiles: [casedTwice] })).toBeNull();
     expect(parseBackupFile({ ...good, dates: { year: "x" } })).toBeNull();
     expect(parseBackupFile({ ...good, locations: { locations: [{ code: "" }] } })).toBeNull();
+    expect(parseBackupFile({ ...good, notes: 1 })).toBeNull();
   });
 });

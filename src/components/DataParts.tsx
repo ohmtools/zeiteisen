@@ -5,6 +5,7 @@ import { dataParts, type DataPart } from "@/lib/reset";
 
 const PART_NAME: Record<DataPart, () => string> = {
   profiles: m.data_delete_profiles,
+  notes: m.data_delete_notes,
   files: m.data_delete_files,
   catalog: m.data_delete_catalog,
   settings: m.data_delete_settings,
@@ -13,6 +14,7 @@ const PART_NAME: Record<DataPart, () => string> = {
 
 const PART_TEXT: Record<DataPart, () => string> = {
   profiles: m.data_delete_profiles_text,
+  notes: m.data_delete_notes_text,
   files: m.data_delete_files_text,
   catalog: m.data_delete_catalog_text,
   settings: m.data_delete_settings_text,

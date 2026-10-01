@@ -1,22 +1,23 @@
-import { CalendarDays, ListChecks, Settings } from "lucide-react";
+import { CalendarDays, ListChecks, NotebookPen, Settings } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
 import { Button } from "@/components/ui/button";
 
-export type Tab = "timetable" | "groups" | "settings";
+export type Tab = "timetable" | "groups" | "notes" | "settings";
 
 // One slot of the bar: icon over label.
 const TAB_ITEM =
   "relative h-14 min-w-0 flex-1 flex-col gap-1 text-xs text-muted-foreground aria-[current=page]:text-foreground";
 
 // Below the `desktop` variant the app shows one page at a time: the grid with
-// its dock, profiles + group tree, or the settings (what the desktop footer
-// shows). This bar, fixed to the bottom of the screen, switches between them.
-// Desktop shows both columns, the footer and no bar.
+// its dock, profiles + group tree, the notes, or the settings (what the
+// desktop footer shows). This bar, fixed to the bottom of the screen, switches between them.
+// Desktop shows both columns, the notes, the footer and no bar.
 export function TabBar({ value, onChange }: { value: Tab; onChange: (tab: Tab) => void }) {
   const tabs: { tab: Tab; label: string; Icon: typeof CalendarDays }[] = [
     { tab: "timetable", label: m.tab_timetable(), Icon: CalendarDays },
     { tab: "groups", label: m.tab_groups(), Icon: ListChecks },
+    { tab: "notes", label: m.tab_notes(), Icon: NotebookPen },
     { tab: "settings", label: m.tab_settings(), Icon: Settings },
   ];
   return (

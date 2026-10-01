@@ -31,6 +31,11 @@ re-implements primitive logic.
   "n more"). Runs `z.config(de() | en())` once: zod/mini ships no locale, so
   messages read "Invalid input" wherever this module was not loaded. Off the
   first load.
+- `notes.ts` — the notes' read view: lines, links (http(s) and `www.` only,
+  trailing punctuation and unbalanced brackets cut off) and `- [ ]` tasks,
+  every piece with its offset in the text; `toggleTask` changes the one box
+  character. `notesFromFile` reads an uploaded notes file (UTF-8, line
+  ends, limit).
 - `toast.ts` — the only way to toast. Each call waits for sonner AND the
   mounted `AppToaster`, so sonner stays out of the entry chunk and early toasts
   are shown late instead of lost.

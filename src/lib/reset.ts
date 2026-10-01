@@ -7,6 +7,8 @@ import {
   DEGREES_KEY,
   IOS_HINT_KEY,
   LOCATIONS_KEY,
+  NOTES_KEY,
+  NOTES_STRIP_KEY,
   PROFILES_KEY,
   SOURCES_KEY,
 } from "@/lib/primitives/storage";
@@ -18,9 +20,10 @@ import {
 // timetables, names and links would stay until the catalog answers.
 export const STORAGE_PARTS = {
   profiles: [PROFILES_KEY, ACTIVE_KEY],
+  notes: [NOTES_KEY],
   files: [DATES_KEY, SOURCES_KEY, LOCATIONS_KEY, DEGREES_KEY],
   catalog: [CATALOG_KEY],
-  settings: [CATALOG_MODE_KEY, CATALOG_URL_KEY, IOS_HINT_KEY, CATALOG_KEY],
+  settings: [CATALOG_MODE_KEY, CATALOG_URL_KEY, IOS_HINT_KEY, NOTES_STRIP_KEY, CATALOG_KEY],
 } as const;
 
 type StoragePart = keyof typeof STORAGE_PARTS;

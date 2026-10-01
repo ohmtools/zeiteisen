@@ -18,6 +18,13 @@ export function downloadText(
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+// `2026-10-01`, the local day, for file names.
+export function dayStamp(now: Date): string {
+  return [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+    .map((part) => String(part).padStart(2, "0"))
+    .join("-");
+}
+
 // Profile and timetable names become file names. Names the app accepts are
 // valid already (`@/lib/primitives/name`) and come through unchanged, so an upload
 // gets the very name back; this only catches names stored before that rule.

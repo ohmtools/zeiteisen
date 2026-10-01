@@ -93,11 +93,11 @@ parameter so tests run without a browser.
 - Profiles parse one at a time: a broken one is dropped alone, a repeated name
   keeps the first.
 - Backup (`loadBackup` / `getBackupFile` / `parseBackupFile` / `saveBackup`) =
-  every key except the catalog cache (the catalog hands it out again) and the
-  iOS hint (about this device only): profiles in their stored shape incl.
+  every key except the catalog cache (the catalog hands it out again), the
+  iOS hint and the notes strip (about this device only): profiles in their stored shape incl.
   `locked` and `rejected`, active profile, dates, own locations and
-  degree files, sources, catalog mode and URL. Fields an older file lacks
-  (own files, mode, URL) restore as their defaults. The
+  degree files, sources, catalog mode and URL, notes. Fields an older file
+  lacks (own files, mode, URL, notes) restore as their defaults. The
   language stays with the browser. `parseBackupFile` is STRICT, unlike the
   loaders: one broken profile, a repeated profile or timetable name or a bad
   field refuses the whole file, because a restore replaces everything.
@@ -122,6 +122,15 @@ parameter so tests run without a browser.
   absolute http(s) only, `null` = the built-in one. `saveDates(null)` removes
   the dates (the app drops catalog-installed ones on `ignore` and on another
   URL).
+- `tt.notes.v1` = the user's notes, one plain string, `""` = none. Never
+  shared: no link, no profile file; only this device and its backup.
+  `MAX_NOTES_LENGTH` (1,000,000 characters, user decision) is what the app
+  lets the user type; reading never checks it, so longer stored notes still
+  load.
+- `tt.notesstrip.v1` = the desktop notes strip's dragged height (CSS px,
+  `null` = default) and folding; folded by default (user decision), so the
+  grid keeps its height until the user opens the notes. About this screen: not in the backup,
+  deleted with the settings.
 - `tt.ioshint.v1` = the one-time "add to home screen" hint was shown.
 
 ## Lookup tables (`overrides.ts`)

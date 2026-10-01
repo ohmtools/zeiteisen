@@ -7,15 +7,15 @@ import {
   saveCatalogCache,
   type Backup,
 } from "@/lib/primitives/storage";
-import { downloadText } from "@/lib/download";
+import { dayStamp, downloadText } from "@/lib/download";
 
 // The backup file of the footer's "Data" menu: everything on this device but
 // the catalog cache, `zeiteisen-<date>.backup`.
 export function downloadBackup(now = new Date()): void {
-  const day = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
-    .map((part) => String(part).padStart(2, "0"))
-    .join("-");
-  downloadText(`zeiteisen-${day}.backup`, JSON.stringify(getBackupFile(loadBackup()), null, 2));
+  downloadText(
+    `zeiteisen-${dayStamp(now)}.backup`,
+    JSON.stringify(getBackupFile(loadBackup()), null, 2),
+  );
 }
 
 // `null` for anything that is no complete backup: not JSON, or any part of it

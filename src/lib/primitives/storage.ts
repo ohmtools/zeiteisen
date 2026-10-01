@@ -44,6 +44,10 @@ export const SOURCES_KEY = "tt.sources.v1";
 export const CATALOG_MODE_KEY = "tt.catalogmode.v1";
 // The catalog's base URL the user set, `null` (or missing) = the built-in one.
 export const CATALOG_URL_KEY = "tt.catalogurl.v1";
+// The user's notes, plain text: never in a link or a profile file.
+export const NOTES_KEY = "tt.notes.v1";
+// Height and folding of the desktop notes strip, about this device only.
+export const NOTES_STRIP_KEY = "tt.notesstrip.v1";
 
 export type KeyValueStore = Pick<Storage, "getItem" | "setItem">;
 
@@ -240,6 +244,43 @@ export function saveCatalogUrl(url: string | null, store = defaultStore()): bool
   return writeJson(CATALOG_URL_KEY, url, store);
 }
 
+// --- notes ---
+
+// The longest notes the app lets the user type, in characters (UTF-16 code
+// units, as `maxLength` counts them). Not checked on reading: notes stored
+// longer still load.
+export const MAX_NOTES_LENGTH = 1_000_000;
+
+// `""` = no notes.
+export function loadNotes(store = defaultStore()): string {
+  return read(NOTES_KEY, z.string(), "", store);
+}
+
+export function saveNotes(notes: string, store = defaultStore()): boolean {
+  return writeJson(NOTES_KEY, notes, store);
+}
+
+// The desktop notes strip: its height in CSS pixels as the user dragged it
+// (`null` = the default height) and whether it is folded to its title row.
+// Folded until the user unfolds it (user decision): the grid keeps its height.
+// Not in the backup: it is about this screen.
+export type NotesStrip = { height: number | null; collapsed: boolean };
+
+export const defaultNotesStrip: NotesStrip = { height: null, collapsed: true };
+
+const notesStripSchema = z.object({
+  height: z.nullable(z.number().check(z.positive())),
+  collapsed: z.boolean(),
+});
+
+export function loadNotesStrip(store = defaultStore()): NotesStrip {
+  return read(NOTES_STRIP_KEY, notesStripSchema, defaultNotesStrip, store);
+}
+
+export function saveNotesStrip(strip: NotesStrip, store = defaultStore()): boolean {
+  return writeJson(NOTES_STRIP_KEY, strip, store);
+}
+
 // --- iOS home screen hint ---
 
 // Whether the one-time "add to home screen" hint was shown on this device.
@@ -268,7 +309,7 @@ export function saveIosHintShown(store = defaultStore()): boolean {
 
 // Everything the user made on this device, to carry it elsewhere or keep it
 // safe: every key above except the catalog cache (the catalog hands that out
-// again) and the iOS hint (about this device only). The language stays with
+// again), the iOS hint and the notes strip (about this device only). The language stays with
 // the browser.
 export type Backup = {
   profiles: Profile[];
@@ -279,6 +320,7 @@ export type Backup = {
   sources: CatalogSources;
   catalogMode: CatalogMode;
   catalogUrl: string | null;
+  notes: string;
 };
 
 export function loadBackup(store = defaultStore()): Backup {
@@ -291,6 +333,7 @@ export function loadBackup(store = defaultStore()): Backup {
     sources: loadSources(store),
     catalogMode: loadCatalogMode(store),
     catalogUrl: loadCatalogUrl(store),
+    notes: loadNotes(store),
   };
 }
 
@@ -316,6 +359,7 @@ export const backupFileSchema = z.object({
   sources: catalogSourcesSchema,
   catalogMode: z._default(catalogModeSchema, "auto"),
   catalogUrl: z._default(catalogUrlSchema, null),
+  notes: z._default(z.string(), ""),
 });
 
 export type BackupFile = z.infer<typeof backupFileSchema>;
@@ -331,6 +375,7 @@ export function getBackupFile(backup: Backup): BackupFile {
     sources: backup.sources,
     catalogMode: backup.catalogMode,
     catalogUrl: backup.catalogUrl,
+    notes: backup.notes,
   };
 }
 
@@ -345,7 +390,8 @@ export function parseBackupFile(json: unknown): Backup | null {
     (profile, i) => profile.timetables.length !== parsed.data.profiles[i].timetables.length,
   );
   if (repeated) return null;
-  const { active, dates, locations, degrees, sources, catalogMode, catalogUrl } = parsed.data;
+  const { active, dates, locations, degrees, sources, catalogMode, catalogUrl, notes } =
+    parsed.data;
   return {
     profiles,
     active,
@@ -355,6 +401,7 @@ export function parseBackupFile(json: unknown): Backup | null {
     sources,
     catalogMode,
     catalogUrl,
+    notes,
   };
 }
 
@@ -370,6 +417,7 @@ export function saveBackup(backup: Backup, store = defaultStore()): boolean {
     saveSources(backup.sources, store),
     saveCatalogMode(backup.catalogMode, store),
     saveCatalogUrl(backup.catalogUrl, store),
+    saveNotes(backup.notes, store),
   ];
   return written.every(Boolean);
 }

@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { startOfDay } from "date-fns";
 import { ChevronDown, Database } from "lucide-react";
 import { cn } from "cn";
@@ -13,10 +14,13 @@ import { ViewSwitch, type View } from "@/components/ViewSwitch";
 import { WeekNav } from "@/components/WeekNav";
 import { OverridesContext } from "@/components/OverridesContext";
 import type { DataProps } from "@/components/DataControls";
+import type { NotesHandle } from "@/components/NotesSection";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/useCatalog";
 import { useCatalogSources } from "@/hooks/useCatalogSources";
 import { useInstallHint } from "@/hooks/useInstallHint";
+import { useNotes } from "@/hooks/useNotes";
+import { useNotesStrip } from "@/hooks/useNotesStrip";
 import { useNow } from "@/hooks/useNow";
 import { useOnline } from "@/hooks/useOnline";
 import { useOwnData } from "@/hooks/useOwnData";
@@ -46,6 +50,7 @@ const SubjectInfoDialog = lazy(() => deferred().then((d) => ({ default: d.Subjec
 const AppToaster = lazy(() => deferred().then((d) => ({ default: d.AppToaster })));
 const DataMenu = lazy(() => deferred().then((d) => ({ default: d.DataMenu })));
 const SettingsPage = lazy(() => deferred().then((d) => ({ default: d.SettingsPage })));
+const NotesSection = lazy(() => deferred().then((d) => ({ default: d.NotesSection })));
 
 export default function App() {
   // "Now" ticks every minute, so a page left open moves on with the clock.
@@ -96,6 +101,10 @@ export default function App() {
   // Profiles own their timetables: there is no device-wide file store.
   const profiles = useProfiles();
   useInstallHint();
+  // Plain text, this device only: never in a link or a profile file.
+  const { notes, setNotes } = useNotes();
+  // The desktop strip's height and folding.
+  const notesStrip = useNotesStrip();
   // A link opened directly is an import like any other: read it on the first
   // render (`useShareLink` strips the URL once the dialog closes), and let
   // the dialog ask for a name and which timetables to take instead of
@@ -127,7 +136,8 @@ export default function App() {
   const share = useShareLink(profiles.active, importing);
   const timetables = profiles.timetables;
   const hasTimetables = timetables.length > 0;
-  // Phones show one page at a time (`TabBar`): grid, groups or settings. An
+  // Phones show one page at a time (`TabBar`): grid, groups, notes or
+  // settings. An
   // empty profile starts on its groups, where timetables are added; anything
   // else on the grid. Not persisted.
   const [tab, setTab] = useState<Tab>(() => (hasTimetables ? "timetable" : "groups"));
@@ -135,6 +145,23 @@ export default function App() {
     setTab(next);
     window.scrollTo({ top: 0 });
   };
+
+  // N, anywhere but in a field, a dialog or a menu: to the notes (phones
+  // switch to their tab first), caret at the end. Escape in them goes back to
+  // the grid.
+  const notesRef = useRef<NotesHandle>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isNotesShortcut(event)) return;
+      event.preventDefault();
+      // The tab has to be on screen before the text area can take the focus.
+      if (!isDesktop()) flushSync(() => setTab("notes"));
+      notesRef.current?.edit();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Tree ↔ grid, shared by sidebar and grid. Desktop: the group cell under the
   // mouse or focus keeps its blocks lit and dims the rest (phones never show
@@ -212,7 +239,7 @@ export default function App() {
       <div
         className={cn(
           "flex flex-col pr-[env(safe-area-inset-right)] pb-[calc(3.5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] desktop:h-dvh desktop:min-h-0 desktop:overflow-hidden desktop:pb-0",
-          tab === "timetable" ? "h-dvh overflow-hidden" : "min-h-screen",
+          tab === "timetable" || tab === "notes" ? "h-dvh overflow-hidden" : "min-h-screen",
         )}
       >
         {/* No visible header (user decision); the name lives in the footer. */}
@@ -266,17 +293,26 @@ export default function App() {
             </Suspense>
           </div>
 
-          {/* On desktop the footer belongs to this column and sits at its
-            bottom, so it lines up with the sidebar's end instead of running
-            under it. */}
+          {/* On desktop the notes and the footer belong to this column and
+            sit at its bottom, so they line up with the sidebar's end instead
+            of running under it. Phones: the timetable tab shows dock and grid,
+            the notes tab the notes alone. */}
           <div
-            className={cn("min-h-0 flex-col desktop:flex", tab === "timetable" ? "flex" : "hidden")}
+            className={cn(
+              "min-h-0 flex-col desktop:flex",
+              tab === "timetable" || tab === "notes" ? "flex" : "hidden",
+            )}
           >
             {/* Phones: a dock between grid and tab bar, where the thumb is —
               last in the column. Rows: week nav (an empty row in the general
               view), day, view switch. Desktop: one toolbar row above the grid, switch
               left, week nav right. */}
-            <div className="order-last flex flex-col gap-2 border-t px-6 py-3 desktop:order-none desktop:flex-row desktop:flex-wrap desktop:items-center desktop:justify-between desktop:border-0 desktop:pt-6 desktop:pb-0">
+            <div
+              className={cn(
+                "order-last flex flex-col gap-2 border-t px-6 py-3 desktop:order-none desktop:flex-row desktop:flex-wrap desktop:items-center desktop:justify-between desktop:border-0 desktop:pt-6 desktop:pb-0",
+                tab === "notes" && "hidden desktop:flex",
+              )}
+            >
               {/* Stays in the general view, empty, so the grid keeps its height. */}
               <div className="flex h-8 items-center desktop:order-last">
                 {view === "week" && <WeekNav value={weekStart} onChange={pickWeek} />}
@@ -286,7 +322,14 @@ export default function App() {
             </div>
             {/* Below `desktop` the grid fills the height the dock leaves and
               scrolls only when that is too short for its minimum rows. */}
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
+            <div
+              ref={gridRef}
+              tabIndex={-1}
+              className={cn(
+                "flex min-h-0 flex-1 flex-col overflow-y-auto p-6 outline-none",
+                tab === "notes" && "hidden desktop:flex",
+              )}
+            >
               <TimetableGrid
                 entries={entries}
                 week={week}
@@ -297,6 +340,37 @@ export default function App() {
                 selectedDay={day}
                 onSelectDay={pickDay}
               />
+            </div>
+            {/* Desktop: a strip of the height the user dragged it to (144px
+              by default, between 112px and 60% of the screen, the bounds of
+              `NotesSection`), or its title row alone when folded. Set here,
+              so the grid keeps its rows while the deferred chunk loads.
+              Phones: the whole page. */}
+            <div
+              style={
+                { "--notes-height": `${notesStrip.strip.height ?? 144}px` } as React.CSSProperties
+              }
+              className={cn(
+                "min-h-0 flex-1 flex-col desktop:flex desktop:flex-none desktop:border-t",
+                notesStrip.strip.collapsed
+                  ? "desktop:h-[calc(3rem+1px)]"
+                  : "desktop:h-[clamp(112px,var(--notes-height),60dvh)]",
+                tab === "notes" ? "flex" : "hidden",
+              )}
+            >
+              <Suspense fallback={null}>
+                <NotesSection
+                  ref={notesRef}
+                  notes={notes}
+                  onChange={setNotes}
+                  strip={notesStrip.strip}
+                  onStripPreview={notesStrip.preview}
+                  onStripSave={notesStrip.save}
+                  onLeave={() => {
+                    if (isDesktop()) gridRef.current?.focus();
+                  }}
+                />
+              </Suspense>
             </div>
             <Footer data={dataMenu} />
           </div>
@@ -362,6 +436,20 @@ function Footer({ data }: { data: DataProps }) {
         </div>
       </div>
     </footer>
+  );
+}
+
+// A bare N (or Shift+N) typed outside anything that takes text or keys of
+// its own.
+function isNotesShortcut(event: KeyboardEvent): boolean {
+  if (event.key !== "n" && event.key !== "N") return false;
+  if (event.ctrlKey || event.metaKey || event.altKey) return false;
+  if (event.isComposing || event.repeat || event.defaultPrevented) return false;
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return true;
+  if (target.isContentEditable) return false;
+  return !target.closest(
+    "input, textarea, select, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]",
   );
 }
 

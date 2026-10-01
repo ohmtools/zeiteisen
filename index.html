@@ -9,8 +9,11 @@
     <!-- `viewport-fit=cover`: without it iOS reports every safe-area inset as
          0, so the tab bar sat under the home indicator of an installed PWA.
          The app pads by `env(safe-area-inset-*)` itself (App, TabBar,
-         AppToaster). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+         AppToaster). `interactive-widget=resizes-content`: Android's keyboard
+         shrinks the page instead of covering it, so the full-height notes
+         keep their caret in view (iOS ignores it and scrolls the caret into
+         view by itself). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />

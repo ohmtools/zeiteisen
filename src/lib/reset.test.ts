@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CATALOG_KEY, DATES_KEY, PROFILES_KEY } from "@/lib/primitives/storage";
+import { CATALOG_KEY, DATES_KEY, NOTES_KEY, PROFILES_KEY } from "@/lib/primitives/storage";
 import { STORAGE_PARTS, dataParts, deleteData, resetAndReload } from "@/lib/reset";
 
 function memoryStore(entries: Record<string, string>) {
@@ -38,6 +38,12 @@ describe("deleteData", () => {
       clear: () => {},
     };
     expect(deleteData(["profiles"], store)).toBe(false);
+  });
+
+  it("deletes the notes alone", () => {
+    const store = memoryStore({ [PROFILES_KEY]: "[]", [NOTES_KEY]: '"x"' });
+    expect(deleteData(["notes"], store)).toBe(true);
+    expect([...store.map.keys()]).toEqual([PROFILES_KEY]);
   });
 
   it("drops the catalog cache with the settings", () => {
