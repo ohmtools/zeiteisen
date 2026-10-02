@@ -1,4 +1,4 @@
-import { m } from "@/i18n";
+import { getLocale, m } from "@/i18n";
 import { parseGroupName, type GroupCategory, type GroupName } from "@/lib/primitives/group";
 import { compareNames } from "@/lib/primitives/name";
 import { Warn, type Warning } from "@/lib/primitives/warnings";
@@ -20,61 +20,62 @@ function categoryOf(groups: readonly GroupName[]): GroupCategory | null {
   return parseGroupName(groups[0])?.category ?? null;
 }
 
-// The primitives warn once per subject with more than one group; the tree says
-// it once per category (user decision): a timetable arrives with every group
-// selected, and a line per subject buried the rest. That line names every
-// such subject of the category and the groups they sit in, and stands where
-// the category's first one would.
-export function warningLines(warnings: readonly Warning[]): WarningLine[] {
-  const multi = new Map<GroupCategory | null, { subjects: string[]; groups: Set<GroupName> }>();
-  for (const warning of warnings) {
-    if (warning.code !== Warn.MultiGroupForSubject) continue;
-    const category = categoryOf(warning.groups);
-    const seen = multi.get(category) ?? { subjects: [], groups: new Set() };
-    seen.subjects.push(subjectLabel(warning.subject));
-    for (const group of warning.groups) seen.groups.add(group);
-    multi.set(category, seen);
-  }
-
-  const lines: WarningLine[] = [];
-  for (const warning of warnings) {
-    if (warning.code !== Warn.MultiGroupForSubject) {
-      lines.push(line(warning));
-      continue;
-    }
-    const category = categoryOf(warning.groups);
-    const seen = multi.get(category);
-    if (!seen) continue;
-    multi.delete(category);
-    lines.push({
-      key: `${warning.code}:${category ?? ""}`,
-      text: m.warn_multi_group_in_category({
-        category: categoryLabel(category),
-        subjects: seen.subjects.join(", "),
-        groups: [...seen.groups].sort(compareNames).join(", "),
-      }),
-    });
-  }
-  return lines;
+// `„A“, „B“ und „C“`: each name quoted, joined the language's way.
+function quotedList(names: readonly string[]): string {
+  const list = new Intl.ListFormat(getLocale(), { type: "conjunction" });
+  return list.format(names.map((text) => m.warn_quoted({ text })));
 }
 
-// Every other warning is a line of its own: one per code and category /
-// subject at most.
-function line(warning: Exclude<Warning, { code: typeof Warn.MultiGroupForSubject }>): WarningLine {
-  switch (warning.code) {
-    case Warn.EmptyCategory:
-      return {
-        key: `${warning.code}:${warning.category ?? ""}`,
-        text: m.warn_empty_category({ category: categoryLabel(warning.category) }),
-      };
+// ONE line per kind of warning (user decision): the primitives warn once per
+// category or subject, and a timetable arriving with every group selected
+// buried the other warnings under its lines. A kind's line names everything
+// it stands for and sits where its first warning was.
+export function warningLines(warnings: readonly Warning[]): WarningLine[] {
+  const byCode = new Map<Warn, Warning[]>();
+  for (const warning of warnings) {
+    byCode.set(warning.code, [...(byCode.get(warning.code) ?? []), warning]);
+  }
+  return [...byCode].map(([code, all]) => ({ key: code, text: text(all) }));
+}
+
+// The line of one kind; `all` holds its warnings, all of the same code.
+function text(all: readonly Warning[]): string {
+  const of = <C extends Warn>(code: C) =>
+    all.filter((w): w is Extract<Warning, { code: C }> => w.code === code);
+  switch (all[0].code) {
+    case Warn.EmptyCategory: {
+      const categories = of(Warn.EmptyCategory).map((w) => categoryLabel(w.category));
+      return m.warn_empty_category({
+        count: categories.length,
+        categories: quotedList(categories),
+      });
+    }
+    case Warn.MultiGroupForSubject: {
+      // By category, in the order the categories first show up: the groups
+      // of one category are what the student weighs against each other.
+      const multi = of(Warn.MultiGroupForSubject);
+      const groups = new Map<GroupCategory | null, Set<GroupName>>();
+      for (const warning of multi) {
+        const category = categoryOf(warning.groups);
+        const seen = groups.get(category) ?? new Set();
+        for (const group of warning.groups) seen.add(group);
+        groups.set(category, seen);
+      }
+      return m.warn_multi_group({
+        subjects: quotedList(multi.map((w) => subjectLabel(w.subject))),
+        groups: [...groups.values()]
+          .map((set) => [...set].sort(compareNames).join(", "))
+          .join("; "),
+      });
+    }
+    // At most one of each.
     case Warn.NonOverlap:
-      return { key: warning.code, text: m.warn_non_overlap({ group: warning.group }) };
+      return m.warn_non_overlap({ group: of(Warn.NonOverlap)[0].group });
     case Warn.NoClassForSubject:
-      return {
-        key: `${warning.code}:${warning.key}`,
-        text: m.warn_no_class_for_subject({ subject: subjectLabel(warning.subject) }),
-      };
+      return m.warn_no_class_for_subject({
+        subjects: quotedList(of(Warn.NoClassForSubject).map((w) => subjectLabel(w.subject))),
+      });
     case Warn.ShRange:
-      return { key: warning.code, text: m.warn_sh_range() };
+      return m.warn_sh_range();
   }
 }

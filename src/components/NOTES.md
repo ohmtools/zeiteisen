@@ -25,9 +25,10 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   the grid does not jump when the deferred chunk arrives. Anything that only
   cares about width keeps `lg:` / `md:`.
 - **Below `desktop` (phones AND short laptop screens): a fixed bottom tab bar
-  "Timetable | Groups | Notes | Settings"** (user decision). Timetable = grid
+  "Timetable | Subjects | Notes | Settings"** (user decision; the second tab
+  is named like the desktop section). Timetable = grid
   plus a dock of view switch, week nav and day toggle, all at the bottom within
-  thumb reach (user decision). Groups = profiles, group tree. Notes = the same
+  thumb reach (user decision). Subjects = profiles, group tree. Notes = the same
   `NotesSection` element as on desktop (it sits in the timetable column; the
   notes tab hides dock and grid), titled, filling the page, one viewport tall
   like the Timetable tab. Settings = `SettingsPage`, the footer's content as a
@@ -38,25 +39,30 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   `useDataControls`), the catalog mode a vertical toggle group applied on pick
   (nothing passes through ignore, so no pending mode), the language a toggle
   group of the languages named in themselves. The active tab is marked by a
-  primary line on the bar's divider, not a filled button. Start tab: Groups when
+  primary line on the bar's divider, not a filled button. Start tab: Subjects when
   the active profile has no timetables, else Timetable; not persisted. The page
   keeps bottom padding for the bar, toasts sit above it. Page, bar and toasts
   also pad by `env(safe-area-inset-*)` (home indicator, landscape notch); that
   needs `viewport-fit=cover` in `index.html`, without it iOS reports 0 and an
   installed PWA's bar sat under the home indicator.
 - The Timetable tab is exactly one viewport tall on phones, no page scroll (user
-  decision; Groups and Settings keep page scroll). Top to bottom: grid (the hour
-  rows share the leftover height, floor 24px so common phones need no scroll
-  (user decision, was 36px); below that the grid scrolls inside itself), week
-  nav (an empty row of the same height in General, so the grid keeps its
+  decision; Subjects and Settings keep page scroll). Top to bottom: grid (the hour
+  rows share the leftover height down to a floor, below it the grid scrolls
+  inside itself), week nav (an empty row of the same height in General, so the grid keeps its
   height), day toggle, view switch, tab bar (user decision). The shown week and
   day move on with the clock unless the user picked one that still lasts
   (`src/lib/NOTES.md`, `view.ts`). The dock is the same element as the desktop
   toolbar, last in the timetable column; `desktop:` puts it back above the grid
   as one row (switch left, week nav right). The hour rows share the leftover
-  height on desktop too, same 24px floor (user decision, was fixed 56px: a
-  landscape tablet under its browser bars had to scroll). `WeekNav` stays one
-  row: prev · relative label ("This week", opens the week picker) · next, then
+  height on desktop too, same floor (user decision, was fixed 56px: a
+  landscape tablet under its browser bars had to scroll). The floor keeps the
+  three lines (name, kinds, room) of the grid's shortest block whole (user
+  decision: they were cut on a landscape iPhone; was a flat 24px, before that
+  36px): `BLOCK_MIN_HEIGHT` × 60 / its minutes, 36px for 90 minutes, never
+  under 24px. Narrow blocks may still cut horizontally. `WeekNav` stays one
+  row: prev · relative label ("This week", opens the week picker) · today
+  (icon only, user decision: back to this week and the phone's default day,
+  disabled while both are shown) · next, then
   the range as plain text above the week number (short range below `sm`) (user
   decision: the range was its own picker button). The week picker ends in a
   "This week" button under a divider (user request), disabled while this week
@@ -173,12 +179,16 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   hours.
   The list is 8rem wide from `md`, 12rem from `xl` (user decision: tablets
   and small laptops need the room for the weekdays).
-- Below `md` one day at a time (`DayToggle` in the dock, defaults to today; App
+- Below `md` one day at a time (`DayToggle` in the dock, defaults to today,
+  from 19:00 on to tomorrow; App
   owns the day), other columns hidden with CSS; horizontal touch swipe changes
   the day. The overlay is `pointer-events-none` so swipes work; a pointer that
   moved > 10px is a swipe, not a click.
-- The all-day row (Current week) has a fixed height (48px phones, 64px from
-  `md`), more events scroll inside their cell. General leaves NO space for
+- The all-day row (Current week) has a fixed height, `ALLDAY_HEIGHT` (about
+  75px): four event lines, so two events of two lines each fit (user decision,
+  was 48px phones, 64px from `md`); more scroll inside their cell. Its cells
+  stay flex from `md` up (`dayColumn(…, "md:flex")`): `md:block` turned them
+  into inline flow, which ignored the gap and spent 4px per event. General leaves NO space for
   it (user decision, replacing "the hours never move"): no empty gap between
   toolbar and grid, the hours shift when switching views.
 - Opens on Current week inside the lecture period, General otherwise (user
@@ -204,7 +214,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (`:focus-visible`; a tap focuses the button too on iPad and must not dim the
   grid) on a group cell keeps its blocks and dims all others — a class toggle,
   no re-layout. On every screen the popup names the block's group as a control;
-  it jumps to the tree cell (phones switch to Groups), unfolds its timetable,
+  it jumps to the tree cell (phones switch to Subjects), unfolds its timetable,
   scrolls to the cell and flashes it.
 - Hovering a block with the mouse gives every block of the same subject name
   (across timetables) a faint ring (user decision: subtle, nothing dimmed).

@@ -3,11 +3,11 @@ import { useRef, useState } from "react";
 import { cn } from "cn";
 import { localized, m } from "@/i18n";
 import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
-import { SubjectBlock, SubjectPopup } from "@/components/SubjectBlock";
+import { BLOCK_MIN_HEIGHT, SubjectBlock, SubjectPopup } from "@/components/SubjectBlock";
 import { Badge } from "@/components/ui/badge";
 import { NowLine } from "@/components/NowLine";
 import type { GlobalEvent } from "@/lib/primitives/meta";
-import { Day } from "@/lib/primitives/subject";
+import { Day, minutesOf } from "@/lib/primitives/subject";
 import { DAYS, isUnclearRepeat, type WeekEvents } from "@/lib/primitives/week";
 import { byDay, FIRST_HOUR, LAST_HOUR, WEEKDAYS, type Entry } from "@/lib/layout";
 import { isHighlighted, type Highlight, type SubjectRef } from "@/lib/link";
@@ -34,9 +34,17 @@ function swipeTarget(from: Day, dx: number, dy: number): Day {
   return DAYS[Math.max(0, Math.min(DAYS.length - 1, index))];
 }
 
-function dayColumn(day: Day, selected: Day): string {
-  return day === selected ? "" : "hidden md:block";
+// `shown` is the column's display from `md` up: a flex cell has to say so, or
+// `md:block` would override its `flex`.
+function dayColumn(day: Day, selected: Day, shown: "md:block" | "md:flex" = "md:block"): string {
+  return day === selected ? "" : `hidden ${shown}`;
 }
+
+// The all-day row's height: four lines of `EventBadge` (`text-[0.625rem]` at
+// the row's inherited `text-sm` line-height ratio), so two events of two lines
+// each fit, plus their `gap-1`, the cell's `p-1.5`, the row's border and 1px
+// for rounding.
+const ALLDAY_HEIGHT = "calc(4 * 0.625rem * 1.25 / 0.875 + 0.25rem + 0.75rem + 2px)";
 
 type Props = {
   entries: Entry[];
@@ -92,6 +100,18 @@ export function TimetableGrid({
 
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i);
   const { grid, list } = byDay(entries);
+  // The hour floor: the shortest block in the grid (any day, so the rows do not
+  // change with the phone's day) still holds its three lines, never under 24px.
+  const shortest = Math.min(
+    ...WEEKDAYS.flatMap((day) =>
+      grid[day].map(({ entry }) =>
+        Math.max(minutesOf(entry.meeting.endTime) - minutesOf(entry.meeting.startTime), 15),
+      ),
+    ),
+  );
+  const hourFloor = Number.isFinite(shortest)
+    ? `max(1.5rem, calc(${BLOCK_MIN_HEIGHT} * ${60 / shortest}))`
+    : "1.5rem";
   // A class toggle per block, nothing moves.
   const dimmed = (entry: Entry) => highlight !== null && !isHighlighted(entry, highlight);
   const related = (entry: Entry) => hovered !== null && entry.subject.name === hovered;
@@ -144,7 +164,7 @@ export function TimetableGrid({
         {/* Fixed height, whatever the events: a growing row would move the
               hours. More events than fit scroll inside their cell. */}
         {week && (
-          <div className={`${COLUMNS} h-12 shrink-0 border-b md:h-16`}>
+          <div className={`${COLUMNS} shrink-0 border-b`} style={{ height: ALLDAY_HEIGHT }}>
             <div className="flex items-center justify-center p-2 text-center text-muted-foreground">
               {m.grid_allday()}
             </div>
@@ -153,7 +173,7 @@ export function TimetableGrid({
                 key={day}
                 className={cn(
                   "flex min-w-0 flex-col gap-1 overflow-y-auto border-l p-1.5",
-                  dayColumn(day, selectedDay),
+                  dayColumn(day, selectedDay, "md:flex"),
                 )}
               >
                 {week.events[day].map((event) => (
@@ -167,16 +187,18 @@ export function TimetableGrid({
         {/* Hour rows draw the grid lines; the subjects sit in an overlay of
               the same columns so they can span and share a slot freely. */}
         {/* The hours share the height left over (one viewport, no page
-              scroll), down to a 24px floor (the hour label still fits), so
-              common phones and a landscape tablet under its browser bars need
-              no scrolling; below the floor the grid scrolls. */}
+              scroll), down to a floor that keeps the shortest block's three
+              lines whole (36px for 90 minutes; 24px at least, the hour label
+              still fits); below the floor the grid scrolls (a landscape
+              phone). */}
         <div className="relative flex flex-1 flex-col">
           {/* Grid lines and hour labels only: the blocks say their own time. */}
           {hours.map((hour, index) => (
             <div
               key={hour}
               aria-hidden
-              className={cn(COLUMNS, "min-h-6 flex-1", index < hours.length - 1 && "border-b")}
+              className={cn(COLUMNS, "flex-1", index < hours.length - 1 && "border-b")}
+              style={{ minHeight: hourFloor }}
             >
               <div className="flex items-center justify-center px-2 text-muted-foreground tabular-nums">
                 {String(hour).padStart(2, "0")}:00

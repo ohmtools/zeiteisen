@@ -272,9 +272,19 @@
   "upload_error_storage": "Dein Browser hat das Speichern des Profils abgelehnt; die Änderung ist nach dem Neuladen weg.",
   "view_general": "Allgemein",
   "view_week": "Aktuelle Woche",
-  "warn_empty_category": "Keine Gruppe in Kategorie {category} ausgewählt.",
-  "warn_multi_group_in_category": "Mehr als eine Gruppe in Kategorie {category} für {subjects} ausgewählt: {groups}.",
-  "warn_no_class_for_subject": "Keine Veranstaltung für {subject} ausgewählt.",
+  "warn_empty_category": [
+    {
+      "declarations": ["input count", "input categories", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Keine Gruppe für Kategorie {categories} ausgewählt.",
+        "countPlural=other": "Keine Gruppe für Kategorien {categories} ausgewählt."
+      }
+    }
+  ],
+  "warn_multi_group": "Mehr als eine Gruppe für {subjects} ausgewählt: {groups}.",
+  "warn_no_class_for_subject": "Keine Veranstaltung für {subjects} ausgewählt.",
+  "warn_quoted": "„{text}“",
   "warn_non_overlap": "Ausgewählte Gruppen überschneiden sich nicht: {group} passt nicht.",
   "warn_sh_range": "Zeitraum für SH1/SH2-Fächer unklar.",
   "week_ago": "Vor {count} Wochen",
@@ -286,6 +296,7 @@
   "week_pick": "Woche wählen",
   "week_prev": "Vorherige Woche",
   "week_this": "Diese Woche",
+  "week_today": "Zu heute springen",
   "data_menu": "Daten",
   "data_section_own": "Eigene Dateien",
   "data_section_catalog": "Katalog",
@@ -305,7 +316,7 @@
   "profile_duplicate_confirm": "Duplizieren",
   "picker_selection": "{enabled} von {total} ausgewählt",
   "tab_timetable": "Stundenplan",
-  "tab_groups": "Gruppen",
+  "tab_groups": "Fächer",
   "tab_notes": "Notizen",
   "tab_settings": "Einstellungen",
   "tab_label": "Ansicht",

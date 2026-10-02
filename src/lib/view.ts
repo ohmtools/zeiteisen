@@ -1,4 +1,4 @@
-import { isWithinInterval, startOfDay, startOfISOWeek } from "date-fns";
+import { addDays, isSameISOWeek, isWithinInterval, startOfDay, startOfISOWeek } from "date-fns";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import { lectureRange } from "@/lib/primitives/occurrence";
 import type { Day } from "@/lib/primitives/subject";
@@ -33,7 +33,26 @@ export function shownWeek(picked: Picked<number> | null, now: Date): number {
   return held(picked, thisWeek, thisWeek);
 }
 
+// From this hour on the phone grid shows the next day (user decision): the
+// day's classes are over, tomorrow's are what a student looks up.
+const NEXT_DAY_HOUR = 19;
+
+// The date the phone grid's day stands for: today, from `NEXT_DAY_HOUR` on
+// tomorrow — but never past the week shown with it, so Sunday evening keeps
+// the weekend list instead of last week's Monday.
+function phoneDate(now: Date): Date {
+  if (now.getHours() < NEXT_DAY_HOUR) return now;
+  const tomorrow = addDays(now, 1);
+  return isSameISOWeek(tomorrow, now) ? tomorrow : now;
+}
+
+// What a day pick is remembered with: the phone day it was made on, so it
+// holds until the grid would move on by itself.
+export function dayPickedIn(now: Date): number {
+  return startOfDay(phoneDate(now)).getTime();
+}
+
 // The day the phone grid shows.
 export function shownDay(picked: Picked<Day> | null, now: Date): Day {
-  return held(picked, startOfDay(now).getTime(), dayOf(now));
+  return held(picked, dayPickedIn(now), dayOf(phoneDate(now)));
 }

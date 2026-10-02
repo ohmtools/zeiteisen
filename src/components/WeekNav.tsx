@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { addDays, addWeeks, differenceInCalendarWeeks, startOfISOWeek } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, LocateFixed } from "lucide-react";
 import { getLocale, m } from "@/i18n";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,9 +35,13 @@ type WeekNavProps = {
   // Monday of the shown week.
   value: Date;
   onChange: (weekStart: Date) => void;
+  // Back to this week and (phones) today's day, as on opening the app.
+  onToday: () => void;
+  // Week and day already are today's: nothing to jump to.
+  atToday: boolean;
 };
 
-export function WeekNav({ value, onChange }: WeekNavProps) {
+export function WeekNav({ value, onChange, onToday, atToday }: WeekNavProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   // "This week" moves on by itself on a page left open past Sunday.
   const now = useNow();
@@ -67,6 +71,17 @@ export function WeekNav({ value, onChange }: WeekNavProps) {
             <CalendarDays data-icon="inline-start" />
             <span className="truncate">{relativeWeekLabel(value, now)}</span>
           </PopoverTrigger>
+          {/* Icon only (user decision), between label and next. */}
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={m.week_today()}
+            title={m.week_today()}
+            disabled={atToday}
+            onClick={onToday}
+          >
+            <LocateFixed />
+          </Button>
           <Button
             variant="outline"
             size="icon-sm"

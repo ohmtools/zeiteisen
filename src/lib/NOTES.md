@@ -19,10 +19,13 @@ re-implements primitive logic.
   the lookup tables in `primitives/overrides.ts` (only the file its
   `degreeProgram` names; unknown codes stay themselves, `/` variants spell out
   their base and keep the variant).
-- `warnings.ts` — wording of the primitives' warning data only. "More than
-  one group" is one line per category, not per subject (user decision): a
-  timetable arrives with every group selected, and a line per subject buried
-  the other warnings. The line keeps every subject and group it stands for.
+- `warnings.ts` — wording of the primitives' warning data only. ONE line per
+  kind of warning (user decision; "more than one group" was once a line per
+  subject, then per category): a timetable arrives with every group selected,
+  and a line each buried the other warnings. The line names every category /
+  subject it stands for, each quoted (`warn_quoted`, „…“ / “…”), joined by
+  `Intl.ListFormat` ("„A“, „B“ und „C“"); "more than one group" lists the
+  groups too, per category.
 - `upload.ts` — reads files and words failures; dates, locations and
   degree files go through one `readJsonFile`, and the latter two refuse a
   file listing nothing (every list defaults to empty, so a dates file would
@@ -126,7 +129,9 @@ re-implements primitive logic.
   persisted). The shown week and the phone's day follow "now"; a week or day
   the user picks holds while the week (day) it was picked in lasts
   (`shownWeek` / `shownDay`), so an app left open over the weekend shows the
-  new week on Monday. The week is epoch ms, so what depends on it is not
+  new week on Monday. The phone's day turns to the next one at 19:00 (user
+  decision), a day pick holds until then; Sunday evening stays on the weekend
+  list, since next Monday is not in the shown week. The week is epoch ms, so what depends on it is not
   recomputed on every tick of `useNow`.
 - `refresh.ts` — `useCatalog`'s scheduling as plain code: one refresh at a
   time, not again within a minute unless forced, a restart (mode or URL

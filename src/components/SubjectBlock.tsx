@@ -49,6 +49,12 @@ const BLOCK_SELECTOR = "[data-subject-block]";
 // A tap that moved this far is a swipe (day change), not a click on the block.
 const TAP_MAX_PX = 10;
 
+// The height a block in the hour grid needs for its three lines (name, kinds,
+// room) uncut, as a CSS length: three `text-xs` `leading-tight` lines, the
+// inner `py-0.5` and border, the wrapper's `p-px`, 2px for rounding. Keep in
+// step with the classes below.
+export const BLOCK_MIN_HEIGHT = "(3 * 0.75rem * 1.25 + 0.25rem + 6px)";
+
 export function SubjectBlock({
   entry,
   lane,

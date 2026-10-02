@@ -272,9 +272,19 @@
   "upload_error_storage": "Your browser refused to save the profile; the change will be gone after a reload.",
   "view_general": "General",
   "view_week": "Current week",
-  "warn_empty_category": "No group selected in category {category}.",
-  "warn_multi_group_in_category": "More than one group selected in category {category} for {subjects}: {groups}.",
-  "warn_no_class_for_subject": "No class selected for {subject}.",
+  "warn_empty_category": [
+    {
+      "declarations": ["input count", "input categories", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "No group selected for category {categories}.",
+        "countPlural=other": "No group selected for categories {categories}."
+      }
+    }
+  ],
+  "warn_multi_group": "More than one group selected for {subjects}: {groups}.",
+  "warn_no_class_for_subject": "No class selected for {subjects}.",
+  "warn_quoted": "“{text}”",
   "warn_non_overlap": "Selected groups do not overlap: {group} does not fit.",
   "warn_sh_range": "Date range unclear for SH1/SH2 subjects.",
   "week_ago": "{count} weeks ago",
@@ -286,6 +296,7 @@
   "week_pick": "Choose week",
   "week_prev": "Previous week",
   "week_this": "This week",
+  "week_today": "Jump to today",
   "data_menu": "Data",
   "data_section_own": "Own files",
   "data_section_catalog": "Catalog",
@@ -305,7 +316,7 @@
   "profile_duplicate_confirm": "Duplicate",
   "picker_selection": "{enabled} of {total} selected",
   "tab_timetable": "Timetable",
-  "tab_groups": "Groups",
+  "tab_groups": "Subjects",
   "tab_notes": "Notes",
   "tab_settings": "Settings",
   "tab_label": "View",

@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { startOfDay } from "date-fns";
 import { Bug, ChevronDown, Database } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
@@ -37,7 +36,7 @@ import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
 import { isDesktop } from "@/lib/media";
-import { defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
+import { dayPickedIn, defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
 
 // Everything but the grid comes from one deferred chunk (see
 // `components/deferred`): rendering any of these on the first render starts
@@ -69,8 +68,13 @@ export default function App() {
   // change, and re-render the grid, on every tick.
   const pickWeek = (next: Date) =>
     setPickedWeek({ value: next.getTime(), pickedIn: shownWeek(null, new Date()) });
-  const pickDay = (next: Day) =>
-    setPickedDay({ value: next, pickedIn: startOfDay(new Date()).getTime() });
+  const pickDay = (next: Day) => setPickedDay({ value: next, pickedIn: dayPickedIn(new Date()) });
+  // "Today" drops both picks: week and day follow the clock again.
+  const pickToday = () => {
+    setPickedWeek(null);
+    setPickedDay(null);
+  };
+  const atToday = weekTime === shownWeek(null, now) && day === shownDay(null, now);
   // Where the global dates came from, plus the footer switch.
   const sources = useCatalogSources();
   const dates = useSemesterDates(sources);
@@ -314,7 +318,14 @@ export default function App() {
             >
               {/* Stays in the general view, empty, so the grid keeps its height. */}
               <div className="flex h-8 items-center desktop:order-last">
-                {view === "week" && <WeekNav value={weekStart} onChange={pickWeek} />}
+                {view === "week" && (
+                  <WeekNav
+                    value={weekStart}
+                    onChange={pickWeek}
+                    onToday={pickToday}
+                    atToday={atToday}
+                  />
+                )}
               </div>
               <DayToggle value={day} onChange={pickDay} className="md:hidden" />
               <ViewSwitch value={view} onChange={setView} />

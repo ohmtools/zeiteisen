@@ -114,7 +114,7 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
   toggle** — user decisions, do not bring back.
 - Desktop (`desktop:` variant = width ≥ 64rem AND height ≥ 600px): the whole
   app in one viewport, no page scroll, sections scroll inside themselves.
-  Below it (phones, short laptops): a bottom tab bar "Timetable | Groups |
+  Below it (phones, short laptops): a bottom tab bar "Timetable | Subjects |
   Notes | Settings", with the grid's controls docked just above it.
 - One spacing unit around every divider: 24px.
 - Dark mode and language follow the browser; the only language controls are

@@ -46,6 +46,19 @@ describe("shownWeek / shownDay", () => {
     expect(shownDay(day, at("2025-10-09"))).toBe("monday");
   });
 
+  it("show the next day from 19:00 on, within the shown week", () => {
+    expect(shownDay(null, new Date("2025-10-09T18:59:00"))).toBe("thursday");
+    expect(shownDay(null, new Date("2025-10-09T19:00:00"))).toBe("friday");
+    expect(shownDay(null, new Date("2025-10-10T20:00:00"))).toBe("other");
+    expect(shownDay(null, new Date("2025-10-12T19:30:00"))).toBe("other");
+  });
+
+  it("keep an evening pick until the next evening", () => {
+    const day = { value: "monday" as const, pickedIn: midnight("2025-10-10") };
+    expect(shownDay(day, new Date("2025-10-10T18:00:00"))).toBe("monday");
+    expect(shownDay(day, new Date("2025-10-10T19:00:00"))).toBe("other");
+  });
+
   it("move on to the new week and day, like a fresh start", () => {
     const week = { value: midnight("2025-10-06"), pickedIn: midnight("2025-10-06") };
     expect(shownWeek(week, at("2025-10-13"))).toBe(midnight("2025-10-13"));
