@@ -17,7 +17,7 @@
   "export_start": "Beginn",
   "export_text": "Es ist keine Datei mit globalen Terminen geladen. Wähle den Zeitraum für den Export. Die Termine werden Woche für Woche aufgelöst, ein Kalendereintrag pro Datum.",
   "export_title": "Kalender exportieren",
-  "footer_note": "Rein clientseitig. Alle Daten bleiben im Browser.",
+  "footer_note": "Daten bleiben im Browser.",
   "grid_allday": "Ganztägig",
   "grid_day_pick": "Tag",
   "grid_empty": "Füge dem Profil einen Stundenplan hinzu, um ihn hier zu sehen.",

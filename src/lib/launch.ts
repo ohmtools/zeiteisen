@@ -19,9 +19,20 @@ export type Resume = {
 
 export type LoggedError = { at: number; message: string };
 
+// The service worker's side of this launch (`public/sw-launch.js`), wall
+// clock: what happened before the page's own clock started.
+export type WorkerLaunch = {
+  created: number | null;
+  started: number;
+  navigations: number[];
+  answered: number;
+};
+
 const MAX_ENTRIES = 10;
 
 export const launch = {
+  visibleAtStart: true,
+  worker: null as WorkerLaunch | null,
   resumes: [] as Resume[],
   errors: [] as LoggedError[],
 };
@@ -59,8 +70,25 @@ function untilNextFrame(done: (ms: number | null) => void): void {
   setTimeout(() => settle(null), 1000);
 }
 
+// Asked right away, while the worker that served this page still runs.
+function askWorker(): void {
+  try {
+    const controller = navigator.serviceWorker?.controller;
+    if (!controller) return;
+    const channel = new MessageChannel();
+    channel.port1.onmessage = (event: MessageEvent<WorkerLaunch>) => {
+      launch.worker = event.data;
+    };
+    controller.postMessage({ type: "zeiteisen:launch" }, [channel.port2]);
+  } catch {
+    // Missing in the debug info, nothing else.
+  }
+}
+
 export function startLaunchLog(): void {
   mark(MARK_MAIN);
+  launch.visibleAtStart = document.visibilityState === "visible";
+  askWorker();
   let hiddenAt = document.visibilityState === "hidden" ? Date.now() : null;
 
   const resumed = (restored: boolean) => {

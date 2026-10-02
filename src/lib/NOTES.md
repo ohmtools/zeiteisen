@@ -126,13 +126,13 @@ re-implements primitive logic.
   first real write (not the load-time rewrite: Firefox prompts).
 - `view.ts` — the app opens on Current week while today is inside the lecture
   period of the installed dates, General otherwise (user decision, not
-  persisted). The shown week and the phone's day follow "now"; a week or day
-  the user picks holds while the week (day) it was picked in lasts
-  (`shownWeek` / `shownDay`), so an app left open over the weekend shows the
-  new week on Monday. The phone's day turns to the next one at 19:00 (user
-  decision), a day pick holds until then; Sunday evening stays on the weekend
-  list, since next Monday is not in the shown week. The week is epoch ms, so what depends on it is not
-  recomputed on every tick of `useNow`.
+  persisted). The shown week and the phone's day follow "now"; a week or day the
+  user picks holds while the week (day) it was picked in lasts (`shownWeek` /
+  `shownDay`), so an app left open over the weekend shows the new week on
+  Monday. The phone's day turns to the next one at 19:00 (user decision), a day
+  pick holds until then; Sunday evening stays on the weekend list, since next
+  Monday is not in the shown week. The week is epoch ms, so what depends on it
+  is not recomputed on every tick of `useNow`.
 - `refresh.ts` — `useCatalog`'s scheduling as plain code: one refresh at a
   time, not again within a minute unless forced, a restart (mode or URL
   changed) makes the running one stale (`refreshScheduler`), `cancel` does
@@ -159,3 +159,13 @@ re-implements primitive logic.
   sizes, counts of profiles, timetables and subjects. Never names, notes or
   file contents. A launch that felt slow while its numbers stay small was
   slow before the page existed (the system starting or waking the app).
+  Because Safari reports no `workerStart`, the service worker reports its
+  own side: `public/sw-launch.js` (imported into the generated worker by
+  `vite.config.ts`, watches only) keeps when the worker started and when it
+  saw the last navigations; `startLaunchLog` asks the controller once, right
+  away, over a `MessageChannel`, and the report shows those times relative to
+  the navigation start (negative: before it). Page request seen around 0: the
+  page's clock covers the worker, so a wait not in the numbers was iOS
+  starting the app. Seen seconds before 0: the page's clock started late, and
+  the worker's created / script-ran times show where the wait went. Created
+  hours before: the worker was still running, it cost nothing.

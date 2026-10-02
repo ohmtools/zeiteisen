@@ -119,6 +119,8 @@ export default defineConfig({
       // along through `globPatterns`).
       includeManifestIcons: false,
       workbox: {
+        // Launch timings for the Debug info (`public/sw-launch.js`).
+        importScripts: ["sw-launch.js"],
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,zip}"],
         // Inter's other scripts: German and English never hit their
         // `unicode-range`, so the browser never asks for them either.
@@ -128,6 +130,8 @@ export default defineConfig({
         globIgnores: [
           "**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2",
           "og.png",
+          // Kept by the service worker itself, as its imported script.
+          "sw-launch.js",
           "og-share.png",
           "apple-touch-icon.png",
           "icon-*.png",

@@ -100,7 +100,9 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
         if (!open) onOpenChange(false);
       }}
     >
-      <AlertDialogContent>
+      {/* Wider than an alert dialog's 28rem: its three buttons, which never
+          shrink, did not fit in a row in German and pushed past the border. */}
+      <AlertDialogContent className="data-[size=default]:sm:max-w-lg">
         <AlertDialogHeader>
           <AlertDialogTitle>{m.update_title({ name: timetable?.name ?? "" })}</AlertDialogTitle>
           <AlertDialogDescription>

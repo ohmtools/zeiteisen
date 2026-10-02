@@ -22,7 +22,8 @@ import {
 // Launch timings are ms since the navigation started. What happens before
 // that (the system starting the browser, iOS waking a suspended app) no page
 // can see: a launch that felt slow while these numbers stay small was slow
-// outside the app.
+// outside the app. The service worker's own times (negative: before the
+// navigation start) tell whether it was the worker starting up.
 
 const ms = (value: number | undefined): string =>
   value === undefined || value <= 0 ? "-" : `${Math.round(value)} ms`;
@@ -48,6 +49,28 @@ function span(ms: number): string {
   const h = Math.floor(m / 60);
   if (h < 48) return `${h}h ${m % 60}m`;
   return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
+// Wall clock against the navigation start: negative is before it.
+function offset(at: number): string {
+  const diff = Math.round(at - performance.timeOrigin);
+  if (Math.abs(diff) < 60_000) return `${diff} ms`;
+  return `${span(Math.abs(diff))} ${diff < 0 ? "before" : "after"}`;
+}
+
+// The service worker's view of this launch: a worker started (or a request
+// seen) long before the navigation start shows time the page's own clock
+// leaves out.
+function workerLaunch(): string[] {
+  if (!navigator.serviceWorker?.controller) return [];
+  const worker = launch.worker;
+  if (!worker) return ["service worker launch: no answer"];
+  const navigation = worker.navigations.at(-1);
+  return [
+    `service worker created: ${worker.created === null ? "-" : offset(worker.created)}`,
+    `service worker script ran: ${offset(worker.started)}`,
+    `service worker saw the page request: ${navigation === undefined ? "-" : offset(navigation)}`,
+  ];
 }
 
 function markAt(name: string): number | undefined {
@@ -93,6 +116,8 @@ function pageLoad(): string[] {
   const lines = [
     `navigation started: ${time(performance.timeOrigin)} (${span(now - performance.timeOrigin)} ago)`,
     `how: ${entry?.type ?? "-"}`,
+    `visible at start: ${launch.visibleAtStart ? "yes" : "no"}`,
+    ...workerLaunch(),
   ];
   if (entry) {
     lines.push(

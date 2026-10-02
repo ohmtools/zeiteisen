@@ -17,7 +17,7 @@
   "export_start": "Start",
   "export_text": "No global dates file is loaded, so choose the period to export. Classes are expanded week by week, one calendar entry per date.",
   "export_title": "Export calendar",
-  "footer_note": "Client-only. All data stays in your browser.",
+  "footer_note": "Data stays in your browser.",
   "grid_allday": "All day",
   "grid_day_pick": "Day",
   "grid_empty": "Add a timetable to your profile to see it here.",
