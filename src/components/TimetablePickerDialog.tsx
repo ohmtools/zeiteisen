@@ -86,7 +86,12 @@ export function TimetablePickerDialog({
     toast.warning(m.picker_offline_warning());
   }, [open, offline]);
 
-  const rows = libraryRows({ profiles, catalog, uploaded, empties, target });
+  // Shown: open, or still running its closing animation. The rows hash every
+  // timetable of every profile, so a closed dialog (mounted from the first
+  // render on) builds none; an opening one builds them fresh from the props.
+  const [shown, setShown] = useState(open);
+  if (open && !shown) setShown(true);
+  const rows = shown ? libraryRows({ profiles, catalog, uploaded, empties, target }) : [];
   const blocked = blockedRows(rows, picked);
   const chosen = new Set([...picked].filter((key) => !blocked.has(key)));
   const held = (target?.timetables ?? []).map((timetable) => timetable.name);
@@ -180,6 +185,10 @@ export function TimetablePickerDialog({
       onOpenChange={(next) => {
         if (!next) reset();
         onOpenChange(next);
+      }}
+      onOpenChangeComplete={(next) => {
+        // Reopened before the closing animation ended: keep the rows.
+        if (!next && !open) setShown(false);
       }}
     >
       <DialogContent>

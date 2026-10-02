@@ -1,10 +1,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { startLaunchLog } from "@/lib/launch";
 import "./index.css";
 import App from "./App.tsx";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LaunchMarks } from "@/components/LaunchMarks";
 import { ThemeProvider } from "@/components/theme-provider";
 import { followLocaleOfOtherTabs, getLocale } from "@/i18n";
+
+// For the debug info: timings, returns from the background, errors.
+startLaunchLog();
 
 // Screen readers and translation offers read the page's language from here.
 document.documentElement.lang = getLocale();
@@ -31,6 +36,7 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <ErrorBoundary>
         <App />
+        <LaunchMarks />
       </ErrorBoundary>
     </ThemeProvider>
   </StrictMode>,

@@ -434,5 +434,12 @@
   "notes_task": "Aufgabe: {text}",
   "notes_count": "{count} / {max} Zeichen",
   "notes_full": "Grenze erreicht: {max} Zeichen.",
-  "notes_file_name": "zeiteisen-notizen-{date}.txt"
+  "notes_file_name": "zeiteisen-notizen-{date}.txt",
+  "debug_menu": "Debug-Infos",
+  "debug_title": "Debug-Infos",
+  "debug_text": "Technische Angaben zu diesem Gerät und dieser App-Sitzung, für einen Fehlerbericht. Keine Namen und keine Notizen.",
+  "debug_loading": "Wird gesammelt…",
+  "debug_copy": "Kopieren",
+  "toast_debug_copied": "Debug-Infos kopiert.",
+  "toast_debug_failed": "Kopieren fehlgeschlagen. Text markieren und von Hand kopieren."
 }

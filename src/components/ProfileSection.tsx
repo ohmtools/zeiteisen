@@ -42,7 +42,6 @@ import {
 import { ExportButtons } from "@/components/ExportButtons";
 import { ProfileNameDialog } from "@/components/ProfileNameDialog";
 import { Section } from "@/components/Section";
-import type { ShareLink } from "@/hooks/useShareLink";
 import type { Catalog } from "@/lib/primitives/catalog";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import { duplicateName, nameTaken, profileByName, type Profile } from "@/lib/primitives/profile";
@@ -54,7 +53,6 @@ type Props = {
   locked: boolean;
   // The lecture period the calendar export runs over.
   dates: SemesterDates | null;
-  share: ShareLink | null;
   catalog: Catalog;
   onSelect: (name: string) => void;
   // Opens the timetable picker, which lives in `App`: a new profile starts by
@@ -80,7 +78,6 @@ export function ProfileSection({
   activeName,
   locked,
   dates,
-  share,
   catalog,
   onSelect,
   onOpenAdd,
@@ -176,7 +173,7 @@ export function ProfileSection({
             {m.groups_import()}
           </Button>
         </div>
-        <ExportButtons dates={dates} profile={active} share={share} catalog={catalog} />
+        <ExportButtons dates={dates} profile={active} catalog={catalog} />
       </CardContent>
 
       <ProfileNameDialog

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { CardDescription } from "@/components/ui/card";
 import { ShareWarningDialog } from "@/components/ShareWarningDialog";
-import { useCopied, type ShareLink } from "@/hooks/useShareLink";
+import { shareLinkOf, useCopied } from "@/hooks/useShareLink";
 import type { Catalog } from "@/lib/primitives/catalog";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import { lectureRange, type DateRange } from "@/lib/primitives/occurrence";
@@ -29,7 +29,6 @@ type Props = {
   // asks for a range.
   dates: SemesterDates | null;
   profile: Profile | undefined;
-  share: ShareLink | null;
   // Decides which timetables a link cannot bring along.
   catalog: Catalog;
 };
@@ -72,14 +71,14 @@ async function downloadIcs(
 
 // Everything that takes the profile off this device: calendar, share link and
 // profile file. They export the profile, so they live in `ProfileSection`.
-export function ExportButtons({ dates, profile, share, catalog }: Props) {
+export function ExportButtons({ dates, profile, catalog }: Props) {
   const [copied, copy] = useCopied();
+  // Built here, after the first paint, not in App: it hashes every timetable
+  // of the profile. The global dates never go in it.
+  const share = shareLinkOf(profile);
   // Past the guard a link is no longer worth copying, so the button turns off
   // and the profile file download takes over.
   const linkBlocked = !share || share.tooLong;
-  // Timetables the receiver of a link cannot get from the catalog: copying
-  // asks first and offers their files.
-  const outside = profile ? timetablesOutsideCatalog(profile, catalog) : [];
   const [warning, setWarning] = useState(false);
   // Only opened when no dates file is loaded: with one, the lecture period is
   // the range and the download starts right away.
@@ -129,8 +128,11 @@ export function ExportButtons({ dates, profile, share, catalog }: Props) {
           disabled={linkBlocked}
           title={share?.tooLong ? m.groups_export_link_long() : m.groups_export_link_hint()}
           onClick={() => {
-            if (!share) return;
-            if (outside.length > 0) setWarning(true);
+            if (!share || !profile) return;
+            // Timetables the receiver cannot get from the catalog: copying
+            // asks first and offers their files. Decided on the click, not
+            // on every render: it hashes every timetable of the profile.
+            if (timetablesOutsideCatalog(profile, catalog).length > 0) setWarning(true);
             else copy(share.url);
           }}
         >
@@ -151,12 +153,15 @@ export function ExportButtons({ dates, profile, share, catalog }: Props) {
         </Button>
       </ButtonGroup>
       {share?.tooLong && <CardDescription>{m.groups_export_link_long()}</CardDescription>}
-      <ShareWarningDialog
-        open={warning}
-        timetables={outside}
-        onOpenChange={setWarning}
-        onCopy={() => share && copy(share.url)}
-      />
+      {profile && (
+        <ShareWarningDialog
+          open={warning}
+          profile={profile}
+          catalog={catalog}
+          onOpenChange={setWarning}
+          onCopy={() => share && copy(share.url)}
+        />
+      )}
       {exportLoaded && (
         <Suspense fallback={null}>
           <ExportDialog open={exporting} onOpenChange={setExporting} onExport={runExport} />

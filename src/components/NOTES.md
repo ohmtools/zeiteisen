@@ -33,7 +33,7 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   like the Timetable tab. Settings = `SettingsPage`, the footer's content as a
   page (user decision: no footer on phones; was a menu upwards out of the bar):
   one `Section` each for language (first, user decision), own files, catalog,
-  backup and reset, about (name and note), every one with its title. Items are
+  backup and reset, about (name, note, "Debug info"), every one with its title. Items are
   full-width outline buttons (the Data menu's items, from the same
   `useDataControls`), the catalog mode a vertical toggle group applied on pick
   (nothing passes through ignore, so no pending mode), the language a toggle
@@ -66,11 +66,13 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (24px) around every divider — change the paddings together so edges stay
   aligned.
 - Footer (desktop only; phones: the Settings tab, same content as a page) = logo
-  and name · note · "Data" menu · EN/DE. `useDataControls` (`DataControls.tsx`)
-  holds the menu's state, dialogs (`DataDialogs.tsx`) and hidden inputs and
-  hands both `DataMenu` and `SettingsPage` the items as `DataAction`s. The Data
+  and name · note · "Debug info" · "Data" menu · EN/DE. `useDataControls`
+  (`DataControls.tsx`) holds the menu's state, dialogs (`DataDialogs.tsx`) and
+  hidden inputs and hands both `DataMenu` and `SettingsPage` the items as `DataAction`s. The Data
   menu has three groups, each headed by a `DropdownMenuLabel` (user decision):
-  "Own files", "Catalog", "Backup and reset". Explanations between items are
+  "Own files", "Catalog", "Backup and reset". "Debug info" is no menu item
+  (user decision): a ghost button left of "Data" in the desktop footer, a
+  button under About on the Settings page (`DebugButton`, `src/lib/NOTES.md`). Explanations between items are
   plain muted text, not group labels: Base UI names a group by its last
   `GroupLabel`. Own files — dates and locations one item each ("Load own …"
   while the catalog's is in use, "Use catalog …" plus a trailing "own file" note
@@ -184,9 +186,19 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Block popup spells out subject, kinds and repeat; the letter badge is hidden
   for weekly `A`. The popup names NO timetable (user decision; the tint does);
   the grid's calendar entries do. It opens where the pointer clicked; opened
-  with Enter / Space (a click with `detail` 0 and no coordinates) it opens
-  beside the block. A swipe stops it with `preventBaseUIHandler()` — Base UI
-  ignores `preventDefault()`.
+  with Enter / Space (or a click with `detail` 0 and no coordinates) it opens
+  beside the block. A swipe opens nothing; one that changes the day closes it.
+- **One popup for the whole grid** (`SubjectPopup`, state in `TimetableGrid`),
+  not a Base UI popover per block: a root per block was most of the first
+  render of a full grid. Blocks are `role="button"` divs that do what a
+  trigger did by hand: Enter / Space, `aria-expanded`, a press on the open
+  block closes it, on another moves it there (a press on a block is no outside
+  press). Pointer opens leave focus where it is, key opens move it in (Base
+  UI's trigger did the same); closing returns it to the block. A press never
+  focuses a block (`preventDefault` on mousedown): leaving a key-opened popup
+  would close it before the click could toggle. The popup shows the entry
+  under its block's `entry.key` as the grid has it now: an edit shows at once,
+  a block that left the grid takes the popup with it.
 - **Tree ↔ grid** (user decision): on desktop, hovering (mouse, read off the
   ruler by position so it works on locked, disabled cells too) or keyboard focus
   (`:focus-visible`; a tap focuses the button too on iPad and must not dim the

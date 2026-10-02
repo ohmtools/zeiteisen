@@ -59,7 +59,7 @@ re-implements primitive logic.
 - `share.ts` — the link `/s/#v=1&t=<hash>.<bits>&t=…` in the fragment (never
   reaches a server), read and written with `ufo`, validated with zod. `/s/`
   only carries the "shared" link preview card (`src/NOTES.md`);
-  `useShareLink` strips the URL back to the app root when the import
+  `useStripSharedUrl` strips the URL back to the app root when the import
   dialog closes. Anything relative the
   app fetches must resolve against `appRoot()` (`catalog.ts`), not the page:
   on `/s/` the built-in `catalog/` would miss.
@@ -143,3 +143,14 @@ re-implements primitive logic.
 - `link.ts` — tree ↔ grid: a group cell's `indexes` meet a block's timetable
   name + index.
 - `media.ts` — the `desktop` variant as a media query for script.
+- `launch.ts` / `debug.ts` — the "Debug info" (desktop footer, Settings →
+  About).
+  `launch.ts` sits in the entry chunk (`startLaunchLog` first in `main.tsx`,
+  keep it tiny): performance marks for the first render and the deferred
+  chunk, every return from the background (hidden for how long, the next
+  frame after it) and page errors, in memory only — no storage key, nothing
+  outlives the page. `debug.ts` (deferred) builds the plain-text report on
+  demand: navigation and paint timings, service worker and caches, storage
+  sizes, counts of profiles, timetables and subjects. Never names, notes or
+  file contents. A launch that felt slow while its numbers stay small was
+  slow before the page existed (the system starting or waking the app).

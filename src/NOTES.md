@@ -6,15 +6,14 @@
   primitives.
 - **First paint = the grid.** `App.tsx` statically imports only the shell (view
   switch, week nav, day toggle, grid, footer, tab bar), the state hooks and what
-  they need. Sidebar, dialogs, toaster, the footer's "Data" menu and the
-  phones' Settings page come from
-  ONE deferred chunk: `components/deferred.ts` re-exports them and App `lazy()`s
-  each through the same `import()`. Anything new that is not the grid goes
-  behind that import. Fallbacks never shift the layout (sidebar: `null`, fixed
-  column; Settings page: `null`, its own tab; Data menu: a disabled
-  look-alike button). `vite.config.ts` names only a `react` chunk group, no catch-all
-  `vendor`, so `ics`, `react-day-picker` and base-ui dialogs stay next to their
-  only user.
+  they need. Sidebar, dialogs, toaster, the footer's "Data" menu and "Debug
+  info" button and the phones' Settings page come from ONE deferred chunk: `components/deferred.ts`
+  re-exports them and App `lazy()`s each through the same `import()`. Anything
+  new that is not the grid goes behind that import. Fallbacks never shift the
+  layout (sidebar: `null`, fixed column; Settings page: `null`, its own tab;
+  Data menu and Debug info: disabled look-alike buttons). `vite.config.ts` names only a
+  `react` chunk group, no catch-all `vendor`, so `ics`, `react-day-picker` and
+  base-ui dialogs stay next to their only user.
 - A tab left open across a deploy asks for chunk names that no longer exist
   (`autoUpdate`: the new service worker takes over and drops the old
   precache). `main.tsx` reloads on `vite:preloadError` (at most once a
@@ -26,18 +25,26 @@
   scripts, `modulepreload`s and stylesheet `dist/index.html` names (gzip).
   `week.ts` writes ISO days by hand (`isoDay`) because date-fns' `format`
   alone brought ~4 KB gzip of formatter and locale into it.
+- The first render's CPU time matters as much (measured with a populated
+  profile at 6x CPU throttle; a phone is that slow). Nothing App or the grid
+  renders at startup may hash timetables (`Subjects.hash()` is an ohash over
+  every subject, uncached on purpose; user decision: no hash cache, here or in
+  primitives — keep hashing off the startup path instead): the picker builds
+  its rows only while shown, the share link and the outside-catalog list live
+  in the deferred chunk or are computed on click. Per-block component cost multiplies by
+  hundreds of blocks (hence one grid popup, `components/NOTES.md`). The Debug
+  info (`src/lib/NOTES.md`) shows these timings on a real device.
 - "Now" is `useNow()` (state, ticks every minute), never `new Date()` in
   render: the React Compiler caches that forever. No function called during
   render may be named `use…` unless it is a hook: the compiler then skips the
   whole component, silently (App was, over `useCatalogDates`).
-- `App.tsx` holds shell state: view, week, phone tab, tree ↔ grid highlight
-  and jump, and which of its four dialogs is open (picker, update, import, subject
-  info).
-  Dialogs sit outside the sidebar because they belong to no section, and the
-  import one must work before a profile holds anything. A link opened
-  directly is read on the first render; `useShareLink` strips the URL when
-  the import dialog closes (import or cancel), so a reload keeps the link;
-  a link some profile already shares exactly opens no dialog.
+- `App.tsx` holds shell state: view, week, phone tab, tree ↔ grid highlight and
+  jump, and which of its four dialogs is open (picker, update, import, subject
+  info). Dialogs sit outside the sidebar because they belong to no section, and
+  the import one must work before a profile holds anything. A link opened
+  directly is read on the first render; `useStripSharedUrl` strips the URL when the
+  import dialog closes (import or cancel), so a reload keeps the link; a link
+  some profile already shares exactly opens no dialog.
 - Toasts only through `@/lib/toast`, never `sonner` directly.
 - `src/index.css` is shadcn's generated CSS plus the `desktop` variant,
   nothing else.
@@ -47,10 +54,13 @@
 - `src/i18n.ts` is the ONLY importer of paraglide; components do
   `import { m } from "@/i18n"`. `localized()` picks a `{ de, en }` value from
   catalog / dates files, never a message.
-- Another tab's language switch reloads this tab too
-  (`followLocaleOfOtherTabs`, from `main.tsx`), as `setLocale` reloads its
-  own: paraglide reads the locale anew on every message, so the next render
-  would otherwise mix both languages.
+- A page keeps the locale it started with: `src/i18n.ts` overwrites
+  paraglide's `getLocale` with the first answer, because paraglide otherwise
+  re-reads localStorage on every message (thousands per full grid render). It
+  is safe only because every locale change reloads: `setLocale`, another tab's
+  switch (`followLocaleOfOtherTabs`, from `main.tsx`, which compares with
+  paraglide's own uncached resolver), a restored backup and "Delete data…".
+  Anything new that changes the locale without a reload breaks this.
 - A `{count}` that can be 1 is a plural variant (`declarations`,
   `countPlural=one` / `other`, see `picker_added`), not a second message.
 - A profile or timetable name inside a sentence is quoted in the message

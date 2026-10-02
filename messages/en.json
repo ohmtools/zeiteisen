@@ -434,5 +434,12 @@
   "notes_task": "Task: {text}",
   "notes_count": "{count} / {max} characters",
   "notes_full": "Limit reached: {max} characters.",
-  "notes_file_name": "zeiteisen-notes-{date}.txt"
+  "notes_file_name": "zeiteisen-notes-{date}.txt",
+  "debug_menu": "Debug info",
+  "debug_title": "Debug info",
+  "debug_text": "Technical details about this device and this app session, for a bug report. No names and no notes.",
+  "debug_loading": "Collecting…",
+  "debug_copy": "Copy",
+  "toast_debug_copied": "Debug info copied.",
+  "toast_debug_failed": "Could not copy. Select the text and copy it by hand."
 }

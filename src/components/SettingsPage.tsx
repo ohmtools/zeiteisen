@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import { getLocale, locales, m, setLocale } from "@/i18n";
 import { Brand } from "@/components/Brand";
+import { DebugButton } from "@/components/DebugDialog";
 import {
   CATALOG_MODES,
   MODE_ICON,
@@ -118,6 +119,7 @@ export function SettingsPage({ className, ...props }: DataProps & { className?: 
           <CardContent className="flex flex-col gap-2">
             <Brand />
             <p className="text-muted-foreground">{m.footer_note()}</p>
+            <DebugButton variant="outline" className="mt-2 w-full justify-start" />
           </CardContent>
         </Section>
       </div>

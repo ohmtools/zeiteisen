@@ -72,8 +72,10 @@ goes through primitives `storage.ts`.
   writing (every pointer move would reach the other tabs) and saves on
   release. A refused write only loses the layout: no toast.
 - `useOnline` — owns nothing; only explains the catalog, nothing waits on it.
-- `useShareLink` — builds the link button's URL and strips the address bar on
-  mount: the URL never mirrors state.
+- `useShareLink` — `useStripSharedUrl` (App) strips the address bar once the
+  import dialog closes: the URL never mirrors state. `shareLinkOf` builds the
+  link button's URL in `ExportButtons`, not in App: encoding hashes every
+  timetable of the profile, which the first render has no use for.
 - `useInstallHint` — iOS browser tab (not standalone): one toast, once per
   device (`tt.ioshint.v1`), because Safari deletes script storage after 7
   days without a visit unless the app is on the home screen.

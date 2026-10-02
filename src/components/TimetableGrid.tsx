@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { cn } from "cn";
 import { localized, m } from "@/i18n";
 import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
-import { SubjectBlock } from "@/components/SubjectBlock";
+import { SubjectBlock, SubjectPopup } from "@/components/SubjectBlock";
 import { Badge } from "@/components/ui/badge";
 import { NowLine } from "@/components/NowLine";
 import type { GlobalEvent } from "@/lib/primitives/meta";
@@ -67,6 +67,28 @@ export function TimetableGrid({
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   // The subject under the mouse: its other blocks get a faint ring.
   const [hovered, setHovered] = useState<string | null>(null);
+  // The one details popup, by the block's `entry.key`: it shows the entry
+  // under that key as the grid has it now, so an edit shows at once and a
+  // block that left the grid (another tab, another week) takes it along.
+  // `open` turns false first, so the details stay for the closing animation.
+  const [popup, setPopup] = useState<{
+    key: string;
+    open: boolean;
+    point: { x: number; y: number };
+    block: HTMLElement;
+    keyboard: boolean;
+  } | null>(null);
+  const popupEntry = popup && (entries.find((entry) => entry.key === popup.key) ?? null);
+  const closePopup = () => setPopup((shown) => shown && { ...shown, open: false });
+  // A press on the open block closes the popup, as a trigger's would; on any
+  // other block it moves there.
+  const pressBlock =
+    (entry: Entry) => (point: { x: number; y: number }, block: HTMLElement, keyboard: boolean) =>
+      setPopup((shown) =>
+        shown?.open && shown.key === entry.key
+          ? { ...shown, open: false }
+          : { key: entry.key, open: true, point, block, keyboard },
+      );
 
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i);
   const { grid, list } = byDay(entries);
@@ -93,7 +115,11 @@ export function TimetableGrid({
         const start = swipeStart.current;
         swipeStart.current = null;
         if (!start) return;
-        onSelectDay(swipeTarget(selectedDay, event.clientX - start.x, event.clientY - start.y));
+        const next = swipeTarget(selectedDay, event.clientX - start.x, event.clientY - start.y);
+        // A press on a block is no outside press (`SubjectPopup`), so a swipe
+        // that starts on one closes the popup here.
+        if (next !== selectedDay) closePopup();
+        onSelectDay(next);
       }}
       onPointerCancel={() => {
         swipeStart.current = null;
@@ -178,10 +204,8 @@ export function TimetableGrid({
                     dimmed={dimmed(entry)}
                     related={related(entry)}
                     onHover={setHovered}
-                    onInfo={onInfo}
-                    onJump={() =>
-                      onJump?.({ timetableName: entry.timetableName, index: entry.index })
-                    }
+                    expanded={popup?.open === true && popup.key === entry.key}
+                    onPress={pressBlock(entry)}
                   />
                 ))}
                 {week?.today === day && <NowLine firstHour={FIRST_HOUR} lastHour={LAST_HOUR} />}
@@ -230,8 +254,8 @@ export function TimetableGrid({
                 dimmed={dimmed(entry)}
                 related={related(entry)}
                 onHover={setHovered}
-                onInfo={onInfo}
-                onJump={() => onJump?.({ timetableName: entry.timetableName, index: entry.index })}
+                expanded={popup?.open === true && popup.key === entry.key}
+                onPress={pressBlock(entry)}
               />
             ))}
             {otherEvents.length === 0 && list.length === 0 && (
@@ -240,6 +264,21 @@ export function TimetableGrid({
           </div>
         </div>
       </div>
+
+      <SubjectPopup
+        open={popup?.open === true}
+        entry={popupEntry}
+        point={popup?.point ?? { x: 0, y: 0 }}
+        block={popup?.block ?? null}
+        keyboard={popup?.keyboard ?? false}
+        unclear={popupEntry !== null && unclear(popupEntry)}
+        onClose={closePopup}
+        onJump={() =>
+          popupEntry &&
+          onJump?.({ timetableName: popupEntry.timetableName, index: popupEntry.index })
+        }
+        onInfo={onInfo}
+      />
     </div>
   );
 }

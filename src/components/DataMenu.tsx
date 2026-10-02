@@ -29,8 +29,8 @@ type TriggerProps = {
 // that is no profile's business. Where dates, locations and degrees come from
 // (the catalog or the user's own files), how the catalog is used and where it
 // is read from, and the backup of it all — one headed group each. Phones get
-// the same as the Settings page. Lives in the deferred chunk; App shows a
-// disabled look-alike trigger until it arrives.
+// the same as the Settings page. Lives in the deferred
+// chunk; App shows a disabled look-alike trigger until it arrives.
 export function DataMenu({ trigger, children, ...props }: DataProps & TriggerProps) {
   const { own, ownHint, catalogUrl, backup, elements } = useDataControls(props);
   // "Catalog" cycles a pending mode while the menu is open; it is applied when

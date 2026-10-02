@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { startOfDay } from "date-fns";
-import { ChevronDown, Database } from "lucide-react";
+import { Bug, ChevronDown, Database } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
 import { DayToggle } from "@/components/DayToggle";
@@ -26,7 +26,7 @@ import { useOnline } from "@/hooks/useOnline";
 import { useOwnData } from "@/hooks/useOwnData";
 import { useSemesterDates } from "@/hooks/useSemesterDates";
 import { useProfiles } from "@/hooks/useProfiles";
-import { useShareLink } from "@/hooks/useShareLink";
+import { useStripSharedUrl } from "@/hooks/useShareLink";
 import { Catalog, CatalogKind, degreeProgramOf } from "@/lib/primitives/catalog";
 import { isKnownSharedProfile } from "@/lib/primitives/profile";
 import type { Day } from "@/lib/primitives/subject";
@@ -49,6 +49,7 @@ const AppDialogs = lazy(() => deferred().then((d) => ({ default: d.AppDialogs })
 const SubjectInfoDialog = lazy(() => deferred().then((d) => ({ default: d.SubjectInfoDialog })));
 const AppToaster = lazy(() => deferred().then((d) => ({ default: d.AppToaster })));
 const DataMenu = lazy(() => deferred().then((d) => ({ default: d.DataMenu })));
+const DebugButton = lazy(() => deferred().then((d) => ({ default: d.DebugButton })));
 const SettingsPage = lazy(() => deferred().then((d) => ({ default: d.SettingsPage })));
 const NotesSection = lazy(() => deferred().then((d) => ({ default: d.NotesSection })));
 
@@ -106,7 +107,7 @@ export default function App() {
   // The desktop strip's height and folding.
   const notesStrip = useNotesStrip();
   // A link opened directly is an import like any other: read it on the first
-  // render (`useShareLink` strips the URL once the dialog closes), and let
+  // render (`useStripSharedUrl` strips the URL once the dialog closes), and let
   // the dialog ask for a name and which timetables to take instead of
   // creating a profile behind the user's back. Reopening a link this device already holds (the same
   // timetables with the same selection) opens no dialog.
@@ -131,9 +132,8 @@ export default function App() {
   // The timetable the update dialog is asking about, by name.
   const [subjectInfo, setSubjectInfo] = useState<SubjectInformation | null>(null);
   const [updating, setUpdating] = useState<TimetableName | null>(null);
-  // The link behind the share button; the global dates never go in it. The
-  // opened link stays in the address bar until the import dialog closes.
-  const share = useShareLink(profiles.active, importing);
+  // An opened link stays in the address bar until the import dialog closes.
+  useStripSharedUrl(importing);
   const timetables = profiles.timetables;
   const hasTimetables = timetables.length > 0;
   // Phones show one page at a time (`TabBar`): grid, groups, notes or
@@ -263,7 +263,6 @@ export default function App() {
                 activeName={profiles.activeName}
                 locked={profiles.locked}
                 dates={dates.dates}
-                share={share}
                 catalog={catalog}
                 onSelect={profiles.select}
                 onOpenAdd={() => setPicking("new-profile")}
@@ -421,6 +420,16 @@ function Footer({ data }: { data: DataProps }) {
           {m.footer_note()}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Desktop only; phones have it on the Settings page, under About. */}
+          <Suspense
+            fallback={
+              <Button variant="ghost" size="xs" disabled>
+                <DebugTriggerContent />
+              </Button>
+            }
+          >
+            <DebugButton variant="ghost" size="xs" />
+          </Suspense>
           <Suspense
             fallback={
               <Button variant="ghost" size="xs" disabled>
@@ -450,6 +459,16 @@ function isNotesShortcut(event: KeyboardEvent): boolean {
   if (target.isContentEditable) return false;
   return !target.closest(
     "input, textarea, select, [role=dialog], [role=alertdialog], [role=menu], [role=listbox]",
+  );
+}
+
+// What `DebugButton` shows, for its fallback.
+function DebugTriggerContent() {
+  return (
+    <>
+      <Bug data-icon="inline-start" />
+      {m.debug_menu()}
+    </>
   );
 }
 
