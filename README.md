@@ -121,3 +121,7 @@ ZEITEISEN_SSH=ssh://root@example.org:2222
 ZEITEISEN_CATALOG_DIR=.local/share/zeiteisen/catalog  # in the owner's home
 ZEITEISEN_CATALOG_USER=zeiteisen
 ```
+
+## License
+
+BSD-3-Clause, see [LICENSE](LICENSE).
