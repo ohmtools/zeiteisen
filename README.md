@@ -51,11 +51,15 @@ push.
 
 The `Containerfile` builds in two stages: Node builds the app, the image only
 gets `dist/` and [static-web-server](https://static-web-server.net), no Node,
-no sources. It runs as `nobody` and serves on port 8080. The headers live in
-`static-web-server.toml`: hashed files under `assets/` are cached for a year
-(`immutable`), everything else (`index.html`, `sw.js`, manifest, icons,
-catalog) is revalidated on every request by `Last-Modified`. Compression and
-TLS are the reverse proxy's job.
+no sources. It runs as `nobody` and serves on port 8080. Every header the app
+needs lives in `static-web-server.toml`, so any proxy in front gets them
+without configuration: Content-Security-Policy, the cross-origin isolation
+headers (COOP, COEP, CORP), Permissions-Policy, Referrer-Policy,
+`X-Frame-Options`, `nosniff`, and the caching (hashed files under `assets/`
+for a year, `immutable`; everything else, `index.html`, `sw.js`, manifest,
+icons, catalog, revalidated on every request by `Last-Modified`). It also
+compresses its responses. Only TLS and its headers (HSTS) are the
+reverse proxy's job.
 
 ```sh
 podman build -t zeiteisen . && podman run --rm -p 8080:8080 -v ./catalog:/public/catalog:ro zeiteisen
@@ -100,14 +104,16 @@ ghcr package is private, log in once with a classic token with
 `read:packages`:
 `podman login ghcr.io --authfile ~/.config/containers/auth.json`.
 
-Caddyfile:
+Caddyfile, adding HSTS (the container's own headers pass through unchanged):
 
 ```caddyfile
 zeiteisen.example.org {
-	encode zstd gzip
+	header ?Strict-Transport-Security "max-age=63072000; includeSubDomains"
 	reverse_proxy 127.0.0.1:8081
 }
 ```
+
+Keep the published port on `127.0.0.1`: the proxy is the only way in.
 
 ### Catalog upload
 

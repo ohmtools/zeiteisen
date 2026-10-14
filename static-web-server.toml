@@ -1,27 +1,40 @@
 # static-web-server inside the container (https://static-web-server.net).
-# TLS and compression are the reverse proxy's job.
+# The image brings every header the app needs; the reverse proxy only adds
+# TLS and what belongs to it (HSTS, Alt-Svc).
 
 [general]
 host = "0.0.0.0"
 port = 8080
 root = "/public"
 log-level = "warn"
-compression = false
+compression = true
 directory-listing = false
 # Own cache rules instead of the built-in ones (those would cache sw.js long)
 cache-control-headers = false
 
 [advanced]
 
-# Revalidate everything on every request by Last-Modified (index.html, sw.js,
-# manifest, icons, the mounted catalog) …
+# Every response: revalidate on every request by Last-Modified (index.html,
+# sw.js, manifest, icons, the mounted catalog) and lock the page down. No
+# backend and no third party: everything is same-origin except a catalog the
+# user points elsewhere (connect-src https:). Styles need 'unsafe-inline' for
+# the <style> elements libraries inject at runtime; scripts stay 'self' only,
+# which is why public/dark.js is a file and not inline.
 [[advanced.headers]]
 source = "**"
 [advanced.headers.headers]
 Cache-Control = "no-cache"
+Content-Security-Policy = "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+Cross-Origin-Opener-Policy = "same-origin"
+Cross-Origin-Embedder-Policy = "require-corp"
+Cross-Origin-Resource-Policy = "same-origin"
+Permissions-Policy = "accelerometer=(), browsing-topics=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=()"
+Referrer-Policy = "strict-origin-when-cross-origin"
 X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-Permitted-Cross-Domain-Policies = "none"
 
-# … except the hashed build files, which never change
+# The hashed build files never change
 [[advanced.headers]]
 source = "/assets/**"
 [advanced.headers.headers]
