@@ -32,12 +32,13 @@
   invalidate client cache. `--stdout` print instead of write. Args go through
   `node:util` `parseArgs` (strict: unknown flag or not exactly one dir is an
   error, `-h` usage). `npm run catalog-remote` run it locally on `./catalog`
-  and tar that over ssh (`ssh "$ZEITEISEN_SSH"`, e.g. `ssh://root@host:2222`,
-  sourced from the gitignored `.env.local`; unset stops it before indexing: the
-  server's address stays out of the public repo) onto
-  `/home/zeiteisen/.local/share/zeiteisen/catalog`, the container's catalog
-  volume (user decision: no JavaScript runtime on the server; overwrite, never
-  delete). `modified` is the local mtime, which tar keeps on the server.
+  and tar that over ssh (`ssh "$ZEITEISEN_SSH"`, e.g. `ssh://root@host:2222`)
+  into `$ZEITEISEN_CATALOG_DIR` (relative to the home of
+  `$ZEITEISEN_CATALOG_USER`, as `~user/dir` expanded by the server's shell), the
+  container's catalog volume, unpacked as that user (all three sourced from the gitignored
+  `.env.local`; one unset stops it before indexing: the server's details stay
+  out of the public repo; user decision: no JavaScript runtime on the server;
+  overwrite, never delete). `modified` is the local mtime, which tar keeps on the server.
 - `scripts/schemas.mjs` hold the `schemas` map and `z.toJSONSchema` options,
   shared by `json-schema.mjs` and `skill.mjs`, so both write the same bytes.
 - `scripts/skill.mjs` (`npm run skill`, part of `npm run build`) write the four

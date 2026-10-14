@@ -1,6 +1,6 @@
 {
   "name": "zeiteisen",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,7 +22,7 @@
     "schema:catalog": "node scripts/json-schema.mjs catalog",
     "catalog": "node scripts/catalog-index.mjs",
     "skill": "node scripts/skill.mjs",
-    "catalog-remote": "{ [ ! -f .env.local ] || . ./.env.local; } && : ${ZEITEISEN_SSH:?set ZEITEISEN_SSH in .env.local, e.g. ZEITEISEN_SSH=ssh://root@example.org:22} && npm run catalog -- ./catalog && tar -C catalog -c . | ssh \"$ZEITEISEN_SSH\" 'd=/home/zeiteisen/.local/share/zeiteisen/catalog && sudo -u zeiteisen mkdir -p $d && sudo -u zeiteisen tar -C $d -x'"
+    "catalog-remote": "{ [ ! -f .env.local ] || . ./.env.local; } && : ${ZEITEISEN_SSH:?} ${ZEITEISEN_CATALOG_DIR:?} ${ZEITEISEN_CATALOG_USER:?} && npm run catalog -- ./catalog && tar -C catalog -c . | ssh \"$ZEITEISEN_SSH\" \"sudo -u $ZEITEISEN_CATALOG_USER mkdir -p ~$ZEITEISEN_CATALOG_USER/$ZEITEISEN_CATALOG_DIR && sudo -u $ZEITEISEN_CATALOG_USER tar -C ~$ZEITEISEN_CATALOG_USER/$ZEITEISEN_CATALOG_DIR -x\""
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

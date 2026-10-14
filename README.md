@@ -113,14 +113,16 @@ zeiteisen.example.org {
 
 `npm run catalog-remote` needs no Node on the server: it writes
 `catalog/index.json` locally and streams `./catalog` over ssh as a tar,
-unpacked as `zeiteisen` over the server's catalog. Files are overwritten,
-never deleted: one removed locally stays on the server, unlisted in the
-index. The server comes from `ZEITEISEN_SSH` in `.env.local` (gitignored, so
-its address stays out of the repository; an exported variable works too, and
-the script stops without either):
+unpacked as the catalog's owner over the server's catalog. Files are
+overwritten, never deleted: one removed locally stays on the server, unlisted
+in the index. Server, catalog directory and owner come from `.env.local`
+(gitignored, so they stay out of the repository; exported variables work too,
+and the script stops if one is missing):
 
 ```sh
 ZEITEISEN_SSH=ssh://root@example.org:2222
+ZEITEISEN_CATALOG_DIR=.local/share/zeiteisen/catalog  # in the owner's home
+ZEITEISEN_CATALOG_USER=zeiteisen
 ```
 
 ## Optional catalog
