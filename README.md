@@ -27,19 +27,101 @@ npm run schema:catalog       # catalog index.json
 npm run catalog -- <dir>     # (re)write <dir>/index.json from its files
 npm run skill                # AI skill schemas + public/zeiteisen-generator.zip
 
-npm run upload               # bundle the committed main, clone it fresh on the server
-npm run publish              # build on the server (no upload), replace the served site
-npm run catalog-remote       # rewrite the server catalog's index.json (no upload)
+npm run catalog-remote       # index ./catalog here, copy it onto the server's catalog
 ```
 
-The server scripts reach the server as `root` over ssh (port 2222; `npm run
-remote -- '<cmd>'` runs one command there). The project lives in
-`/home/caddy/.config/containers/zeiteisen`, the site is served from
-`…/containers/srv/zeiteisen/site` and the catalog from
-`…/containers/srv/zeiteisen/catalog`. `upload` sends a `git bundle` of `main`
-(committed changes only) and replaces the project directory with a fresh clone
-of it, so anything else there is gone; the server runs `npm ci` itself before
-building or indexing.
+## Deployment
+
+`dist/` is a plain static site; any static host serves it. Production runs it
+as a container.
+
+### Release and container image
+
+Publishing a release on GitHub runs `.github/workflows/release.yml`: lint and
+tests, then
+
+1. the build as `zeiteisen-<tag>.zip` (with `.sha256`) attached to the release,
+2. a container image `ghcr.io/ohmtools/zeiteisen`, tagged `<tag>`, `1.2.3`,
+   `1.2` and, except for pre-releases, `latest`.
+
+Set the repository variable `VITE_SITE_URL` (the deployed origin, e.g.
+`https://zeiteisen.example.org`) first: the link previews need it, for the ZIP
+and the image alike. `.github/workflows/ci.yml` lints, tests and builds every
+push.
+
+The `Containerfile` builds in two stages: Node builds the app, the image only
+gets `dist/` and [static-web-server](https://static-web-server.net), no Node,
+no sources. It runs as `nobody` and serves on port 8080. The headers live in
+`static-web-server.toml`: hashed files under `assets/` are cached for a year
+(`immutable`), everything else (`index.html`, `sw.js`, manifest, icons,
+catalog) is revalidated on every request by `Last-Modified`. Compression and
+TLS are the reverse proxy's job.
+
+```sh
+podman build -t zeiteisen . && podman run --rm -p 8080:8080 -v ./catalog:/public/catalog:ro zeiteisen
+```
+
+### Running it with Podman and Caddy
+
+The image carries no catalog: the server keeps it in
+`/home/zeiteisen/.local/share/zeiteisen/catalog`, mounted read-only at
+`/public/catalog`, so the app finds it under its default `catalog/`. Without
+the mount the app runs without a catalog. A rootless Quadlet for the user
+`zeiteisen` (`~/.config/containers/systemd/zeiteisen.container`):
+
+```ini
+[Container]
+ContainerName=zeiteisen
+Image=ghcr.io/ohmtools/zeiteisen:latest
+PublishPort=127.0.0.1:8081:8080
+Volume=%h/.local/share/zeiteisen/catalog:/public/catalog:ro
+AutoUpdate=registry
+ReadOnly=true
+DropCapability=all
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
+```
+
+```sh
+systemctl --user daemon-reload && systemctl --user start zeiteisen
+systemctl --user enable --now podman-auto-update.timer   # pulls new releases daily
+loginctl enable-linger zeiteisen                         # as root: run without a login
+```
+
+`podman auto-update` pulls the image once `latest` points to a new release and
+restarts the service; `podman auto-update` by hand does it right away. Roll
+back by pinning a tag, e.g. `Image=ghcr.io/ohmtools/zeiteisen:1.2.9`. If the
+ghcr package is private, log in once with a classic token with
+`read:packages`:
+`podman login ghcr.io --authfile ~/.config/containers/auth.json`.
+
+Caddyfile:
+
+```caddyfile
+zeiteisen.example.org {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8081
+}
+```
+
+### Catalog upload
+
+`npm run catalog-remote` needs no Node on the server: it writes
+`catalog/index.json` locally and streams `./catalog` over ssh as a tar,
+unpacked as `zeiteisen` over the server's catalog. Files are overwritten,
+never deleted: one removed locally stays on the server, unlisted in the
+index. The server comes from `ZEITEISEN_SSH` in `.env.local` (gitignored, so
+its address stays out of the repository; an exported variable works too, and
+the script stops without either):
+
+```sh
+ZEITEISEN_SSH=ssh://root@example.org:2222
+```
 
 ## Optional catalog
 
@@ -48,7 +130,7 @@ locations, subject information, semester dates and ready-made timetables do
 not have to be collected by hand. It stays client-only: these are static asset
 reads, there is no API and nothing is ever sent.
 
-```
+```text
 srv/catalog/           # the copy in this repo, dev only
   index.json           # generated: npm run catalog -- ./srv/catalog
   locations.json       # building shortcut -> name, maps link, site link
@@ -61,8 +143,8 @@ srv/catalog/           # the copy in this repo, dev only
 
 `npm run dev` mounts `srv/catalog/` at `/catalog/` (dev server only, never part
 of `dist/`). In production, serve such a directory under `catalog/` next to
-`index.html` (Caddy: same `root`, nothing to configure), or point the app
-elsewhere at build time:
+`index.html` (the container: a volume at `/public/catalog`, see Deployment),
+or point the app elsewhere at build time:
 
 ```sh
 VITE_CATALOG_URL=https://files.example.org/catalog/ npm run build

@@ -1,0 +1,15 @@
+# Read by podman and docker when building the image
+.git
+.claude
+node_modules
+dist
+dist-ssr
+dev-dist
+generated
+catalog
+srv
+*.local
+*.log
+.vscode
+.idea
+.DS_Store

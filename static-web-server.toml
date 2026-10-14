@@ -1,0 +1,28 @@
+# static-web-server inside the container (https://static-web-server.net).
+# TLS and compression are the reverse proxy's job.
+
+[general]
+host = "0.0.0.0"
+port = 8080
+root = "/public"
+log-level = "warn"
+compression = false
+directory-listing = false
+# Own cache rules instead of the built-in ones (those would cache sw.js long)
+cache-control-headers = false
+
+[advanced]
+
+# Revalidate everything on every request by Last-Modified (index.html, sw.js,
+# manifest, icons, the mounted catalog) …
+[[advanced.headers]]
+source = "**"
+[advanced.headers.headers]
+Cache-Control = "no-cache"
+X-Content-Type-Options = "nosniff"
+
+# … except the hashed build files, which never change
+[[advanced.headers]]
+source = "/assets/**"
+[advanced.headers.headers]
+Cache-Control = "public, max-age=31536000, immutable"

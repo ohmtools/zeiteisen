@@ -1,6 +1,6 @@
 {
   "name": "zeiteisen",
-  "version": "1.2.9",
+  "version": "1.2.10",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,10 +22,7 @@
     "schema:catalog": "node scripts/json-schema.mjs catalog",
     "catalog": "node scripts/catalog-index.mjs",
     "skill": "node scripts/skill.mjs",
-    "remote": "ssh -p 2222 root@server.example.org \"sudo -i -u caddy --\"",
-    "upload": "git bundle create - HEAD main | ssh -p 2222 root@server.example.org 'b=$(mktemp) && cat > $b && chmod 644 $b && rm -rf /home/caddy/.local/state/zeiteisen && sudo -u caddy git clone -q $b /home/caddy/.local/state/zeiteisen; s=$?; rm -f $b; exit $s'",
-    "publish": "npm run remote -- 'just zeiteisen publish'",
-    "catalog-remote": "npm run remote -- 'just zeiteisen catalog'"
+    "catalog-remote": "{ [ ! -f .env.local ] || . ./.env.local; } && : ${ZEITEISEN_SSH:?set ZEITEISEN_SSH in .env.local, e.g. ZEITEISEN_SSH=ssh://root@example.org:22} && npm run catalog -- ./catalog && tar -C catalog -c . | ssh \"$ZEITEISEN_SSH\" 'd=/home/zeiteisen/.local/share/zeiteisen/catalog && sudo -u zeiteisen mkdir -p $d && sudo -u zeiteisen tar -C $d -x'"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
