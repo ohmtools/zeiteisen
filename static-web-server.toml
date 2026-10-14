@@ -11,6 +11,9 @@ compression = true
 directory-listing = false
 # Own cache rules instead of the built-in ones (those would cache sw.js long)
 cache-control-headers = false
+# One worker thread per CPU plus at most this many for file reads: stays
+# within TasksMax=32 of the Quadlet on hosts with up to ~20 CPUs
+max-blocking-threads = 8
 
 [advanced]
 
