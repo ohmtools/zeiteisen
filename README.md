@@ -22,6 +22,7 @@ npm run schema              # JSON schemas (also :timetable :dates :locations :d
 npm run catalog -- <dir>    # (re)write <dir>/index.json
 npm run skill               # after editing skill/
 npm run catalog-remote      # index ./catalog and copy it to the server
+npm run release             # tag the current version and push the tag
 ```
 
 Code layout: `src/lib/primitives/` holds the domain model and core logic,
@@ -48,8 +49,10 @@ Re-run `npm run catalog` after every change. Another origin works too
 
 ## Deployment
 
-A GitHub release builds `zeiteisen-<tag>.zip` and the image
-`ghcr.io/ohmtools/zeiteisen` (`<tag>`, `1.2`, `latest`). The ZIP takes the
+`npm run release` pushes the tag `v<version>` from `package.json`; the
+workflow builds `zeiteisen-<tag>.zip` and the image `ghcr.io/ohmtools/zeiteisen`
+(`<tag>`, `1.2`, `latest`), then publishes the release (releases are
+immutable, so never create one by hand in GitHub). The ZIP takes the
 origin for its link preview images from the repository variable
 `VITE_SITE_URL` (e.g. `https://zeiteisen.example.org`).
 

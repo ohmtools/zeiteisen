@@ -1,6 +1,6 @@
 {
   "name": "zeiteisen",
-  "version": "1.2.17",
+  "version": "1.2.18",
   "private": true,
   "license": "BSD-3-Clause",
   "type": "module",
@@ -23,7 +23,8 @@
     "schema:catalog": "node scripts/json-schema.mjs catalog",
     "catalog": "node scripts/catalog-index.mjs",
     "skill": "node scripts/skill.mjs",
-    "catalog-remote": "{ [ ! -f .env.local ] || . ./.env.local; } && : ${ZEITEISEN_SSH:?} ${ZEITEISEN_CATALOG_DIR:?} ${ZEITEISEN_CATALOG_USER:?} && npm run catalog -- ./catalog && tar -C catalog -c . | ssh \"$ZEITEISEN_SSH\" \"sudo -u $ZEITEISEN_CATALOG_USER mkdir -p ~$ZEITEISEN_CATALOG_USER/$ZEITEISEN_CATALOG_DIR && sudo -u $ZEITEISEN_CATALOG_USER tar -C ~$ZEITEISEN_CATALOG_USER/$ZEITEISEN_CATALOG_DIR -x\""
+    "catalog-remote": "{ [ ! -f .env.local ] || . ./.env.local; } && : ${ZEITEISEN_SSH:?} ${ZEITEISEN_CATALOG_DIR:?} ${ZEITEISEN_CATALOG_USER:?} && npm run catalog -- ./catalog && tar -C catalog -c . | ssh \"$ZEITEISEN_SSH\" \"sudo -u $ZEITEISEN_CATALOG_USER mkdir -p ~$ZEITEISEN_CATALOG_USER/$ZEITEISEN_CATALOG_DIR && sudo -u $ZEITEISEN_CATALOG_USER tar -C ~$ZEITEISEN_CATALOG_USER/$ZEITEISEN_CATALOG_DIR -x\"",
+    "release": "git tag \"v$npm_package_version\" && git push origin \"v$npm_package_version\""
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
