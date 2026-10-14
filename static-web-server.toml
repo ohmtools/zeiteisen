@@ -1,6 +1,6 @@
 # static-web-server inside the container (https://static-web-server.net).
-# The image brings every header the app needs; the reverse proxy only adds
-# TLS and what belongs to it (HSTS, Alt-Svc).
+# The image brings every header the app needs; the reverse proxy adds TLS and
+# what belongs to it (HSTS, Alt-Svc) and compresses (Caddy: encode).
 
 [general]
 # All addresses, IPv6 and IPv4: in an IPv6-only container network
@@ -9,7 +9,8 @@ host = "::"
 port = 8080
 root = "/public"
 log-level = "warn"
-compression = true
+# Compression is the reverse proxy's job
+compression = false
 directory-listing = false
 # index.html and s/index.html are symlinks into _site/, written at container
 # start (container-start.sh). Paths resolving outside root stay forbidden.

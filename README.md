@@ -55,8 +55,8 @@ origin for its link preview images from the repository variable
 
 The image is `dist/` and [static-web-server](https://static-web-server.net)
 (Alpine) on port 8080, running as `nobody`. It sends all headers itself (CSP,
-COOP/COEP/CORP, Permissions-Policy, caching, compression; see
-`static-web-server.toml`), the proxy only adds TLS and HSTS. The only setting
+COOP/COEP/CORP, Permissions-Policy, caching; see `static-web-server.toml`),
+the proxy adds TLS, HSTS and compression. The only setting
 is `SITE_URL`, the origin for the link preview images, applied on every start
 (`container-start.sh`); empty = previews without an image. The same image
 works under any domain.
@@ -89,8 +89,7 @@ Group=65534
 [Service]
 Restart=always
 MemoryMax=64M
-# Compression runs on every request: a first visit costs ~30–70 ms CPU
-CPUQuota=50%
+CPUQuota=10%
 TasksMax=32
 
 [Install]
@@ -107,6 +106,7 @@ Caddy:
 
 ```caddyfile
 zeiteisen.example.org {
+	encode zstd gzip
 	header ?Strict-Transport-Security "max-age=63072000; includeSubDomains"
 	reverse_proxy [::1]:8081
 }
