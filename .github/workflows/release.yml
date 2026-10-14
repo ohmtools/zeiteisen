@@ -5,7 +5,8 @@ name: Release
 # 2. builds the container image (build + static-web-server) and publishes it
 #    to the GitHub Container Registry as ghcr.io/<owner>/<repo>
 # The repository variable VITE_SITE_URL (e.g. https://zeiteisen.example.org)
-# gives the link previews their image; it applies to the ZIP and the image.
+# gives the ZIP's link previews their image. The image takes it at runtime
+# instead (SITE_URL, see container-start.sh).
 on:
   release:
     types: [published]
@@ -70,7 +71,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VITE_SITE_URL=${{ vars.VITE_SITE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

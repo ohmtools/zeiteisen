@@ -83,6 +83,10 @@
   impossible: the state is in the fragment, which no server or crawler ever
   sees, and rendering per link would need a backend. Absolute URLs come from
   `VITE_SITE_URL` (`.env`); empty = no preview image, the build warns. The
+  container image builds with the placeholder `__SITE_URL__` instead and
+  `container-start.sh` fills in `SITE_URL` on every start (user decision: one
+  image for any domain); the `Containerfile` fails if a file other than the
+  two `index.html` gets the placeholder. The
   PNGs are marketing, own colours allowed; source `scripts/og/`. They are
   kept out of the service worker precache. The dev server needs nothing for
   `/s/`: Vite's SPA fallback serves `index.html`.

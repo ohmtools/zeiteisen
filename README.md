@@ -49,14 +49,17 @@ Re-run `npm run catalog` after every change. Another origin works too
 ## Deployment
 
 A GitHub release builds `zeiteisen-<tag>.zip` and the image
-`ghcr.io/ohmtools/zeiteisen` (`<tag>`, `1.2`, `latest`). Set the repository
-variable `VITE_SITE_URL` (e.g. `https://zeiteisen.example.org`) for the link
-preview images.
+`ghcr.io/ohmtools/zeiteisen` (`<tag>`, `1.2`, `latest`). The ZIP takes the
+origin for its link preview images from the repository variable
+`VITE_SITE_URL` (e.g. `https://zeiteisen.example.org`).
 
-The image is just `dist/` and [static-web-server](https://static-web-server.net)
-on port 8080, running as `nobody`. It sends all headers itself (CSP,
+The image is `dist/` and [static-web-server](https://static-web-server.net)
+(Alpine) on port 8080, running as `nobody`. It sends all headers itself (CSP,
 COOP/COEP/CORP, Permissions-Policy, caching, compression; see
-`static-web-server.toml`), the proxy only adds TLS and HSTS.
+`static-web-server.toml`), the proxy only adds TLS and HSTS. The only setting
+is `SITE_URL`, the origin for the link preview images, applied on every start
+(`container-start.sh`); empty = previews without an image. The same image
+works under any domain.
 
 Rootless Quadlet in `~/.config/containers/systemd/`, `zeiteisen.network`:
 
@@ -75,6 +78,7 @@ PublishPort=[::1]:8081:8080
 # Own network; otherwise pasta's guest address is used, which can be confusing
 Network=zeiteisen.network
 Volume=%h/.local/share/zeiteisen/catalog:/public/catalog:ro
+Environment=SITE_URL=https://zeiteisen.example.org
 
 ReadOnly=true
 NoNewPrivileges=true

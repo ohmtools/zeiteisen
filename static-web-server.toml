@@ -3,12 +3,17 @@
 # TLS and what belongs to it (HSTS, Alt-Svc).
 
 [general]
-host = "0.0.0.0"
+# All addresses, IPv6 and IPv4: in an IPv6-only container network
+# "0.0.0.0" (IPv4 only) would leave the server unreachable
+host = "::"
 port = 8080
 root = "/public"
 log-level = "warn"
 compression = true
 directory-listing = false
+# index.html and s/index.html are symlinks into _site/, written at container
+# start (container-start.sh). Paths resolving outside root stay forbidden.
+disable-symlinks = false
 # Own cache rules instead of the built-in ones (those would cache sw.js long)
 cache-control-headers = false
 # One worker thread per CPU plus at most this many for file reads: stays
