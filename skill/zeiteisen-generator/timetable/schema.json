@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "repeat": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "I"
+              },
+              "dates": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "professor": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "location": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "startTime": {
+                      "type": "object",
+                      "properties": {
+                        "hour": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 23
+                        },
+                        "minute": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 59
+                        }
+                      },
+                      "required": [
+                        "hour",
+                        "minute"
+                      ]
+                    },
+                    "endTime": {
+                      "type": "object",
+                      "properties": {
+                        "hour": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 23
+                        },
+                        "minute": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 59
+                        }
+                      },
+                      "required": [
+                        "hour",
+                        "minute"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "startTime",
+                    "endTime"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "type",
+              "dates"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "G",
+                  "U",
+                  "G1",
+                  "G2",
+                  "U1",
+                  "U2",
+                  "SH1",
+                  "SH2"
+                ]
+              },
+              "day": {
+                "type": "string",
+                "enum": [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "other"
+                ]
+              },
+              "professor": {
+                "default": "",
+                "type": "string"
+              },
+              "location": {
+                "default": "",
+                "type": "string"
+              },
+              "startTime": {
+                "type": "object",
+                "properties": {
+                  "hour": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 23
+                  },
+                  "minute": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 59
+                  }
+                },
+                "required": [
+                  "hour",
+                  "minute"
+                ]
+              },
+              "endTime": {
+                "type": "object",
+                "properties": {
+                  "hour": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 23
+                  },
+                  "minute": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 59
+                  }
+                },
+                "required": [
+                  "hour",
+                  "minute"
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "day",
+              "startTime",
+              "endTime"
+            ]
+          }
+        ]
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "SU",
+            "Pr",
+            "Ue",
+            "Tu",
+            "S",
+            "WF"
+          ]
+        }
+      },
+      "degreeProgram": {
+        "type": "string",
+        "minLength": 1
+      },
+      "group": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "index": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "category",
+          "index"
+        ]
+      },
+      "onDemand": {
+        "default": false,
+        "type": "boolean"
+      },
+      "note": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "repeat",
+      "name",
+      "kind"
+    ]
+  }
+}
