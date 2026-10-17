@@ -80,7 +80,10 @@ directory-specific knowledge there, not here.
 - `src/components/NOTES.md` — shell, tab bar, grid, tree ↔ grid, group tree.
 - `src/components/ui/NOTES.md` — shadcn rules and hand-edits.
 - `scripts/NOTES.md` — schema, catalog index and AI skill zip generators.
-- `skill/zeiteisen-generator/` — the downloadable AI skill (Data menu).
+- `skill/zeiteisen-generator/` — the downloadable AI skill (Data menu), also
+  the plugin `zeiteisen` of the `ohmtools/claude-plugins` marketplace, which
+  names this path: moving the folder breaks the plugin. After editing the
+  primitives, run `npm run skill` and commit the schemas.
 
 ## Stack / tooling
 

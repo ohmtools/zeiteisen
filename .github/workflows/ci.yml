@@ -18,3 +18,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Committed skill schemas match the primitives
+        run: |
+          if [ -n "$(git status --porcelain -- skill/)" ]; then
+            git status --short -- skill/
+            echo "::error::skill/ differs from what npm run skill writes: run it and commit the result"
+            exit 1
+          fi

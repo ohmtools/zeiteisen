@@ -43,13 +43,16 @@
   shared by `json-schema.mjs` and `skill.mjs`, so both write the same bytes.
 - `scripts/skill.mjs` (`npm run skill`, part of `npm run build`) write the four
   `skill/zeiteisen-generator/<kind>/schema.json` (timetable, dates, locations,
-  degree; git-ignored, identical to `npm run schema:<kind>`), then zip
+  degree; identical to `npm run schema:<kind>`), then zip
   `skill/zeiteisen-generator/` with `fflate` to `public/zeiteisen-generator.zip`
   (git-ignored, precached by the PWA). One top-level `zeiteisen-generator/`
   folder in the zip, as Claude's skill upload expects; dotfiles and
   `__pycache__` skipped; a fixed entry date, so an unchanged skill gives the
   same zip. Optional positional = other output path; `parseArgs` strict, `-h`.
   The skill's own texts live in `skill/`; edit them there and re-run.
+  The schemas are committed, because the `ohmtools/claude-plugins`
+  marketplace installs the skill folder straight from git as the plugin
+  `zeiteisen`; CI fails when `npm run build` changes anything in `skill/`.
 - `scripts/app-icons.mjs` (`node scripts/app-icons.mjs`, by hand after a
   logo change) renders `public/logo.svg` to the app icons, all committed:
   `apple-touch-icon.png` 180×180 full-bleed (square backdrop, no rim: iOS

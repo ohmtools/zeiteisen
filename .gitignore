@@ -36,8 +36,7 @@ public/_*.html
 .claude/worktrees
 .claude/settings.local.json
 
-# the AI skill: schemas generated from the primitives, zip built by `npm run skill`
-skill/zeiteisen-generator/*/schema.json
+# the AI skill's zip, built by `npm run skill` (its schemas are committed)
 public/zeiteisen-generator.zip
 
 # local env (not deployed via upload)
