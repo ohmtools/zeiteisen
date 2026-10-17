@@ -82,8 +82,10 @@ directory-specific knowledge there, not here.
 - `scripts/NOTES.md` — schema, catalog index and AI skill zip generators.
 - `skill/zeiteisen-generator/` — the downloadable AI skill (Data menu), also
   the plugin `zeiteisen` of the `ohmtools/claude-plugins` marketplace, which
-  names this path: moving the folder breaks the plugin. After editing the
-  primitives, run `npm run skill` and commit the schemas.
+  names this path: moving the folder breaks the plugin. Its manifest is
+  `.claude-plugin/plugin.json` there (Claude.ai refuses the plugin without
+  it). After editing the primitives, run `npm run skill` and commit the
+  schemas.
 
 ## Stack / tooling
 

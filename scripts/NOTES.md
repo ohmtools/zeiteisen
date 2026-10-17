@@ -53,6 +53,8 @@
   The schemas are committed, because the `ohmtools/claude-plugins`
   marketplace installs the skill folder straight from git as the plugin
   `zeiteisen`; CI fails when `npm run build` changes anything in `skill/`.
+  The plugin's manifest `skill/zeiteisen-generator/.claude-plugin/plugin.json`
+  stays out of the zip as a dotfile.
 - `scripts/app-icons.mjs` (`node scripts/app-icons.mjs`, by hand after a
   logo change) renders `public/logo.svg` to the app icons, all committed:
   `apple-touch-icon.png` 180×180 full-bleed (square backdrop, no rim: iOS
