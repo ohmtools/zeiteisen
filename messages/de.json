@@ -17,6 +17,7 @@
   "export_start": "Beginn",
   "export_text": "Es ist keine Datei mit globalen Terminen geladen. Wähle den Zeitraum für den Export. Die Termine werden Woche für Woche aufgelöst, ein Kalendereintrag pro Datum.",
   "export_title": "Kalender exportieren",
+  "source_code": "Quellcode auf GitHub",
   "footer_note": "Daten bleiben im Browser.",
   "grid_allday": "Ganztägig",
   "grid_day_pick": "Tag",

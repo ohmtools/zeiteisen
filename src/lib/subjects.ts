@@ -1,4 +1,4 @@
-import { parseISO } from "date-fns";
+import { addDays, parseISO } from "date-fns";
 import {
   Day,
   formatTime,
@@ -12,6 +12,7 @@ import {
   type Time,
 } from "@/lib/primitives/subject";
 import { getLocale, localized, m } from "@/i18n";
+import { DAYS } from "@/lib/primitives/week";
 import {
   degreeTableOf,
   infoEntry,
@@ -94,6 +95,19 @@ export function dateLabel(date: string): string {
     day: "numeric",
     month: "numeric",
   }).format(parseISO(date));
+}
+
+// "21.10." / "10/21": a weekday's date in the week view.
+export function shortDate(date: Date, withMonth = true): string {
+  return new Intl.DateTimeFormat(
+    getLocale(),
+    withMonth ? { day: "numeric", month: "numeric" } : { day: "numeric" },
+  ).format(date);
+}
+
+// The date of a weekday in the week starting on Monday `weekStart`.
+export function dateOf(weekStart: Date, day: Day): Date {
+  return addDays(weekStart, DAYS.indexOf(day));
 }
 
 // "Mon 08:00-09:30". A class can be listed more than once in the same group

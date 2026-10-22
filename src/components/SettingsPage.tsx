@@ -2,6 +2,7 @@ import { cn } from "cn";
 import { getLocale, locales, m, setLocale } from "@/i18n";
 import { Brand } from "@/components/Brand";
 import { DebugButton } from "@/components/DebugDialog";
+import { GitHubLink } from "@/components/GitHubLink";
 import {
   CATALOG_MODES,
   MODE_ICON,
@@ -117,7 +118,10 @@ export function SettingsPage({ className, ...props }: DataProps & { className?: 
             <CardTitle>{m.data_section_about()}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            <Brand />
+            <div className="flex items-center justify-between gap-2">
+              <Brand />
+              <GitHubLink />
+            </div>
             <p className="text-muted-foreground">{m.footer_note()}</p>
             <DebugButton variant="outline" className="mt-2 w-full justify-start" />
           </CardContent>

@@ -1,10 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { addWeeks } from "date-fns";
 import { Bug, ChevronDown, Database } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
 import { DayToggle } from "@/components/DayToggle";
 import { Brand } from "@/components/Brand";
+import { GitHubLink } from "@/components/GitHubLink";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { SubjectInformation } from "@/lib/primitives/meta";
 import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
@@ -226,7 +228,11 @@ export default function App() {
     const containsToday = shownWeek(null, now) === weekTime;
     const today = dayOf(now);
     const events = eventsForWeek(dates.dates, weekStart);
-    week = { ...events, today: containsToday && today !== "other" ? today : null };
+    week = {
+      ...events,
+      today: containsToday && today !== "other" ? today : null,
+      start: weekStart,
+    };
     entries = weekEntries(timetables, weekStart, events);
   }
 
@@ -327,7 +333,12 @@ export default function App() {
                   />
                 )}
               </div>
-              <DayToggle value={day} onChange={pickDay} className="md:hidden" />
+              <DayToggle
+                value={day}
+                onChange={pickDay}
+                weekStart={view === "week" ? weekStart : null}
+                className="md:hidden"
+              />
               <ViewSwitch value={view} onChange={setView} />
             </div>
             {/* Below `desktop` the grid fills the height the dock leaves and
@@ -349,6 +360,11 @@ export default function App() {
                 onInfo={setSubjectInfo}
                 selectedDay={day}
                 onSelectDay={pickDay}
+                onSwipeWeek={
+                  view === "week"
+                    ? (direction) => pickWeek(addWeeks(weekStart, direction))
+                    : undefined
+                }
               />
             </div>
             {/* Desktop: a strip of the height the user dragged it to (144px
@@ -420,7 +436,7 @@ export default function App() {
   );
 }
 
-// Logo and name · note · Data menu · language. The menu comes with the deferred chunk; until
+// Logo and name · note · Debug info · Data menu · language · GitHub. The menu comes with the deferred chunk; until
 // then a disabled look-alike holds its place, so nothing shifts.
 function Footer({ data }: { data: DataProps }) {
   return (
@@ -453,6 +469,7 @@ function Footer({ data }: { data: DataProps }) {
             </DataMenu>
           </Suspense>
           <LanguageSwitcher />
+          <GitHubLink />
         </div>
       </div>
     </footer>

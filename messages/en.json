@@ -17,6 +17,7 @@
   "export_start": "Start",
   "export_text": "No global dates file is loaded, so choose the period to export. Classes are expanded week by week, one calendar entry per date.",
   "export_title": "Export calendar",
+  "source_code": "Source code on GitHub",
   "footer_note": "Data stays in your browser.",
   "grid_allday": "All day",
   "grid_day_pick": "Day",

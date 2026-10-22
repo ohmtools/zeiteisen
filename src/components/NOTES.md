@@ -72,7 +72,9 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   (24px) around every divider — change the paddings together so edges stay
   aligned.
 - Footer (desktop only; phones: the Settings tab, same content as a page) = logo
-  and name · note · "Debug info" · "Data" menu · EN/DE. `useDataControls`
+  and name · note · "Debug info" · "Data" menu · EN/DE · GitHub mark
+  (`GitHubLink`, an icon link to the repo as in faltung; on the Settings page
+  at the right of the name under About). `useDataControls`
   (`DataControls.tsx`) holds the menu's state, dialogs (`DataDialogs.tsx`) and
   hidden inputs and hands both `DataMenu` and `SettingsPage` the items as `DataAction`s. The Data
   menu has three groups, each headed by a `DropdownMenuLabel` (user decision):
@@ -182,8 +184,14 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 - Below `md` one day at a time (`DayToggle` in the dock, defaults to today,
   from 19:00 on to tomorrow; App
   owns the day), other columns hidden with CSS; horizontal touch swipe changes
-  the day. The overlay is `pointer-events-none` so swipes work; a pointer that
+  the day. From `md` up every day is shown, so there a swipe changes the week
+  (Current week only, nothing in General; user report: on a landscape iPad a
+  swipe seemed to do nothing). The overlay is `pointer-events-none` so swipes work; a pointer that
   moved > 10px is a swipe, not a click.
+- Current week names each weekday's date (user request): "Mo 21.10." in the
+  column heads from `md`, the day of the month alone in the phone's
+  `DayToggle` ("Mo 21"; the week nav right above has the month). General has
+  no dates.
 - The all-day row (Current week) has a fixed height, `ALLDAY_HEIGHT` (about
   75px): four event lines, so two events of two lines each fit (user decision,
   was 48px phones, 64px from `md`); more scroll inside their cell. Its cells

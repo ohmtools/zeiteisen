@@ -11,13 +11,15 @@ import { Day, minutesOf } from "@/lib/primitives/subject";
 import { DAYS, isUnclearRepeat, type WeekEvents } from "@/lib/primitives/week";
 import { byDay, FIRST_HOUR, LAST_HOUR, WEEKDAYS, type Entry } from "@/lib/layout";
 import { isHighlighted, type Highlight, type SubjectRef } from "@/lib/link";
-import { dayName as dayLabel } from "@/lib/subjects";
+import { dateOf, dayName as dayLabel, shortDate } from "@/lib/subjects";
 
 // Current-week extras; null in the general view.
 export type WeekView = WeekEvents & {
   // Column that gets the now-line: set when the shown week contains today
   // (weekdays only, `other` has no single date).
   today: Day | null;
+  // Monday of the shown week: every weekday shows its date.
+  start: Date;
 };
 
 // Below `md` the grid shows the time column plus one weekday, picked in the
@@ -25,12 +27,20 @@ export type WeekView = WeekEvents & {
 // no column: it is the list next to the grid (below `md`: instead of it).
 const COLUMNS = "grid grid-cols-[5rem_minmax(0,1fr)] md:grid-cols-[6rem_repeat(5,minmax(0,1fr))]";
 
-// A horizontal touch swipe on the grid moves to the previous/next day.
+// A horizontal touch swipe on the grid moves to the previous/next day; from
+// `md` up, where every day is shown, to the previous/next week (Current week
+// only: a tablet swiped and nothing seemed to happen).
 const SWIPE_MIN_PX = 50;
+const ALL_DAYS_QUERY = "(width >= 48rem)";
 
-function swipeTarget(from: Day, dx: number, dy: number): Day {
-  if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return from;
-  const index = DAYS.indexOf(from) + (dx < 0 ? 1 : -1);
+// -1 back, 1 forward, 0 no swipe.
+function swipeDirection(dx: number, dy: number): -1 | 0 | 1 {
+  if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
+  return dx < 0 ? 1 : -1;
+}
+
+function swipeTarget(from: Day, direction: -1 | 1): Day {
+  const index = DAYS.indexOf(from) + direction;
   return DAYS[Math.max(0, Math.min(DAYS.length - 1, index))];
 }
 
@@ -60,6 +70,8 @@ type Props = {
   // The one day shown below `md`; a swipe moves it.
   selectedDay: Day;
   onSelectDay: (day: Day) => void;
+  // A swipe from `md` up, in the week view: one week back (-1) or on (1).
+  onSwipeWeek?: (direction: -1 | 1) => void;
 };
 
 export function TimetableGrid({
@@ -71,6 +83,7 @@ export function TimetableGrid({
   onInfo,
   selectedDay,
   onSelectDay,
+  onSwipeWeek,
 }: Props) {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   // The subject under the mouse: its other blocks get a faint ring.
@@ -135,9 +148,17 @@ export function TimetableGrid({
         const start = swipeStart.current;
         swipeStart.current = null;
         if (!start) return;
-        const next = swipeTarget(selectedDay, event.clientX - start.x, event.clientY - start.y);
+        const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
+        if (direction === 0) return;
         // A press on a block is no outside press (`SubjectPopup`), so a swipe
         // that starts on one closes the popup here.
+        if (matchMedia(ALL_DAYS_QUERY).matches) {
+          if (!onSwipeWeek) return;
+          closePopup();
+          onSwipeWeek(direction);
+          return;
+        }
+        const next = swipeTarget(selectedDay, direction);
         if (next !== selectedDay) closePopup();
         onSelectDay(next);
       }}
@@ -157,6 +178,11 @@ export function TimetableGrid({
               className={cn("border-l p-2 text-center font-medium", dayColumn(day, selectedDay))}
             >
               {dayLabel(day)}
+              {week && (
+                <span className="ml-1.5 font-normal text-muted-foreground tabular-nums">
+                  {shortDate(dateOf(week.start, day))}
+                </span>
+              )}
             </div>
           ))}
         </div>
