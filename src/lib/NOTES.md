@@ -102,8 +102,8 @@ re-implements primitive logic.
   university's "Block / n.V. / Samstag" column, no known weekday) has no date
   and never goes in; the export names those in a warning toast
   (`undatedClasses`) with the way in: give them dates in the editor.
-- `uploader.ts` — `loadUpload()`: the lazy `@/lib/upload` import of the Data
-  menu uploads, `null` plus a toast when the chunk is gone after a deploy.
+- `uploader.ts` — `loadUpload()`: the lazy `@/lib/upload` import of the
+  settings' uploads, `null` plus a toast when the chunk is gone after a deploy.
 - `backup.ts` — the settings' backup: `zeiteisen-<date>.backup`; a restore
   writes storage (a refused write puts every key back as it was, so storage and
   the running page agree) and reloads the page, because every hook read its

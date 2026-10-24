@@ -14,9 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { debugReport } from "@/lib/debug";
 import { toast } from "@/lib/toast";
 
-// "Debug info" under About in the settings: the button and
-// its dialog in one, from the deferred chunk (App's footer shows a disabled
-// look-alike, `DebugTriggerContent`, until it arrives).
+// "Debug info" under About in the settings: the button and its dialog in one,
+// in the deferred chunk with the settings.
 export function DebugButton(props: Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
   const [open, setOpen] = useState(false);
   return (

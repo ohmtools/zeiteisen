@@ -16,7 +16,7 @@ not "migrate anyway".
 
 ## Domain
 
-Why groups exist — read before touching the tree, `ClassPicker` or warnings.
+Why groups exist — read before touching the group tree, its category view or warnings.
 
 A subject is taught in several variations (`Kind`: `SU` lecture, `Pr`
 laboratory, `Ue` exercise, `Tu` tutorial, `S` seminar, `WF` elective subject

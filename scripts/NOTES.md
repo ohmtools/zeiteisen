@@ -68,7 +68,7 @@
   all four (read once, at install).
 - `scripts/og/card.mjs` (`node scripts/og/card.mjs`, by hand) write the link
   preview cards `og.svg` / `og-share.svg` from one template (favicon watch,
-  mini Mo–Fr grid in the favicon's and timetable tints' reds, Inter from
+  mini Mo–Fr grid in the favicon's reds, Geist, the app's font, from
   `node_modules`) and render them with `web-shot` to `public/og.png` /
   `public/og-share.png`, 1200×630, both committed. PNG because WhatsApp
   refuses SVG; keep each under 300 KB (WhatsApp's limit).

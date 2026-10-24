@@ -1,5 +1,5 @@
 // Packs the AI skill in skill/zeiteisen-generator/ into the zip the app offers
-// for download (Data menu, timetable picker).
+// for download (settings, timetable picker).
 //
 // Usage: npm run skill [-- <out.zip>]   default public/zeiteisen-generator.zip
 //

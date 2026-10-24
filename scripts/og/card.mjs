@@ -11,10 +11,10 @@ const here = import.meta.dirname;
 const root = path.resolve(here, "../..");
 const font = path.relative(
   here,
-  path.join(root, "node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2"),
+  path.join(root, "node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2"),
 );
 
-// Favicon palette + the app's red timetable tints (light → dark).
+// The favicon's reds (light → dark).
 const tints = ["#E23A46", "#C10007", "#9E0711", "#6E050C"];
 
 // The pocket watch of `public/favicon.svg`, drawn in its own 384-unit box.
@@ -81,8 +81,8 @@ function card(lines) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <defs>
     <style>
-      @font-face { font-family: Inter; src: url("${font}") format("woff2"); font-weight: 100 900; }
-      text { font-family: Inter, sans-serif; letter-spacing: -0.01em; }
+      @font-face { font-family: Geist; src: url("${font}") format("woff2"); font-weight: 100 900; }
+      text { font-family: Geist, sans-serif; letter-spacing: -0.01em; }
       .day { font-size: 22px; font-weight: 600; fill: #D6D3CE; }
       .subject { font-size: 24px; font-weight: 700; }
       .kind { font-size: 20px; font-weight: 500; }

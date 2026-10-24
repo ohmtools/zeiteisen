@@ -383,7 +383,7 @@
   "toast_own_degree_removed": "{file} removed.",
   "skill_menu": "Create with AI…",
   "skill_title": "Create own files with AI",
-  "skill_text": "This AI skill turns the university's documents into files for this app: a timetable PDF into a .timetable file, abbreviation lists and module handbooks into a .degree file per degree program, the semester dates page into dates and the locations page into locations. Upload a .timetable file under “Add timetables”, everything else in the Data menu.",
+  "skill_text": "This AI skill turns the university's documents into files for this app: a timetable PDF into a .timetable file, abbreviation lists and module handbooks into a .degree file per degree program, the semester dates page into dates and the locations page into locations. Upload a .timetable file under “Add timetables”, everything else in Settings under “Own files”.",
   "skill_steps_claude": "Claude: Settings → Capabilities → Skills, upload the zip.",
   "skill_steps_other": "Other AI apps with skill support: import the zip.",
   "skill_steps_chat": "Otherwise: attach the zip to a chat together with your document.",
