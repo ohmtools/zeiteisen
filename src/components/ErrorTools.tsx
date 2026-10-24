@@ -7,7 +7,7 @@ import { DataPartsList } from "@/components/DataParts";
 import { downloadBackup } from "@/lib/backup";
 import { resetAndReload, type DataPart } from "@/lib/reset";
 
-// The error screen's way out when reloading does not help. The Data menu is
+// The error screen's way out when reloading does not help. The settings are
 // out of reach there, so its backup and "Delete data…" come along: a backup of
 // everything on the device, then deleting what keeps the app from starting
 // (stored data, or the offline app files a broken deploy left behind). No
@@ -22,12 +22,12 @@ export function ErrorTools() {
     <EmptyContent>
       <p className="text-muted-foreground">{m.app_error_help()}</p>
       <div className="flex flex-wrap justify-center gap-2">
-        <Button variant="outline" onClick={() => downloadBackup()}>
+        <Button variant="secondary" onClick={() => downloadBackup()}>
           <Download data-icon="inline-start" />
           {m.backup_save()}
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           aria-expanded={deleting}
           aria-controls="error-delete"
           onClick={() => setDeleting(!deleting)}

@@ -4,14 +4,15 @@
   permission). Everything else is glue: hooks own state, components render,
   `src/lib/*` words and wires. No second model — import types from
   primitives.
-- **First paint = the grid.** `App.tsx` statically imports only the shell (view
-  switch, week nav, day toggle, grid, footer, tab bar), the state hooks and what
-  they need. Sidebar, dialogs, toaster, the footer's "Data" menu and "Debug
-  info" button and the phones' Settings page come from ONE deferred chunk: `components/deferred.ts`
+- **First paint = the grid.** `App.tsx` statically imports only the shell
+  (header, view tabs, week nav, week filter, day bar, bottom bar, grid), the
+  state hooks and what they need. The panels (groups, notes, settings), the
+  profile menu, the sheets and drawers (panel sheet, details, week picker),
+  dialogs and toaster come from ONE deferred chunk: `components/deferred.ts`
   re-exports them and App `lazy()`s each through the same `import()`. Anything
   new that is not the grid goes behind that import. Fallbacks never shift the
-  layout (sidebar: `null`, fixed column; Settings page: `null`, its own tab;
-  Data menu and Debug info: disabled look-alike buttons). `vite.config.ts` names only a
+  layout (panels: `null`, the sidebar keeps its width; the profile menu: a
+  disabled look-alike trigger). `vite.config.ts` names only a
   `react` chunk group, no catch-all `vendor`, so `ics`, `react-day-picker` and
   base-ui dialogs stay next to their only user.
 - A tab left open across a deploy asks for chunk names that no longer exist
@@ -38,16 +39,18 @@
   render: the React Compiler caches that forever. No function called during
   render may be named `use…` unless it is a hook: the compiler then skips the
   whole component, silently (App was, over `useCatalogDates`).
-- `App.tsx` holds shell state: view, week, phone tab, tree ↔ grid highlight and
-  jump, and which of its four dialogs is open (picker, update, import, subject
-  info). Dialogs sit outside the sidebar because they belong to no section, and
+- `App.tsx` holds shell state: view, week filter, week, the phone's day, the
+  open panel and category view, tree ↔ grid highlight and jump, and which of
+  its dialogs is open (picker, update, import, subject info, subject editor).
+  Dialogs sit outside the panels because they belong to no section, and
   the import one must work before a profile holds anything. A link opened
   directly is read on the first render; `useStripSharedUrl` strips the URL when the
   import dialog closes (import or cancel), so a reload keeps the link; a link
   some profile already shares exactly opens no dialog.
 - Toasts only through `@/lib/toast`, never `sonner` directly.
-- `src/index.css` is shadcn's generated CSS plus the `desktop` variant,
-  nothing else.
+- `src/index.css` is shadcn's generated CSS with the app's theme (colours,
+  kind colours, red accent, warning, grid lines, Geist) and the `compact`,
+  `wide` and `short` variants, nothing else.
 - Tests sit beside their module, pure logic only (no component tests), and
   reuse `primitives/fixtures.test-util.ts`. `src/test-setup.ts` stubs
   `localStorage` because paraglide reads the locale from it.

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CloudDownload, FilePlus, FolderOpen, Upload, User } from "lucide-react";
+import { FilePlus, RefreshCw, Search, Sparkles, Upload, WifiOff } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
@@ -37,6 +37,8 @@ type Props = {
   offline: boolean;
   // The profile the picks go to; undefined while a new one is being named.
   target?: Profile;
+  // Asks the catalog again ("Try again" while it cannot be reached).
+  onRetry?: () => void;
   // The profile name (new-profile mode) and the timetables, under their final
   // names. `false` when they were refused (the name was taken or the profile
   // locked meanwhile, in another tab): the dialog stays open and says why.
@@ -56,6 +58,7 @@ export function TimetablePickerDialog({
   catalog,
   offline,
   target,
+  onRetry,
   onConfirm,
 }: Props) {
   const [name, setName] = useState<string | null>(null);
@@ -69,6 +72,7 @@ export function TimetablePickerDialog({
   const [errors, setErrors] = useState<UploadError[]>([]);
   const [busy, setBusy] = useState(false);
   const [skillOpen, setSkillOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const input = useRef<HTMLInputElement>(null);
   // Bumped by every reset: an upload or confirm still awaiting a file or a
   // download when the dialog closes finds it changed and does nothing.
@@ -96,6 +100,8 @@ export function TimetablePickerDialog({
   const chosen = new Set([...picked].filter((key) => !blocked.has(key)));
   const held = (target?.timetables ?? []).map((timetable) => timetable.name);
   const names = finalNames(rows, chosen, held);
+  // What the profile holds already: identical rows say so.
+  const heldHashes = new Set(rows.filter((row) => row.held).map((row) => row.hash));
 
   const nameValue =
     name ??
@@ -115,6 +121,7 @@ export function TimetablePickerDialog({
     setPicked(new Set());
     setErrors([]);
     setBusy(false);
+    setQuery("");
     session.current++;
   };
 
@@ -191,7 +198,7 @@ export function TimetablePickerDialog({
         if (!next && !open) setShown(false);
       }}
     >
-      <DialogContent>
+      <DialogContent className="compact:max-w-[min(36rem,calc(100%-2rem))]">
         <DialogHeader>
           <DialogTitle>{mode === "add" ? m.picker_add_title() : m.picker_new_title()}</DialogTitle>
           <DialogDescription>
@@ -215,30 +222,72 @@ export function TimetablePickerDialog({
             </div>
           )}
 
+          {offline && (
+            <div className="flex flex-col items-start gap-2 rounded-lg bg-muted p-3">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <WifiOff className="size-4" />
+                {m.picker_unreachable_title()}
+              </p>
+              <p className="text-xs text-muted-foreground">{m.picker_unreachable_text()}</p>
+              {onRetry && (
+                <Button variant="secondary" size="sm" onClick={onRetry}>
+                  <RefreshCw data-icon="inline-start" />
+                  {m.picker_retry()}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                className="pl-9"
+                value={query}
+                placeholder={m.picker_search()}
+                aria-label={m.picker_search_label()}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </div>
+          )}
+
           {rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">{m.picker_none()}</p>
           ) : (
-            // The list scrolls inside itself, like the catalog lists did: the
-            // dialog keeps its height however many versions exist.
-            <ul className="flex max-h-[18rem] flex-col divide-y overflow-y-auto pr-2">
-              {rows.map((row) => (
-                <PickerRow
-                  key={row.key}
-                  row={row}
-                  checked={row.held || chosen.has(row.key)}
-                  blocked={blocked.has(row.key)}
-                  addedAs={names.get(row.key)}
-                  onToggle={(checked) =>
-                    setPicked((previous) => {
-                      const next = new Set(previous);
-                      if (checked) next.add(row.key);
-                      else next.delete(row.key);
-                      return next;
-                    })
-                  }
-                />
+            // The list scrolls inside itself: the dialog keeps its height
+            // however many versions exist. Grouped: new rows first, then the
+            // catalog by folder, then the other profiles' copies. Rows the
+            // profile holds itself only block, they are not listed.
+            <div className="-mx-2 flex max-h-[20rem] flex-col gap-3 overflow-y-auto px-2">
+              {sectionsOf(rows, query).map((section) => (
+                <section key={section.key} className="flex flex-col">
+                  {section.title && (
+                    <h3 className="pb-1 text-xs text-muted-foreground">{section.title}</h3>
+                  )}
+                  <ul className="flex flex-col">
+                    {section.rows.map((row) => (
+                      <PickerRow
+                        key={row.key}
+                        row={row}
+                        checked={chosen.has(row.key)}
+                        blocked={blocked.has(row.key)}
+                        inProfile={heldHashes.has(row.hash)}
+                        addedAs={names.get(row.key)}
+                        onToggle={(checked) =>
+                          setPicked((previous) => {
+                            const next = new Set(previous);
+                            if (checked) next.add(row.key);
+                            else next.delete(row.key);
+                            return next;
+                          })
+                        }
+                      />
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </div>
           )}
 
           <div className="flex flex-col gap-2">
@@ -255,43 +304,28 @@ export function TimetablePickerDialog({
                 if (selected.length > 0) void upload(selected);
               }}
             />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={addEmpty}>
+            <div className="-mx-2.5 flex flex-col">
+              <Button variant="ghost" className="justify-start px-2.5" onClick={addEmpty}>
                 <FilePlus data-icon="inline-start" />
                 {m.picker_empty()}
               </Button>
-              {/* With a catalog around, the upload is the fallback and stays a
-                quiet icon; without one it is the only way in. */}
-              {catalog.timetables.length > 0 ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title={m.picker_upload()}
-                  aria-label={m.picker_upload()}
-                  onClick={() => input.current?.click()}
-                >
-                  <Upload />
-                </Button>
-              ) : (
-                <Button variant="outline" onClick={() => input.current?.click()}>
-                  <Upload data-icon="inline-start" />
-                  {m.picker_upload()}
-                </Button>
-              )}
-            </div>
-            {/* Quiet on purpose: most timetables come from the catalog. */}
-            <p className="text-sm text-muted-foreground">
-              {m.picker_skill_hint()}{" "}
-              {/* Not a `Button`: its inline-flex and nowrap would overflow at
-                  360px in German. Classes of the link variant. */}
-              <button
-                type="button"
-                className="text-left text-primary underline underline-offset-4"
+              <Button
+                variant="ghost"
+                className="justify-start px-2.5"
+                onClick={() => input.current?.click()}
+              >
+                <Upload data-icon="inline-start" />
+                {m.picker_upload()}
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start px-2.5"
                 onClick={() => setSkillOpen(true)}
               >
-                {m.picker_skill_link()}
-              </button>
-            </p>
+                <Sparkles data-icon="inline-start" />
+                {m.picker_skill()}
+              </Button>
+            </div>
             {errors.length > 0 && (
               <ul className="flex flex-col gap-1 text-sm text-destructive">
                 {errors.map((error) => (
@@ -312,7 +346,7 @@ export function TimetablePickerDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={close}>
+          <Button variant="ghost" onClick={close}>
             {m.cancel()}
           </Button>
           <Button
@@ -330,12 +364,50 @@ export function TimetablePickerDialog({
   );
 }
 
+type Section = { key: string; title: string | null; rows: LibraryRow[] };
+
+// The list's sections: rows made in this dialog (uploads, empties) first and
+// untitled, then the catalog by folder ("Catalog · B-EI"), then the copies in
+// other profiles. The profile's own copies are left out: they only block.
+function sectionsOf(rows: readonly LibraryRow[], query: string): Section[] {
+  const wanted = query.trim().toLocaleLowerCase(getLocale());
+  const sections = new Map<string, Section>();
+  const add = (key: string, title: string | null, row: LibraryRow) => {
+    const section = sections.get(key) ?? { key, title, rows: [] };
+    section.rows.push(row);
+    sections.set(key, section);
+  };
+  for (const row of rows) {
+    if (row.held) continue;
+    if (wanted && !row.name.toLocaleLowerCase(getLocale()).includes(wanted)) continue;
+    if (row.kind === "catalog") {
+      const folder = folderOf(row);
+      add(
+        `c:${folder}`,
+        folder ? m.picker_catalog_folder({ folder }) : m.picker_source_catalog(),
+        row,
+      );
+    } else if (row.kind === "profile") add("p", m.picker_other_profiles(), row);
+    else add("new", null, row);
+  }
+  const order = (key: string) => (key === "new" ? 0 : key === "p" ? 2 : 1);
+  return [...sections.values()].sort((a, b) => order(a.key) - order(b.key));
+}
+
+// "B-EI" of "timetables/B-EI/BEI3.timetable"; "" for a file at the top.
+function folderOf(row: LibraryRow): string {
+  const { origin } = row.source;
+  if (origin.kind !== "catalog") return "";
+  return origin.path.split("/").slice(1, -1).join("/");
+}
+
 // Status under the name, never beside it: the dialog is too narrow for name,
 // source and the final name on one line at 360px in German.
 function PickerRow({
   row,
   checked,
   blocked,
+  inProfile,
   addedAs,
   onToggle,
 }: {
@@ -343,49 +415,40 @@ function PickerRow({
   checked: boolean;
   // Identical to a picked or held row: greyed out, unchecked, disabled.
   blocked: boolean;
+  // Identical to a timetable the profile holds already.
+  inProfile: boolean;
   // The name the row lands under, when it is picked.
   addedAs: string | undefined;
   onToggle: (checked: boolean) => void;
 }) {
   const id = "pick-" + row.key;
-  const Icon =
-    row.kind === "catalog"
-      ? CloudDownload
-      : row.kind === "profile"
-        ? User
-        : row.kind === "empty"
-          ? FilePlus
-          : FolderOpen;
   return (
-    <li className={cn("flex items-center gap-3 py-2", blocked && "opacity-50")}>
+    <li className={cn("flex items-center gap-3 py-1.5", blocked && "opacity-50")}>
       <Checkbox
         id={id}
         checked={checked && !blocked}
-        disabled={row.held || blocked}
-        // Already in the profile: checked but out of reach. Primary would
-        // still read as clickable, so the check is muted instead.
-        className={cn(
-          row.held &&
-            "data-checked:border-input data-checked:bg-muted data-checked:text-muted-foreground dark:data-checked:bg-muted",
-        )}
+        disabled={blocked}
         onCheckedChange={(next) => onToggle(next === true)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Label htmlFor={id}>{row.name}</Label>
+        <Label htmlFor={id} className="text-sm font-medium">
+          {row.name}
+        </Label>
         <span className="text-xs text-muted-foreground">
-          {[
-            sourceLabel(row),
-            row.selection ? m.picker_selection(row.selection) : null,
-            row.modified ? m.picker_modified({ date: dateLabel(row.modified) }) : null,
-            addedAs !== undefined && addedAs !== row.name
-              ? m.picker_added_as({ name: addedAs })
-              : null,
-          ]
-            .filter((part) => part !== null)
-            .join(" · ")}
+          {inProfile
+            ? m.picker_in_profile()
+            : [
+                sourceLabel(row),
+                row.selection ? m.picker_selection(row.selection) : null,
+                row.modified ? m.picker_modified({ date: dateLabel(row.modified) }) : null,
+                addedAs !== undefined && addedAs !== row.name
+                  ? m.picker_added_as({ name: addedAs })
+                  : null,
+              ]
+                .filter((part) => part !== null)
+                .join(" · ")}
         </span>
       </div>
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
     </li>
   );
 }

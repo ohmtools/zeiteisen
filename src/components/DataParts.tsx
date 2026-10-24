@@ -22,7 +22,7 @@ const PART_TEXT: Record<DataPart, () => string> = {
 };
 
 // What "Delete data" can remove (`@/lib/reset`), ticked one by one, in the
-// Data menu's dialog and on the error screen alike; `id` keeps their checkbox
+// settings' dialog and on the error screen alike; `id` keeps their checkbox
 // ids apart. Ticking keeps the parts in list order.
 export function DataPartsList({
   id,

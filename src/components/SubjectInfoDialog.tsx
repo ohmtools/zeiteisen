@@ -53,7 +53,7 @@ export function SubjectInfoDialog({
               </section>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="ghost" onClick={onClose}>
                 {m.close()}
               </Button>
             </DialogFooter>

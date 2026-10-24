@@ -1,136 +1,109 @@
 # src/components — notes
 
-Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
-`NOTES.md`.
+Shell layout, grid, group selection, panels. shadcn primitives in `ui/` have
+their own `NOTES.md`. The design lives on the "Zeiteisen Redesign" canvas
+(claude.ai artifact) and in the doc "Zeiteisen-Redesign:
+Designentscheidungen"; this file keeps what the code has to hold to.
 
 ## Shell
 
-- Full width, no max-width container. No header (user decision): logo,
-  name and version (`Brand`) sit in the desktop footer and the phone's
-  Settings page; an `sr-only` h1 keeps the page titled. The version is
-  `package.json`'s, put in at build time as `__APP_VERSION__` (`define` in
-  `vite.config.ts`, declared in `src/env.d.ts`), so the user can tell which
-  deploy a browser runs; the pre-commit hook bumps its patch
-  (`scripts/NOTES.md`).
-- **Desktop (`desktop:` variant, width ≥ 64rem AND height ≥ 600px) is exactly
-  one viewport tall, the page never scrolls.** Left column 24rem:
-  `ProfileSection` (height set by its content) and `GroupTree` (takes the rest;
-  only its trees scroll, the "Add timetables" button stays in view). Right
-  column: toolbar, grid, notes, footer at its bottom. The notes are a strip
-  (user decision): a title row ("Notes" folds it to that row; upload and
-  download on the right) over the text. Its top edge drags its height (or arrow
-  keys on it; double click = default), 144px by default, kept between 112px and
-  60% of the screen. Folded by default (user decision); height and folding
-  persist on the device (`tt.notesstrip.v1`). App sets the wrapper's height, so
-  the grid does not jump when the deferred chunk arrives. Anything that only
-  cares about width keeps `lg:` / `md:`.
-- **Below `desktop` (phones AND short laptop screens): a fixed bottom tab bar
-  "Timetable | Subjects | Notes | Settings"** (user decision; the second tab
-  is named like the desktop section). Timetable = grid
-  plus a dock of view switch, week nav and day toggle, all at the bottom within
-  thumb reach (user decision). Subjects = profiles, group tree. Notes = the same
-  `NotesSection` element as on desktop (it sits in the timetable column; the
-  notes tab hides dock and grid), titled, filling the page, one viewport tall
-  like the Timetable tab. Settings = `SettingsPage`, the footer's content as a
-  page (user decision: no footer on phones; was a menu upwards out of the bar):
-  one `Section` each for language (first, user decision), own files, catalog,
-  backup and reset, about (name, note, "Debug info"), every one with its title. Items are
-  full-width outline buttons (the Data menu's items, from the same
-  `useDataControls`), the catalog mode a vertical toggle group applied on pick
-  (nothing passes through ignore, so no pending mode), the language a toggle
-  group of the languages named in themselves. The active tab is marked by a
-  primary line on the bar's divider, not a filled button. Start tab: Subjects when
-  the active profile has no timetables, else Timetable; not persisted. The page
-  keeps bottom padding for the bar, toasts sit above it. Page, bar and toasts
-  also pad by `env(safe-area-inset-*)` (home indicator, landscape notch); that
-  needs `viewport-fit=cover` in `index.html`, without it iOS reports 0 and an
-  installed PWA's bar sat under the home indicator.
-- The Timetable tab is exactly one viewport tall on phones, no page scroll (user
-  decision; Subjects and Settings keep page scroll). Top to bottom: grid (the hour
-  rows share the leftover height down to a floor, below it the grid scrolls
-  inside itself), week nav (an empty row of the same height in General, so the grid keeps its
-  height), day toggle, view switch, tab bar (user decision). The shown week and
-  day move on with the clock unless the user picked one that still lasts
-  (`src/lib/NOTES.md`, `view.ts`). The dock is the same element as the desktop
-  toolbar, last in the timetable column; `desktop:` puts it back above the grid
-  as one row (switch left, week nav right). The hour rows share the leftover
-  height on desktop too, same floor (user decision, was fixed 56px: a
-  landscape tablet under its browser bars had to scroll). The floor keeps the
-  three lines (name, kinds, room) of the grid's shortest block whole (user
-  decision: they were cut on a landscape iPhone; was a flat 24px, before that
-  36px): `BLOCK_MIN_HEIGHT` × 60 / its minutes, 36px for 90 minutes, never
-  under 24px. Narrow blocks may still cut horizontally. `WeekNav` stays one
-  row: prev · relative label ("This week", opens the week picker) · today
-  (icon only, user decision: back to this week and the phone's default day,
-  disabled while both are shown) · next, then
-  the range as plain text above the week number (short range below `sm`) (user
-  decision: the range was its own picker button). The week picker ends in a
-  "This week" button under a divider (user request), disabled while this week
-  is shown.
-- **No boxes** (user decision): sections are split by divider lines, `Section`
-  is shadcn's `Card` minus background, shadow and ring. One spacing unit
-  (24px) around every divider — change the paddings together so edges stay
-  aligned.
-- Footer (desktop only; phones: the Settings tab, same content as a page) = logo
-  and name · note · "Debug info" · "Data" menu · EN/DE · GitHub mark
-  (`GitHubLink`, an icon link to the repo as in faltung; on the Settings page
-  at the right of the name under About). `useDataControls`
-  (`DataControls.tsx`) holds the menu's state, dialogs (`DataDialogs.tsx`) and
-  hidden inputs and hands both `DataMenu` and `SettingsPage` the items as `DataAction`s. The Data
-  menu has three groups, each headed by a `DropdownMenuLabel` (user decision):
-  "Own files", "Catalog", "Backup and reset". "Debug info" is no menu item
-  (user decision): a ghost button left of "Data" in the desktop footer, a
-  button under About on the Settings page (`DebugButton`, `src/lib/NOTES.md`). Explanations between items are
-  plain muted text, not group labels: Base UI names a group by its last
-  `GroupLabel`. Own files — dates and locations one item each ("Load own …"
-  while the catalog's is in use, "Use catalog …" plus a trailing "own file" note
-  while an own file is, disabled while the catalog is ignored); degree programs
-  "Load own …" / "Add own …" (several `.degree` files, trailing "n own files";
-  after picking, a dialog asks each checked file's name — the `degreeProgram`
-  subjects name, filled in with its file name without `.degree`, stored NFC like
-  every typed name, unique in any case, noting a name that replaces a held file,
-  else one that replaces a catalog file (named, in the catalog's spelling, which
-  the file then takes); cancel loads none) plus "Remove own degree programs…", a
-  dialog listing the files by name in upload order with a remove button each and
-  "Remove all"; removing is immediate (the user still has the file), the last
-  one closes it. One hidden file input outside the menu, which unmounts its
-  content on closing. Last in the group, always enabled (also with the catalog
-  ignored): "Create own files with AI…" opens `SkillDialog` — what the AI skill
-  makes, how to get it into Claude / other skill apps / a chat, a
-  check-the-results hint, and a download of the shipped
-  `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative: share
-  links open the app on `/s/`). While any own file is in use a muted line says
-  how they combine with the catalog and that it never updates them. Then the
-  catalog — "Mode" cycles ignore → auto-update → freeze on click WITHOUT closing
-  the menu (`closeOnClick={false}`), the mode as trailing note and its
-  explanation as a muted line below (phones have no tooltips). The cycle is only
-  a pending choice: the mode shown when the menu closes is applied then (user
-  decision), so passing through ignore (freeze → auto) never drops the catalog
-  cache and its dates; "Catalog URL…" opens a dialog (empty or "Use default" =
-  built-in, absolute http(s) only, trailing "custom" note when set). Then Save
-  backup, Load backup. Load validates first (broken → error toast, nothing
-  touched), then confirms ("Profiles now: N, in the backup: M") with "Save
-  current backup first" in the dialog; restoring replaces everything but the
-  catalog cache. Last "Delete data…" (destructive): the reset for when storage
-  breaks the app. Its dialog ticks parts (profiles; notes; dates, locations and
-  degree programs; catalog cache; settings; offline app files — `@/lib/reset`,
-  list in `DataParts`), none at first, offers "Save current backup first", then
-  removes the keys and reloads.
+- Full width, no max-width container. **Every step is exactly one viewport
+  tall, the page never scrolls** (user decision): the grid, the panels and
+  the phone pages scroll inside themselves. Three steps (`@/lib/media`, the
+  `compact:` / `wide:` / `short:` variants in `index.css`), the same content in
+  other containers (user decision):
+  - **Narrow** (below 40rem: phones upright, Split View): header with the
+    profile and lock, groups, notes, settings; the grid shows one day; at the
+    bottom (`BottomBar`, within thumb reach, user decision) the view tabs,
+    the week nav (or the week filter) and the two-line day bar, the picked day
+    red. A panel is a page of its own in place of all that, with a back
+    arrow.
+  - **Compact** (from 40rem, or under 600px height in landscape: a phone
+    turned sideways, an iPad upright, short laptops): the whole week, one
+    header row (week nav as "‹ CW 43 [today] ›", range from `md`), panels as a
+    380px sheet from the right (`PanelSheet`). On `short` screens blocks
+    show code and kinds only, every second hour is labelled, the header is
+    48px and the details are a sheet from the right.
+  - **Wide** (from 64rem AND 600px height: iPad landscape, desktop): the
+    week beside a 340px sidebar, **closable** (user decision; was always
+    there). It opens on the groups (user decision), elsewhere panels start
+    closed. Not persisted.
+- Header (`AppHeader`, entry chunk): the profile menu's trigger (red tile,
+  name, chevrons; a disabled look-alike until the deferred chunk arrives),
+  lock, a divider, the view tabs "Week | General", the week nav or the
+  filter; right "Groups" (with its label on wide screens), notes, settings,
+  8px apart. An open panel's button is filled. A first visit (one empty
+  profile) shows the app's name and settings only, and the grid's place
+  shows the welcome with three ways in (catalog, import, empty timetable).
+- Lock applies to the profile, so its button sits on every view of it (header,
+  groups page), never on notes or settings. Filled while locked; the groups
+  panel then says so with an "Unlock" button (user decision, was no line).
+- `WeekNav` stays one row: ‹ · relative label ("This week", "In 4 weeks";
+  opens the week picker) with "CW 43 · 19.–25.10." · today (icon only,
+  user decision: back to this week and the phone's default day, disabled
+  while both are shown) · ›. The picker is a month with week numbers, the
+  shown week a band, today red, and "This week" under a divider (user
+  request); a popover, a drawer on phones (`WeekDrawer`, deferred).
+- General view: "All weeks | Even weeks | Odd weeks" takes the week nav's
+  place and height. It filters G and U only (user decision): G1, G2, U1 and
+  U2 stay and show their code, SH1/SH2 and listed dates stay in Other.
+- **No boxes** (user decision): sections are split by divider lines. One
+  spacing unit (24px, 16px on phones) around every divider — change the
+  paddings together so edges stay aligned. Safe areas pad header, grid,
+  pages, bottom bar and sheets (`viewport-fit=cover` in `index.html`).
+- Settings (`SettingsPage`, a panel): language tabs (the languages named in
+  themselves), own files, catalog (mode tabs "Ignore | Auto-update |
+  Freeze", applied on pick — nothing passes through ignore — with its
+  explanation and "Catalog URL…"), backup ("Save backup", "Load backup…",
+  "Delete data…" in red), about (name, version, GitHub mark, note, "Debug
+  info"). Rows are ghost buttons flush with the text; `useDataControls`
+  (`DataControls.tsx`) holds their state, dialogs (`DataDialogs.tsx`) and
+  hidden inputs. Own files: dates and locations one row each ("Load …"
+  while the catalog's is in use, "Use catalog …" plus a trailing "own file"
+  note while an own file is, disabled while the catalog is ignored); degree
+  programs "Load …" / "Add …" (several `.degree` files, trailing "n own";
+  after picking, a dialog asks each file's name — the `degreeProgram`
+  subjects name, filled in with its file name without `.degree`, stored NFC
+  like every typed name, unique in any case, noting a name that replaces a
+  held file, else one that replaces a catalog file (named, in the catalog's
+  spelling, which the file then takes); cancel loads none) plus "Remove own
+  degree programs…", a dialog listing the files with a remove button each and
+  "Remove all"; removing is immediate, the last one closes it. "Create with
+  AI…" (always enabled) opens `SkillDialog`, with a download of the shipped
+  `zeiteisen-generator.zip` (root-based `BASE_URL` href, never relative:
+  share links open the app on `/s/`). While any own file is in use a muted
+  line says how they combine with the catalog. Load backup validates first
+  (broken → error toast), then confirms ("Profiles now: N, in the backup: M")
+  with "Save current backup first"; restoring replaces everything but the
+  catalog cache. "Delete data…": the reset for when storage breaks the app;
+  its dialog ticks parts (none at first, `@/lib/reset`, list in
+  `DataParts`), offers "Save current backup first", removes and reloads.
 - Error screen (`ErrorBoundary`, first chunk): title, text, Reload. Below it
-  `ErrorTools` from the deferred chunk (loaded right after the first paint,
-  so a tab failing later holds it): "Save backup" and "Delete data…" as an
-  inline list, since the Data menu is out of reach and no toaster runs. If
-  that chunk does not load either, the screen stays with Reload alone.
-- Exports (ICS | Link | profile file) live in `ProfileSection` and work while
-  locked. ICS over the lecture period also holds listed dates outside it;
-  classes without a weekday are named in a warning toast (`src/lib/NOTES.md`,
-  `ics.ts`). **Never in the header** (user decision): up there they would imply
-  global state like the dates, which never leave the device. Link warns first
-  when a timetable is outside the catalog (the receiver needs its file); past
-  `MAX_SHARE_LENGTH` it is disabled and the profile file becomes the obvious
-  fallback. ICS without dates asks for the range.
-- Transient feedback is a toast, never a panel. Copying the link toasts too
+  `ErrorTools` from the deferred chunk: "Save backup" and "Delete data…",
+  since the settings are out of reach and no toaster runs. If that chunk does
+  not load either, the screen stays with Reload alone.
+- Profile menu (`ProfileMenu`, deferred; a popover, a drawer on phones):
+  the profiles with the active one ticked and a lock on locked ones, each
+  row with rename, duplicate and delete (icon buttons without gaps); "New
+  profile", "Import…"; then the active profile's exports. Duplicate copies
+  the active profile (another row's is picked first), unlocked, under a name
+  asked with "Name 2" suggested; it works while locked. A taken name is
+  refused, never suffixed.
+- Exports (`.ics` | Link | `.profile`) live in the profile menu and work
+  while locked. **Never in the header** (user decision): up there they would
+  imply global state like the dates, which never leave the device. ICS over
+  the lecture period also holds listed dates outside it; classes without a
+  weekday are named in a warning toast (`src/lib/NOTES.md`, `ics.ts`). Link
+  warns first when a timetable is outside the catalog (the receiver needs its
+  file); past `MAX_SHARE_LENGTH` it is disabled and the profile file becomes
+  the obvious fallback. ICS without dates asks for the range.
+- Transient feedback is a toast, never a panel; on phones above the bottom
+  bar (`--bottom-bar`), elsewhere bottom right. Copying the link toasts too
   (user decision), on top of the button's inline "Copied".
+- Dialogs: centred from compact on, a sheet from the bottom on phones with the
+  main button on top, full width (`ui/dialog.tsx`); questions
+  (`AlertDialog`) are centred everywhere, destructive buttons red next to
+  "Cancel".
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`, `.degree`; the pickers accept
   only their own. Downloads go out as `application/octet-stream` so no browser
@@ -142,9 +115,10 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
 
 ## Notes
 
-- Plain text in `tt.notes.v1`, never shared (no link, no profile file; the
-  backup holds it). At most `MAX_NOTES_LENGTH` characters (1,000,000, user
-  decision), a count shows from 90% on.
+- A panel (sidebar, sheet or page; user decision, was a strip under the grid
+  on desktop). Plain text in `tt.notes.v1`, never shared (no link, no
+  profile file; the backup holds it). At most `MAX_NOTES_LENGTH` characters
+  (1,000,000, user decision), a count shows from 90% on.
 - Two faces of the same text (user decision): a read view where http(s) and
   `www.` links open in a new tab and `- [ ]` / `- [x]` lines (GitHub's task
   syntax, `*` too, indented too) are checkboxes that tick the text itself
@@ -159,152 +133,171 @@ Shell layout, grid, group tree. shadcn primitives in `ui/` have their own
   N). The view copies the text area's box and type so no line moves. No
   underline on either, focused or not (user decision).
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
-  the notes with the caret at the end, unfolding the strip, on phones
-  switching to the tab first (`flushSync`, the text area has to be on screen
-  to take the focus). Escape in the text area goes back to the grid (desktop;
-  the grid's scroll box takes the focus).
+  the notes panel with the caret at the end (`flushSync`: the text area has
+  to be on screen to take the focus). Escape in the text area goes back to the
+  grid.
 - Download: `zeiteisen-notes-<date>.txt` (localized), `text/plain`.
 - Upload: any `.txt` (`notesFromFile`): UTF-8 only, BOM dropped, CRLF made
   `\n`; not text or over `MAX_NOTES_LENGTH` = a toast, nothing changes. It
   REPLACES the notes (no merging); with notes there that differ, an alert
   dialog asks first and offers "Save current notes first", like the backup
-  restore. A folded strip unfolds to show the new text. Plain text has no
-  schema, so no zod here.
+  restore. Plain text has no schema, so no zod here.
 - Android's keyboard resizes the page instead of covering it
   (`interactive-widget=resizes-content` in `index.html`).
 
 ## Grid
 
-- Mon–Fri, 8–20. `other` is NO column (user decision): a list beside the grid
-  (below `md` instead of it, picked like a day) with weekend events, `other`
-  classes, SH1/SH2 and dates in the general view, and anything outside the
-  hours.
-  The list is 8rem wide from `md`, 12rem from `xl` (user decision: tablets
-  and small laptops need the room for the weekdays).
-- Below `md` one day at a time (`DayToggle` in the dock, defaults to today,
-  from 19:00 on to tomorrow; App
-  owns the day), other columns hidden with CSS; horizontal touch swipe changes
-  the day. From `md` up every day is shown, so there a swipe changes the week
-  (Current week only, nothing in General; user report: on a landscape iPad a
-  swipe seemed to do nothing). The overlay is `pointer-events-none` so swipes work; a pointer that
-  moved > 10px is a swipe, not a click.
-- Current week names each weekday's date (user request): "Mo 21.10." in the
-  column heads from `md`, the day of the month alone in the phone's
-  `DayToggle` ("Mo 21"; the week nav right above has the month). General has
-  no dates.
-- The all-day row (Current week) has a fixed height, `ALLDAY_HEIGHT` (about
-  75px): four event lines, so two events of two lines each fit (user decision,
-  was 48px phones, 64px from `md`); more scroll inside their cell. Its cells
-  stay flex from `md` up (`dayColumn(…, "md:flex")`): `md:block` turned them
-  into inline flow, which ignored the gap and spent 4px per event. General leaves NO space for
-  it (user decision, replacing "the hours never move"): no empty gap between
-  toolbar and grid, the hours shift when switching views.
+- 08:00–19:00 (user decision, was 20:00), Mon–Fri plus **Other** as a sixth
+  column of the same width (weekend events, `other` classes, SH1/SH2 and
+  dates in the general view, anything outside the hours), not aligned to the
+  hours. Phones show one column, picked in the day bar, Other included.
+  The frame is open on the left, rounded on the right; the hour lines are
+  `--grid`, the labels mono `--hour`, centred on their line, 19:00 just
+  above it.
+- **The hours never move** (user decision): the all-day row is always there,
+  one line (36px, 32px on phones), also in General, where it explains
+  itself ("Regular classes, whatever the week"); empty it says "No all-day
+  events". Neighbouring days with the very same events share one chip
+  (`@/lib/allday`); a day with several shows "+n", a press lists them; a
+  lecture-free day wins the line. Then 12px to the first hour line.
+- Height: the hours share the leftover height down to a floor that keeps the
+  shortest block's lines whole (`BLOCK_MIN_HEIGHT` × 60 / its minutes: three
+  lines, two on `short` screens; never under 24px). Below the floor the body
+  scrolls inside the frame (iPhone SE, Safari with its bars), day names and
+  all-day row stay.
+- **Colour by kind only** (user decision, was a tint per timetable): the most
+  specific kind of the subject (`colourKind`: Pr, Ue, Tu, S, WF, SU), the
+  kinds always also written in the block. Name never cut or broken inside;
+  kinds and group, then room (mono); in General the rhythm ("even weeks",
+  "G1").
+- **No lane narrower than 48px** (user decision, `fitDay`): a column too
+  narrow for every lane of a cluster keeps its first lanes and gathers the
+  rest into the last one as a dashed collected block (codes stacked, "+n"
+  when they do not fit, a press lists them and each opens its details). The
+  column width comes from a `ResizeObserver` on the body.
+- Current week names each weekday's date: "Mo 19" in the heads, two lines
+  in the phone's day bar. Today: its date on red, the red now-line with its
+  dot at the column's left edge. A lecture-free day is covered by the
+  surface colour with "No lectures"; lectures there are gone (listed dates
+  still meet, above the cover).
+- A week without classes says so over the grid, where the next ones start
+  and jumps there (`nextWeekWithEntries`, only computed for an empty week).
+  A profile without timetables shows its own card there.
 - Opens on Current week inside the lecture period, General otherwise (user
   decision).
-- Block popup spells out subject, kinds and repeat; the letter badge is hidden
-  for weekly `A`. The popup names NO timetable (user decision; the tint does);
-  the grid's calendar entries do. It opens where the pointer clicked; opened
-  with Enter / Space (or a click with `detail` 0 and no coordinates) it opens
-  beside the block. A swipe opens nothing; one that changes the day closes it.
-- **One popup for the whole grid** (`SubjectPopup`, state in `TimetableGrid`),
-  not a Base UI popover per block: a root per block was most of the first
-  render of a full grid. Blocks are `role="button"` divs that do what a
-  trigger did by hand: Enter / Space, `aria-expanded`, a press on the open
-  block closes it, on another moves it there (a press on a block is no outside
-  press). Pointer opens leave focus where it is, key opens move it in (Base
-  UI's trigger did the same); closing returns it to the block. A press never
-  focuses a block (`preventDefault` on mousedown): leaving a key-opened popup
-  would close it before the click could toggle. The popup shows the entry
-  under its block's `entry.key` as the grid has it now: an edit shows at once,
-  a block that left the grid takes the popup with it.
-- **Tree ↔ grid** (user decision): on desktop, hovering (mouse, read off the
-  ruler by position so it works on locked, disabled cells too) or keyboard focus
-  (`:focus-visible`; a tap focuses the button too on iPad and must not dim the
-  grid) on a group cell keeps its blocks and dims all others — a class toggle,
-  no re-layout. On every screen the popup names the block's group as a control;
-  it jumps to the tree cell (phones switch to Subjects), unfolds its timetable,
-  scrolls to the cell and flashes it.
+- A horizontal touch swipe changes the day on phones, the week elsewhere
+  (Current week only). The overlay is `pointer-events-none` so swipes work; a
+  pointer that moved > 10px is a swipe, not a click.
+- Details (user decision: names NO timetable): kind badges in their colours
+  and the group, the full name with the code under it, time with rhythm and
+  "on now", lecturer, room with building, "Map" and "Campus", "Module
+  description" (only with a degree file, opens `SubjectInfoDialog`), note,
+  "on request"; then "Switch class off", "Edit class" (both hidden while
+  locked; editing asks first for a catalog timetable) and "Show in groups".
+  The open block gets a light border. A popover on iPad and desktop, opened
+  where the pointer clicked (Enter / Space, or a click with `detail` 0: beside
+  the block); a drawer on phones, a sheet on `short` screens (`DetailsSheet`,
+  deferred). A swipe opens nothing; one that changes the day closes it.
+- **One popup for the whole grid** (state in `TimetableGrid`), not a Base UI
+  popover per block: a root per block was most of the first render of a full
+  grid. Blocks are `role="button"` divs that do what a trigger did by hand:
+  Enter / Space, `aria-expanded`, a press on the open block closes it, on
+  another moves it there (a press on a block is no outside press). Pointer
+  opens leave focus where it is, key opens move it in; closing returns it to
+  the block. A press never focuses a block (`preventDefault` on mousedown).
+  The popup shows the entry under its key as the grid has it now: an edit
+  shows at once, a block that left the grid takes the popup with it.
+- **Tree ↔ grid** (user decision): on wide screens, hovering (mouse, read off
+  the ruler by position so it works on locked, disabled cells too) or
+  keyboard focus (`:focus-visible`) on a group cell keeps its blocks and dims
+  all others — a class toggle, no re-layout; so does an open category view.
+  "Show in groups" opens the groups panel on its overview, scrolls to the cell
+  and flashes it.
 - Hovering a block with the mouse gives every block of the same subject name
   (across timetables) a faint ring (user decision: subtle, nothing dimmed).
-  Mouse only, so a tap leaves nothing behind.
-- The now-line (Current week, today's column) is `--foreground` with a dot at
-  the column's left edge, above the blocks: a `--primary` line vanished over
-  the blocks (all tints of `--primary`) and looked like a rendering glitch.
 - Screen readers: a block in the hour grid carries its day (or date) and time
-  as `sr-only` text, every block its timetable (the tint's stand-in; the
-  visible popup still names none). Hour rows are `aria-hidden`, the now-line
-  too.
+  as `sr-only` text, every block its timetable (nothing visible names it).
+  Hour labels are `aria-hidden`, the now-line too.
 
-## Group tree
+## Group selection
 
-- One block per timetable (numeric name order): heading, one row per
-  category, then that timetable's warnings — no separate warnings panel (user
-  decision). Folding a timetable keeps a warning count in its heading.
-  Open/closed is not persisted.
+- A panel (`GroupTree`). Overview: one section per timetable (numeric name
+  order): name with update (red dot: an update waits; opens `UpdateDialog`),
+  pen (`TimetableDialog`: name and "Remove timetable…", asked first) and
+  download; under it one status line (user decision): "Own timetable · no
+  updates", "From the catalog · current / outdated / catalog unreachable /
+  catalog ignored" (a refused update counts as current). Then "Classes
+  without a group" (one cell "All classes") if there are any, a ruler per
+  category (ascending), "partly picked" under a ruler with dashed cells,
+  "No group picked yet" right under its category, the other warnings (one
+  amber line per kind, user decision, `@/lib/warnings`), "Add subject".
+  Header: "+" adds timetables (`TimetablePickerDialog`).
 - **A category row is a ruler, never a wrapped list.** Group `n.i` owns slice
   `[(i-1)/n, i/n]` of the row, exactly as `isOverlapping` reads it, so rows
-  line up and show which combinations work. n equal grid columns, cells flush
-  (`-ml-px`), always one line; percentage flex bases do NOT work. What gives
-  way is the label (`--cell-font` scales with the slice). Check categories 1,
-  2, 3, 6, 12 stacked at 1440 and 360px after touching it.
-- Partial selection per category, not per cell: `ClassPicker`, one row per
-  slot (user decision), each with a pen that opens the subject editor.
-- Subject editor: an optional "Degree program" select (None + every degree file
-  on the device, by its bare name, after the name because it decides the name
-  hints). The draft's own value stays listed even when its file is not on the
-  device, so an edit never drops it silently.
-- Any subject change turns a catalog timetable local (no more updates), so
-  for one the user is asked first, on the `+` or the pen, before the editor
-  opens (user decision: never after the changes are made). Adding suggests an
-  empty timetable instead; the pen's question covers editing and deleting. A
-  local timetable is never asked about.
+  line up and show which combinations work. n equal grid columns, nothing
+  else; what gives way is the label (`--cell-font` scales with the slice).
+  Check categories 1, 2, 3, 6, 12 stacked at 1440 and 360px after touching it.
 - A group cell is an on/off switch that keeps the manual pick (user
-  decision): switching off a partial group remembers its picked classes,
-  switching it on brings them back (all classes when nothing is remembered or
-  the remembered subjects moved). Session memory only, in `TimetableTree`
-  (`@/lib/groupToggle`); a reload forgets it.
-- At the right end of each category line with two or more used groups, just
-  left of the `ClassPicker` (user decision), a tri-state checkbox icon
-  switches all its groups (user decision, replacing "no select all / none"):
-  every group on → all off, each remembering a partial pick; otherwise the
-  groups that are off come back on with their pick, the others stay as they
-  are. Disabled while locked.
+  decision): on (filled like a picked tab), off (plain), partly on (dashed).
+  Switching off a partial group remembers its picked classes, switching it on
+  brings them back (all classes when nothing is remembered or the subjects
+  moved). Several groups on at once are fine. Session memory only, per
+  timetable, in `GroupTree` (`@/lib/groupToggle`); a reload forgets it.
+- With two or more used groups a tri-state icon next to the category's name
+  switches all of them: every group on → all off, each remembering a partial
+  pick; otherwise the groups that are off come back on with their pick.
+  Disabled while locked.
+- Category view (the chevron at the category): the same ruler, a search,
+  every subject (same name and kinds) as a fold with its used groups as
+  badges (amber when it breaks a rule: several groups, or every class off).
+  Open: per used group "Only this one" and its classes with a checkbox and a
+  pen; "Show other groups · n" adds the rest, each switchable alike. One row
+  per entry, never merged (user decision): a class listed twice with
+  different slots is two rows.
+- Any subject change turns a catalog timetable local (no more updates), so
+  for one the user is asked first, on "Add subject", the pen or the block's
+  "Edit class", before the editor opens (user decision: never after the
+  changes are made). Adding suggests a new empty timetable instead (user
+  decision), "Add to BEI3 anyway" is the other way; a local timetable is
+  never asked about. `SubjectEditor` (in `AppDialogs`) holds the request,
+  the question and the editor, read against the current timetables.
+- Subject editor: an optional "Degree program" select (None + every degree
+  file on the device, by its bare name, after the name because it decides the
+  name hints). The draft's own value stays listed even when its file is not
+  on the device, so an edit never drops it silently.
 - Screen readers: each category ruler is a `group` labelled by its category
   line; a cell with some of its classes picked is `aria-pressed="mixed"`. The
-  heading's icon buttons name their timetable ("Download BEI3"), the class
-  picker its category; the folded warning count reads as "3 warnings". The
-  jump's flash and scroll respect `prefers-reduced-motion`.
-- Lock applies to the profile: tree cells, pickers, rename, delete, removing a
-  timetable, subject edits and update decisions are disabled; exports and
-  downloads keep working.
-- A catalog timetable's heading icon: nothing for `local`, offline, update
-  waiting (the only button, opens `UpdateDialog`), or current (a refused
-  update counts as current).
+  icon buttons name their timetable ("Download BEI3"). The jump's flash and
+  scroll respect `prefers-reduced-motion`.
+- Lock applies to the profile: cells, checkboxes, rename, removal, subject
+  edits and update decisions are disabled or hidden; exports and downloads
+  keep working.
 
-## Profiles
+## Profiles and timetables in
 
-- Header: the lock button floats right and title and description flow around
-  it (user decision; the card grid kept a column free under the button). The
-  description starts exactly at the button's bottom, so its lines run full
-  width. No "profile is locked" line (user decision): the button says it.
-- Profile dropdown: profiles · Add · Duplicate · Rename · Delete. Duplicate
-  copies the whole profile unlocked and works while the source is locked; its
-  name is asked with "Name 2" suggested. A taken name is refused, never
-  suffixed.
 - `TimetablePickerDialog` is the ONLY way a timetable enters a profile (new
-  profile or add), one row per source (see `src/lib/NOTES.md`). A new empty
-  timetable is created only if still checked on confirm. Every way out of a
-  dialog resets it. A confirm or upload still waiting on a download
-  when the dialog closes (or goes back) is dropped, never applied late.
-  Below the add-empty / upload buttons, a muted line "No file? Let an AI
-  create one…" opens the same `SkillDialog`, nested in the picker.
+  profile or add), one row per source (see `src/lib/NOTES.md`): a search,
+  then new rows (uploads, empties), the catalog by folder ("Catalog · B-EI")
+  with its change date, then "From other profiles" ("Copy from “X” · 14 of 40
+  picked"). Content the profile holds already is greyed out ("Already in the
+  profile"); the profile's own copies are not listed. Below: "Empty
+  timetable", "Upload file…", "Let an AI create it…". Offline: "Catalog
+  unreachable" with "Try again". A new empty timetable is created only if
+  still checked on confirm. Every way out of a dialog resets it. A confirm or
+  upload still waiting on a download when the dialog closes is dropped,
+  never applied late.
 - `ImportDialog` always creates a NEW profile: a profile file imports at once;
   a link asks for the name and shows per timetable where its content is found
   (a local copy, the catalog, or missing — upload it right there).
+- `UpdateDialog`: "New", "Changed" (old → new per field: a class whose
+  `SubjectID` pairs up uniquely, `diffSubjects`) and "Dropped", then "Later",
+  "Reject" (never offered again for that version) and "Apply". Never applied
+  by itself.
 
 ## Checking
 
-Phones at 360px in German (longest labels) and 400px, English too; desktop 1440.
-Screenshots cannot swipe or hover: flip a `useState` default temporarily, or
-drive pointer events from a throwaway `public/_*.html` that iframes `/`, and
-delete it after.
+Phones at 360px in German (longest labels) and 400px, English too; a phone
+turned sideways (844×390); desktop 1440; dark and light. Screenshots cannot
+swipe or hover: flip a `useState` default temporarily, or drive pointer
+events from a throwaway `public/_*.html` that iframes `/`, and delete it
+after.

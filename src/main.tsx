@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { startLaunchLog } from "@/lib/launch";
+import { dropRetiredKeys } from "@/lib/retired";
 import "./index.css";
 import App from "./App.tsx";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -10,6 +11,9 @@ import { followLocaleOfOtherTabs, getLocale } from "@/i18n";
 
 // For the debug info: timings, returns from the background, errors.
 startLaunchLog();
+
+// What older versions stored and none reads any more (the notes strip).
+dropRetiredKeys();
 
 // Screen readers and translation offers read the page's language from here.
 document.documentElement.lang = getLocale();

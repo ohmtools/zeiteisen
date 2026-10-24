@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Minus, Plus } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
 import {
@@ -13,7 +14,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { Catalog } from "@/lib/primitives/catalog";
-import { diffSubjects } from "@/lib/primitives/diff";
+import { diffSubjects, type SubjectChange } from "@/lib/primitives/diff";
+import { groupName } from "@/lib/primitives/group";
+import type { Subject } from "@/lib/primitives/subject";
 import {
   catalogUpdate,
   rejectUpdate,
@@ -21,7 +24,7 @@ import {
   type Timetable,
   type TimetableName,
 } from "@/lib/primitives/timetable";
-import { classLabel } from "@/lib/subjects";
+import { classLabel, dayName, repeatTypeName, timeRangeLabel } from "@/lib/subjects";
 import { limit } from "@/lib/upload";
 
 type Props = {
@@ -115,15 +118,25 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
         ) : (
           <div className="flex flex-col gap-3 text-sm">
             <p className="text-muted-foreground">{m.update_summary({ count: diff.sameCount })}</p>
-            <DiffList title={m.update_added()} lines={limit(diff.added.map(classLabel))} />
-            <DiffList title={m.update_removed()} lines={limit(diff.removed.map(classLabel))} />
+            <DiffList
+              title={m.update_added()}
+              sign="added"
+              lines={limit(diff.added.map(classLabel))}
+            />
+            <ChangeList changes={diff.changed} />
+            <DiffList
+              title={m.update_removed()}
+              sign="removed"
+              lines={limit(diff.removed.map(classLabel))}
+            />
           </div>
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
+          {/* Later: nothing changes, the update stays offered. */}
+          <AlertDialogCancel>{m.update_later()}</AlertDialogCancel>
           <Button
-            variant="outline"
+            variant="secondary"
             disabled={locked || diff === null || entry === null}
             onClick={() => {
               if (timetable) onReplace(timetable.name, rejectUpdate(timetable, catalog));
@@ -149,15 +162,105 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
   );
 }
 
-function DiffList({ title, lines }: { title: string; lines: string[] }) {
+// "New" and "Dropped", each class with its slot.
+function DiffList({
+  title,
+  sign,
+  lines,
+}: {
+  title: string;
+  sign: "added" | "removed";
+  lines: string[];
+}) {
   if (lines.length === 0) return null;
+  const Icon = sign === "added" ? Plus : Minus;
   return (
     <div className="flex flex-col gap-1">
-      <p className="font-medium">{title}</p>
-      <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground">{title}</p>
+      <ul className="flex flex-col gap-1.5">
         {lines.map((line, i) => (
-          <li key={i}>{line}</li>
+          <li key={i} className="flex items-start gap-2">
+            <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span className="font-mono text-xs">{line}</span>
+          </li>
         ))}
+      </ul>
+    </div>
+  );
+}
+
+// "ELK1 · Pr · 10.7": a changed class, the part that stayed the same.
+function classHead(subject: Subject): string {
+  const group = subject.group ? ` · ${groupName(subject.group)}` : "";
+  return `${subject.name} · ${subject.kind.join(", ")}${group}`;
+}
+
+const or = (text: string | undefined) => (text ? text : "–");
+
+// What changed, old → new, one line per field ("Room WE.107 → WE.109").
+function changeLines({ before, after, fields }: SubjectChange): string[] {
+  const a = before.repeat;
+  const b = after.repeat;
+  return fields.map((field) => {
+    switch (field) {
+      case "repeat":
+        return m.update_change_repeat({ from: repeatTypeName(a.type), to: repeatTypeName(b.type) });
+      case "dates":
+        return m.update_change_dates();
+      case "note":
+        return m.update_change_note();
+      case "onDemand":
+        return m.update_change_on_demand();
+      case "degreeProgram":
+        return m.update_change_degree({
+          from: or(before.degreeProgram),
+          to: or(after.degreeProgram),
+        });
+    }
+    // The rest only differ between two weekly rhythms.
+    if (a.type === "I" || b.type === "I") return "";
+    switch (field) {
+      case "day":
+        return m.update_change_day({ from: dayName(a.day), to: dayName(b.day) });
+      case "time":
+        return m.update_change_time({ from: timeRangeLabel(a), to: timeRangeLabel(b) });
+      case "location":
+        return m.update_change_location({ from: or(a.location), to: or(b.location) });
+      case "professor":
+        return m.update_change_professor({ from: or(a.professor), to: or(b.professor) });
+    }
+  });
+}
+
+// At most this many changes are listed, the rest counted, like `limit`.
+const MAX_CHANGES = 10;
+
+// "Changed": the class, then old → new for what differs.
+function ChangeList({ changes }: { changes: SubjectChange[] }) {
+  if (changes.length === 0) return null;
+  const more = changes.length - MAX_CHANGES;
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-xs text-muted-foreground">{m.update_changed()}</p>
+      <ul className="flex flex-col gap-1.5">
+        {changes.slice(0, MAX_CHANGES).map((change, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span className="flex flex-col">
+              <span className="text-sm font-medium">{classHead(change.after)}</span>
+              {changeLines(change).map((line) => (
+                <span key={line} className="font-mono text-xs text-muted-foreground">
+                  {line}
+                </span>
+              ))}
+            </span>
+          </li>
+        ))}
+        {more > 0 && (
+          <li className="pl-6 text-xs text-muted-foreground">
+            {m.upload_error_more({ count: more })}
+          </li>
+        )}
       </ul>
     </div>
   );

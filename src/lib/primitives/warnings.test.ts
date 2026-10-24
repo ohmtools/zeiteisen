@@ -1,5 +1,4 @@
 import { expect, test } from "vitest";
-import { diffSubjects } from "./diff";
 import { subject, timetable, weekly } from "./fixtures.test-util";
 import type { Subject } from "./subject";
 import type { Timetable } from "./timetable";
@@ -80,13 +79,4 @@ test("different subjects of one category may pick different groups", () => {
   // A in 2.1 and C in 2.2: one group per subject, no warning. Category 2 has
   // no single slice, so only 3.1 takes part in the overlap check.
   expect(warningsFor(only(timetable("T", free), [0, 1, 2]))).toEqual([]);
-});
-
-test("diffSubjects compares every field and pairs duplicates", () => {
-  const a = subject("A");
-  const moved = subject("A", { repeat: weekly("friday") });
-  const diff = diffSubjects([a, a, subject("B")], [a, moved]);
-  expect(diff.sameCount).toBe(1);
-  expect(diff.added).toEqual([moved]);
-  expect(diff.removed.map((s) => s.name).sort()).toEqual(["A", "B"]);
 });

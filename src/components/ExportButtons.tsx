@@ -1,10 +1,8 @@
 import { lazy, Suspense, useState } from "react";
-import { Check, Download, Link2 } from "lucide-react";
+import { CalendarDays, Check, FileDown, Link2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { m } from "@/i18n";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { CardDescription } from "@/components/ui/card";
 import { ShareWarningDialog } from "@/components/ShareWarningDialog";
 import { shareLinkOf, useCopied } from "@/hooks/useShareLink";
 import type { Catalog } from "@/lib/primitives/catalog";
@@ -70,7 +68,9 @@ async function downloadIcs(
 }
 
 // Everything that takes the profile off this device: calendar, share link and
-// profile file. They export the profile, so they live in `ProfileSection`.
+// profile file. They export the profile, so they live in its menu
+// (`ProfileMenu`), never in the header (user decision): up there they would
+// imply global state like the dates, which never leave the device.
 export function ExportButtons({ dates, profile, catalog }: Props) {
   const [copied, copy] = useCopied();
   // Built here, after the first paint, not in App: it hashes every timetable
@@ -109,22 +109,20 @@ export function ExportButtons({ dates, profile, catalog }: Props) {
 
   return (
     <div className="flex flex-col gap-2">
-      <ButtonGroup aria-label={m.groups_export()} className="w-full">
+      <div aria-label={m.groups_export()} role="group" className="grid grid-cols-3 gap-2">
         <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 px-2"
+          variant="secondary"
+          className="min-w-0 px-2"
           disabled={!profile}
           title={m.groups_export_ics()}
           onClick={() => void startExport().catch(() => toast.error(m.toast_ics_failed()))}
         >
-          <Download data-icon="inline-start" />
-          ics
+          <CalendarDays data-icon="inline-start" />
+          <span className="font-mono text-xs">.ics</span>
         </Button>
         <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 px-2"
+          variant="secondary"
+          className="min-w-0 px-2"
           disabled={linkBlocked}
           title={share?.tooLong ? m.groups_export_link_long() : m.groups_export_link_hint()}
           onClick={() => {
@@ -141,18 +139,19 @@ export function ExportButtons({ dates, profile, catalog }: Props) {
         </Button>
         <Button
           // The fallback when the link is too long, so it stands out then.
-          variant={share?.tooLong ? "default" : "outline"}
-          size="sm"
-          className="flex-1 px-2"
+          variant={share?.tooLong ? "default" : "secondary"}
+          className="min-w-0 px-2"
           disabled={!profile}
           title={m.groups_export_json()}
           onClick={() => profile && downloadProfile(profile)}
         >
-          <Download data-icon="inline-start" />
-          .profile
+          <FileDown data-icon="inline-start" />
+          <span className="font-mono text-xs">.profile</span>
         </Button>
-      </ButtonGroup>
-      {share?.tooLong && <CardDescription>{m.groups_export_link_long()}</CardDescription>}
+      </div>
+      {share?.tooLong && (
+        <p className="text-xs text-muted-foreground">{m.groups_export_link_long()}</p>
+      )}
       {profile && (
         <ShareWarningDialog
           open={warning}

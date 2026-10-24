@@ -137,6 +137,8 @@ export function ImportDialog({
     onOpenChange(false);
   };
 
+  const detected = text.trim() ? decodeShareInput(text) : null;
+
   const acceptLink = () => {
     const next = decodeShareInput(text);
     if (next) {
@@ -223,6 +225,7 @@ export function ImportDialog({
             <Input
               id="import-link"
               value={text}
+              aria-invalid={failed || undefined}
               autoFocus
               placeholder={m.import_link_placeholder()}
               onChange={(event) => {
@@ -246,13 +249,19 @@ export function ImportDialog({
               }}
             />
             <Button
-              variant="outline"
+              variant="secondary"
               className="self-start"
               onClick={() => fileInput.current?.click()}
             >
               <FileUp data-icon="inline-start" />
               {m.import_file()}
             </Button>
+            {/* What the typed link holds, before "Next". */}
+            {!failed && detected !== null && (
+              <p className="text-xs text-muted-foreground">
+                {m.import_detected({ count: detected.length })}
+              </p>
+            )}
             {failed && <p className="text-sm text-destructive">{m.import_error()}</p>}
           </div>
         ) : (
@@ -314,7 +323,7 @@ export function ImportDialog({
                 <>
                   <p className="text-sm text-muted-foreground">{m.import_missing_hint()}</p>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="self-start"
                     onClick={() => uploadInput.current?.click()}
@@ -341,7 +350,7 @@ export function ImportDialog({
 
         <DialogFooter>
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => {
               // With a pasted link the first step is still reachable; a
               // link-opened dialog has nothing to go back to.
@@ -357,7 +366,7 @@ export function ImportDialog({
           </Button>
           {shared === null ? (
             <Button disabled={!text.trim()} onClick={acceptLink}>
-              {m.import_confirm()}
+              {m.import_next()}
             </Button>
           ) : (
             <Button disabled={busy || !anyIncluded || nameInvalid} onClick={() => void confirm()}>

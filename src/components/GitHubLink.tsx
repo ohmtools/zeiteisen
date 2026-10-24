@@ -4,8 +4,8 @@ import { buttonVariants } from "@/components/ui/button";
 
 const REPO_URL = "https://github.com/ohmtools/zeiteisen";
 
-// The GitHub mark as a link to the source, in the desktop footer and under
-// About on the Settings page (as in faltung).
+// The GitHub mark as a link to the source, under About in the settings (as
+// in faltung).
 export function GitHubLink({ className }: { className?: string }) {
   return (
     <a

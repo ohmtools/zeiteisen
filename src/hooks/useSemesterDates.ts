@@ -41,7 +41,7 @@ export function useSemesterDates(sources: Sources) {
     manual: sources.datesManual,
 
     // A file the user picked by hand: theirs from now on. There is no panel
-    // for it in the Data menu, so a refused file is a toast with zod's
+    // for it in the settings, so a refused file is a toast with zod's
     // details. `@/lib/upload` (and zod's locales) load on the first upload
     // only.
     upload: async (file: File) => {
@@ -74,7 +74,7 @@ export function useSemesterDates(sources: Sources) {
       if (!options?.quiet) toast.success(m.toast_catalog_dates_removed());
     },
 
-    // The Data menu's way back: take the catalog's dates again and let it
+    // The settings' way back: take the catalog's dates again and let it
     // keep them current. It fetches on its own, because it may run long after
     // the last catalog refresh.
     // Not named `use…`: it is no hook, and the React Compiler would refuse

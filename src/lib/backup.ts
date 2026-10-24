@@ -33,7 +33,7 @@ export async function readBackupFile(file: File): Promise<Backup | null> {
 // browser refused a write: then everything written is put back as it was, so
 // the page (which stays as it is) and storage still agree. A backup reading
 // another catalog, or none, drops the cached one, like switching the URL or
-// to `ignore` in the Data menu does: its timetables, names and links would
+// to `ignore` in the settings does: its timetables, names and links would
 // otherwise stay until the new catalog answers.
 export function restoreBackup(backup: Backup): boolean {
   const before = loadBackup();

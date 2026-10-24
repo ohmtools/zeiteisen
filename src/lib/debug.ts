@@ -15,7 +15,7 @@ import {
   loadProfiles,
 } from "@/lib/primitives/storage";
 
-// The Settings page's (and Data menu's) "Debug info": a plain-text report to
+// The settings' "Debug info": a plain-text report to
 // copy into a bug report. Counts and sizes only: no profile, timetable or
 // subject names, no notes. Built on demand, in the deferred chunk.
 //
@@ -136,7 +136,7 @@ function pageLoad(): string[] {
     `app scripts ran: ${ms(markAt(MARK_MAIN))}`,
     `first render committed: ${ms(markAt(MARK_COMMIT))}`,
     `first frame after it: ${ms(markAt(MARK_FRAME))}`,
-    `sidebar chunk arrived: ${ms(markAt(MARK_DEFERRED))}`,
+    `deferred chunk arrived: ${ms(markAt(MARK_DEFERRED))}`,
   );
   return lines;
 }

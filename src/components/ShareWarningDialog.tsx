@@ -65,7 +65,7 @@ function OutsideList({ profile, catalog }: { profile: Profile; catalog: Catalog 
         <li key={timetable.name} className="flex items-center justify-between gap-2">
           <span className="min-w-0 truncate">{timetable.name}</span>
           <Button
-            variant="outline"
+            variant="secondary"
             size="xs"
             title={m.share_warning_download({ name: timetable.name })}
             onClick={() => {

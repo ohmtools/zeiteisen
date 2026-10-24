@@ -122,13 +122,14 @@ export default defineConfig({
         // Launch timings for the Debug info (`public/sw-launch.js`).
         importScripts: ["sw-launch.js"],
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,zip}"],
-        // Inter's other scripts: German and English never hit their
+        // Geist's other scripts: German and English never hit their
         // `unicode-range`, so the browser never asks for them either.
         // The link preview cards are for crawlers only, never shown in the app;
         // the app icons are read when the app is installed (online), never by
         // the app itself.
         globIgnores: [
-          "**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2",
+          "**/geist-{cyrillic,cyrillic-ext,vietnamese}-*.woff2",
+          "**/geist-mono-{cyrillic,cyrillic-ext,vietnamese,symbols2}-*.woff2",
           "og.png",
           // Kept by the service worker itself, as its imported script.
           "sw-launch.js",

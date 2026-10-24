@@ -1,18 +1,13 @@
 import { cn } from "cn";
 import { m } from "@/i18n";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Day } from "@/lib/primitives/subject";
 import { DAYS } from "@/lib/primitives/week";
 import { dateOf, dayName, shortDate } from "@/lib/subjects";
 
-function isDay(value: string | undefined): value is Day {
-  return DAYS.some((day) => day === value);
-}
-
-// Below `md` the grid shows one day at a time; this picks it. App owns the
-// day because the toggle sits in the phone's bottom dock, apart from the grid.
-// In the week view each weekday carries its day of the month ("Mo 21."), the
-// month is in the week nav right above.
+// Phones show one day at a time; this bar at the bottom picks it. App owns
+// the day because the bar sits apart from the grid. In the week view each
+// weekday carries its day of the month under its name; the picked day is red,
+// the one accent.
 export function DayToggle({
   value,
   onChange,
@@ -26,37 +21,37 @@ export function DayToggle({
   className?: string;
 }) {
   return (
-    <ToggleGroup
-      variant="outline"
-      size="sm"
-      spacing={0}
-      className={cn("w-full", className)}
-      value={[value]}
-      onValueChange={([day]) => {
-        if (isDay(day)) onChange(day);
-      }}
-      aria-label={m.grid_day_pick()}
-    >
-      {DAYS.map((day) => (
-        <ToggleGroupItem
-          key={day}
-          value={day}
-          // "Other" keeps its natural width; the weekdays share the rest. `!` beats
-          // toggle-group's own `group-data-[spacing=0]:px-6`.
-          className={day === Day.other ? "shrink-0 px-3!" : "min-w-0 flex-1 px-0!"}
-        >
-          {day === Day.other ? (
-            m.grid_other_short()
-          ) : (
-            <>
-              {dayName(day)}
-              {weekStart && (
-                <span className="tabular-nums">{shortDate(dateOf(weekStart, day), false)}</span>
-              )}
-            </>
-          )}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <div role="tablist" aria-label={m.grid_day_pick()} className={cn("flex gap-1", className)}>
+      {DAYS.map((day) => {
+        const selected = day === value;
+        return (
+          <button
+            key={day}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            className={cn(
+              "flex min-w-0 flex-1 flex-col items-center justify-center rounded-md text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              weekStart ? "h-14" : "h-10",
+              selected ? "bg-red font-semibold text-red-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => onChange(day)}
+          >
+            {day === Day.other ? (
+              m.grid_other_short()
+            ) : (
+              <>
+                <span>{dayName(day)}</span>
+                {weekStart && (
+                  <span className={cn("font-mono text-base", !selected && "text-foreground")}>
+                    {shortDate(dateOf(weekStart, day), false)}
+                  </span>
+                )}
+              </>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }

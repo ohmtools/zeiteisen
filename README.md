@@ -5,10 +5,11 @@
 
 PWA to try out group combinations for a personal university timetable. Runs
 entirely in the browser: no backend, nothing is ever sent. Data lives in
-local storage; the footer's "Data" menu saves and loads backups. On iPhone and
+local storage; the settings save and load backups. On iPhone and
 iPad add it to the home screen, Safari deletes site data after 7 days unused.
 
-Vite + React 19 + TypeScript + Tailwind v4, `paraglide-js` (en/de), `zod/mini`.
+Vite + React 19 + TypeScript + Tailwind v4 + shadcn/ui (base-vega), `paraglide-js`
+(en/de), `zod/mini`.
 
 ## Development
 

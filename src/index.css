@@ -1,21 +1,50 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
-/* The two-column shell only works when the sidebar fits the viewport height
-   without a page scrollbar; below that the phone layout (one column, page
-   scrolls) takes over. 600px, not more: an iPad 10 in landscape leaves about
-   700px under the browser's toolbar and tab strip, short laptops about 650px,
-   and both should get the desktop. Use `desktop:` for shell layout, `lg:`
-   stays for everything that only cares about width. */
-@custom-variant desktop (@media (width >= 64rem) and (height >= 600px));
+/* Three steps, the same content in other containers (user decision):
+   narrow (the base: one day, tabs, week and day bar at the bottom), `compact:`
+   (the whole week, a one-line header, panels as a sheet from the right) from
+   40rem or on a short landscape screen (phones turned sideways), `wide:` (the
+   week beside a closable 340px sidebar) from 64rem AND 600px height. 600px,
+   not more: an iPad 10 in landscape leaves about 700px under the browser's
+   toolbar and tab strip, short laptops about 650px, and both should get the
+   sidebar. `compact:` holds on `wide:` screens too, like Tailwind's
+   breakpoints. `lg:` / `md:` stay for what only cares about width. */
+@custom-variant compact (@media (width >= 40rem), (height < 600px) and (orientation: landscape));
+@custom-variant wide (@media (width >= 64rem) and (height >= 600px));
+/* A phone turned sideways (or any short landscape window): a lower header,
+   every second hour label, the details as a sheet from the right. */
+@custom-variant short (@media (height < 600px) and (orientation: landscape));
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: "Geist Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --color-grid: var(--grid);
+  --color-hour: var(--hour);
+  --color-red: var(--accent-red);
+  --color-red-foreground: var(--accent-red-foreground);
+  --color-warning: var(--warning);
+  --color-surface: var(--surface);
+  --color-kind-su: var(--kind-su);
+  --color-kind-su-border: var(--kind-su-border);
+  --color-kind-ue: var(--kind-ue);
+  --color-kind-ue-border: var(--kind-ue-border);
+  --color-kind-pr: var(--kind-pr);
+  --color-kind-pr-border: var(--kind-pr-border);
+  --color-kind-tu: var(--kind-tu);
+  --color-kind-tu-border: var(--kind-tu-border);
+  --color-kind-s: var(--kind-s);
+  --color-kind-s-border: var(--kind-s-border);
+  --color-kind-wf: var(--kind-wf);
+  --color-kind-wf-border: var(--kind-wf-border);
+  --color-block-kind: var(--block-kind);
+  --color-block-room: var(--block-room);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -57,72 +86,118 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.505 0.213 27.518);
-  --primary-foreground: oklch(0.971 0.013 17.38);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #fafafa;
+  --card-foreground: #0a0a0a;
+  --popover: #fafafa;
+  --popover-foreground: #0a0a0a;
+  /* Neutral: red is the one accent and has its own token. */
+  --primary: #0a0a0a;
+  --primary-foreground: #fafafa;
+  --secondary: #e5e5e5;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
+  --destructive: #dc2626;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #a3a3a3;
   --chart-1: oklch(0.808 0.114 19.571);
   --chart-2: oklch(0.637 0.237 25.331);
   --chart-3: oklch(0.577 0.245 27.325);
   --chart-4: oklch(0.505 0.213 27.518);
   --chart-5: oklch(0.444 0.177 26.899);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.577 0.245 27.325);
-  --sidebar-primary-foreground: oklch(0.971 0.013 17.38);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #0a0a0a;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #a3a3a3;
+  /* Zeiteisen: hour lines, hour labels, the red accent (profile tile, today,
+     now-line, picked day, "update waiting", destructive fills), hints and
+     warnings, the "Other" column. */
+  --grid: #f0f0f0;
+  --hour: #737373;
+  --accent-red: #dc2626;
+  --accent-red-foreground: #ffffff;
+  --warning: #b45309;
+  --surface: #fafafa;
+  /* Blocks are coloured by kind only, never by timetable (user decision). */
+  --kind-su: #f5f5f5;
+  --kind-su-border: #d4d4d4;
+  --kind-ue: #eff6ff;
+  --kind-ue-border: #3b82f6;
+  --kind-pr: #ffedd5;
+  --kind-pr-border: #ea580c;
+  --kind-tu: #f0fdfa;
+  --kind-tu-border: #14b8a6;
+  --kind-s: #f5f3ff;
+  --kind-s-border: #8b5cf6;
+  --kind-wf: #f7fee7;
+  --kind-wf-border: #65a30d;
+  --block-kind: #404040;
+  --block-room: #525252;
 }
 
+/* OLED dark: a black ground, surfaces a step above it. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.444 0.177 26.899);
-  --primary-foreground: oklch(0.971 0.013 17.38);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #000000;
+  --foreground: #fafafa;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --popover: #0a0a0a;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #fafafa;
+  --muted: #111111;
+  --muted-foreground: #a3a3a3;
+  --accent: #1f1f1f;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --border: #1f1f1f;
+  --input: #262626;
+  --ring: #525252;
   --chart-1: oklch(0.808 0.114 19.571);
   --chart-2: oklch(0.637 0.237 25.331);
   --chart-3: oklch(0.577 0.245 27.325);
   --chart-4: oklch(0.505 0.213 27.518);
   --chart-5: oklch(0.444 0.177 26.899);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.637 0.237 25.331);
-  --sidebar-primary-foreground: oklch(0.971 0.013 17.38);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: #000000;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1f1f1f;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #1f1f1f;
+  --sidebar-ring: #525252;
+  --grid: #141414;
+  --hour: #8a8a8a;
+  --accent-red: #dc2626;
+  --accent-red-foreground: #ffffff;
+  --warning: #fbbf24;
+  --surface: #0a0a0a;
+  --kind-su: #111111;
+  --kind-su-border: #2e2e2e;
+  --kind-ue: #0d1f3c;
+  --kind-ue-border: #2563eb;
+  --kind-pr: #4a1a04;
+  --kind-pr-border: #f97316;
+  --kind-tu: #062b2a;
+  --kind-tu-border: #0d9488;
+  --kind-s: #25104d;
+  --kind-s-border: #7c3aed;
+  --kind-wf: #1a2e05;
+  --kind-wf-border: #84cc16;
+  --block-kind: #d4d4d4;
+  --block-room: #a3a3a3;
 }
 
 @layer base {

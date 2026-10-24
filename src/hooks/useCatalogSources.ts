@@ -17,7 +17,7 @@ import {
 } from "@/lib/primitives/storage";
 
 // Owns `tt.sources.v1` (where the global dates came from, and whether the user
-// picked them by hand), `tt.catalogmode.v1` (the Data menu's "Catalog":
+// picked them by hand), `tt.catalogmode.v1` (the settings' catalog mode:
 // ignore, auto-update, freeze) and `tt.catalogurl.v1` (the user's catalog
 // URL). Timetables are not in here: every profile records the origin of its
 // own timetables.

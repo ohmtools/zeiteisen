@@ -30,7 +30,7 @@ import { appRoot } from "@/lib/catalog";
 import { degreeNames, type DegreeName } from "@/lib/degrees";
 import { toast } from "@/lib/toast";
 
-// The dialogs behind the Data menu and the Settings page (`useDataControls`).
+// The dialogs behind the settings (`useDataControls`).
 
 // The own degree files in upload order, each removable on its own; the dialog closes once none is left. Removing is
 // at once, no confirmation: the user still has the file.
@@ -75,7 +75,7 @@ export function OwnDegreesDialog({
         </ul>
         <DialogFooter>
           <Button
-            variant="outline"
+            variant="secondary"
             className="sm:mr-auto"
             onClick={() => onRemove(files.map((file) => file.name))}
           >
@@ -162,7 +162,7 @@ export function DegreeNamesDialog({
           ))}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {m.cancel()}
           </Button>
           <Button disabled={invalid} onClick={add}>
@@ -222,7 +222,7 @@ export function DeleteDataDialog({
         </AlertDialogHeader>
         <DataPartsList id="delete" chosen={chosen} onChange={setChosen} />
         <Button
-          variant="outline"
+          variant="secondary"
           className="sm:justify-self-start"
           onClick={() => downloadBackup()}
         >
@@ -314,14 +314,14 @@ export function CatalogUrlDialog({
         </div>
         <DialogFooter>
           <Button
-            variant="outline"
+            variant="secondary"
             className="sm:mr-auto"
             disabled={url === null}
             onClick={() => save(null)}
           >
             {m.catalog_url_default()}
           </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.cancel()}
           </Button>
           <Button disabled={invalid} onClick={() => save(trimmed || null)}>

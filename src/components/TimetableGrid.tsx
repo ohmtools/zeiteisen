@@ -1,17 +1,33 @@
-import type { SubjectInformation } from "@/lib/primitives/meta";
-import { useRef, useState } from "react";
+import { lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "cn";
-import { localized, m } from "@/i18n";
-import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
-import { BLOCK_MIN_HEIGHT, SubjectBlock, SubjectPopup } from "@/components/SubjectBlock";
-import { Badge } from "@/components/ui/badge";
+import { getLocale, localized, m } from "@/i18n";
+import {
+  BLOCK_MIN_HEIGHT,
+  CollectedBlock,
+  CollectedList,
+  SubjectBlock,
+  SubjectDetails,
+  SubjectPopup,
+  type DetailActions,
+  type Popup,
+  type Press,
+} from "@/components/SubjectBlock";
 import { NowLine } from "@/components/NowLine";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { GlobalEvent } from "@/lib/primitives/meta";
 import { Day, minutesOf } from "@/lib/primitives/subject";
 import { DAYS, isUnclearRepeat, type WeekEvents } from "@/lib/primitives/week";
-import { byDay, FIRST_HOUR, LAST_HOUR, WEEKDAYS, type Entry } from "@/lib/layout";
-import { isHighlighted, type Highlight, type SubjectRef } from "@/lib/link";
+import { allDaySegments, type AllDaySegment } from "@/lib/allday";
+import { byDay, FIRST_HOUR, fitDay, LAST_HOUR, WEEKDAYS, type Entry } from "@/lib/layout";
+import { isHighlighted, type Highlight } from "@/lib/link";
+import type { Step } from "@/lib/media";
 import { dateOf, dayName as dayLabel, shortDate } from "@/lib/subjects";
+
+// On phones the details are a drawer from the bottom, on a phone turned
+// sideways a sheet from the right (deferred chunk, with the dialogs).
+const DetailsSheet = lazy(() =>
+  import("@/components/deferred").then((d) => ({ default: d.DetailsSheet })),
+);
 
 // Current-week extras; null in the general view.
 export type WeekView = WeekEvents & {
@@ -22,16 +38,10 @@ export type WeekView = WeekEvents & {
   start: Date;
 };
 
-// Below `md` the grid shows the time column plus one weekday, picked in the
-// bottom dock (`DayToggle`); from `md` up it shows Mon-Fri. Hidden columns are CSS-only. `other` is
-// no column: it is the list next to the grid (below `md`: instead of it).
-const COLUMNS = "grid grid-cols-[5rem_minmax(0,1fr)] md:grid-cols-[6rem_repeat(5,minmax(0,1fr))]";
-
-// A horizontal touch swipe on the grid moves to the previous/next day; from
-// `md` up, where every day is shown, to the previous/next week (Current week
+// A horizontal touch swipe on the grid moves to the previous/next day on
+// phones; where every day is shown, to the previous/next week (Current week
 // only: a tablet swiped and nothing seemed to happen).
 const SWIPE_MIN_PX = 50;
-const ALL_DAYS_QUERY = "(width >= 48rem)";
 
 // -1 back, 1 forward, 0 no swipe.
 function swipeDirection(dx: number, dy: number): -1 | 0 | 1 {
@@ -44,77 +54,116 @@ function swipeTarget(from: Day, direction: -1 | 1): Day {
   return DAYS[Math.max(0, Math.min(DAYS.length - 1, index))];
 }
 
-// `shown` is the column's display from `md` up: a flex cell has to say so, or
-// `md:block` would override its `flex`.
-function dayColumn(day: Day, selected: Day, shown: "md:block" | "md:flex" = "md:block"): string {
-  return day === selected ? "" : `hidden ${shown}`;
-}
-
-// The all-day row's height: four lines of `EventBadge` (`text-[0.625rem]` at
-// the row's inherited `text-sm` line-height ratio), so two events of two lines
-// each fit, plus their `gap-1`, the cell's `p-1.5`, the row's border and 1px
-// for rounding.
-const ALLDAY_HEIGHT = "calc(4 * 0.625rem * 1.25 / 0.875 + 0.25rem + 0.75rem + 2px)";
+const HOURS = LAST_HOUR - FIRST_HOUR;
+// The lines between the hours, drawn by each day column itself.
+const HOUR_LINES = {
+  backgroundImage: `repeating-linear-gradient(to bottom, var(--grid) 0 1px, transparent 1px calc(100% / ${HOURS}))`,
+};
 
 type Props = {
   entries: Entry[];
   week: WeekView | null;
-  // Tells "nothing uploaded" apart from "nothing this week".
-  hasFiles: boolean;
-  // The group cell hovered in the tree: every other block is dimmed.
+  step: Step;
+  // A short landscape screen (a phone turned sideways): every second hour
+  // label, blocks name and kinds only, the details as a sheet.
+  short: boolean;
+  // Shown over the empty grid: no timetables yet, or a week without classes.
+  overlay?: ReactNode;
+  // The group cell hovered in the tree, or the category open there: every
+  // other block is dimmed.
   highlight?: Highlight | null;
-  // A block's popup asks to show its group cell in the tree.
-  onJump?: (subject: SubjectRef) => void;
-  // A block's popup asks for the subject's catalog info.
-  onInfo?: (info: SubjectInformation) => void;
-  // The one day shown below `md`; a swipe moves it.
+  actions: DetailActions;
+  // The one day shown on phones; a swipe moves it.
   selectedDay: Day;
   onSelectDay: (day: Day) => void;
-  // A swipe from `md` up, in the week view: one week back (-1) or on (1).
+  // A swipe where the whole week shows, in the week view: one week back (-1)
+  // or on (1).
   onSwipeWeek?: (direction: -1 | 1) => void;
 };
 
 export function TimetableGrid({
   entries,
   week,
-  hasFiles,
+  step,
+  short,
+  overlay,
   highlight = null,
-  onJump,
-  onInfo,
+  actions,
   selectedDay,
   onSelectDay,
   onSwipeWeek,
 }: Props) {
+  const general = week === null;
+  const narrow = step === "narrow";
+  const brief = short;
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   // The subject under the mouse: its other blocks get a faint ring.
   const [hovered, setHovered] = useState<string | null>(null);
-  // The one details popup, by the block's `entry.key`: it shows the entry
-  // under that key as the grid has it now, so an edit shows at once and a
-  // block that left the grid (another tab, another week) takes it along.
-  // `open` turns false first, so the details stay for the closing animation.
+  // The body's size: how wide a day column is (lanes narrower than
+  // `MIN_LANE_PX` are gathered) and how tall an hour (a collected block's
+  // lines).
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setSize({ width: entry.contentRect.width, height: entry.contentRect.height }),
+    );
+    observer.observe(body);
+    return () => observer.disconnect();
+  }, []);
+
+  // The one popup, by the block's key: it shows the entry under that key as
+  // the grid has it now, so an edit shows at once and a block that left the
+  // grid (another tab, another week) takes it along. `open` turns false
+  // first, so the details stay for the closing animation.
   const [popup, setPopup] = useState<{
-    key: string;
+    keys: string[];
     open: boolean;
     point: { x: number; y: number };
     block: HTMLElement;
     keyboard: boolean;
   } | null>(null);
-  const popupEntry = popup && (entries.find((entry) => entry.key === popup.key) ?? null);
+  const popupEntries = popup
+    ? popup.keys
+        .map((key) => entries.find((entry) => entry.key === key))
+        .filter((entry) => entry !== undefined)
+    : [];
+  const content: Popup =
+    popupEntries.length === 0
+      ? null
+      : popup!.keys.length === 1
+        ? { kind: "details", entry: popupEntries[0] }
+        : { kind: "list", entries: popupEntries };
   const closePopup = () => setPopup((shown) => shown && { ...shown, open: false });
+  const openKey = popup?.open ? popup.keys.join("+") : null;
   // A press on the open block closes the popup, as a trigger's would; on any
   // other block it moves there.
-  const pressBlock =
-    (entry: Entry) => (point: { x: number; y: number }, block: HTMLElement, keyboard: boolean) =>
+  const press =
+    (keys: string[]): Press =>
+    (point, block, keyboard) =>
       setPopup((shown) =>
-        shown?.open && shown.key === entry.key
+        shown?.open && shown.keys.join("+") === keys.join("+")
           ? { ...shown, open: false }
-          : { key: entry.key, open: true, point, block, keyboard },
+          : { keys, open: true, point, block, keyboard },
       );
 
-  const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, i) => FIRST_HOUR + i);
   const { grid, list } = byDay(entries);
-  // The hour floor: the shortest block in the grid (any day, so the rows do not
-  // change with the phone's day) still holds its three lines, never under 24px.
+  const columns = narrow ? (selectedDay === Day.other ? [] : [selectedDay]) : WEEKDAYS;
+  const showOther = !narrow || selectedDay === Day.other;
+  const hourColumn = narrow ? "3rem" : "3.5rem";
+  const template = narrow
+    ? selectedDay === Day.other
+      ? "minmax(0, 1fr)"
+      : `${hourColumn} minmax(0, 1fr)`
+    : `${hourColumn} repeat(6, minmax(0, 1fr))`;
+  const columnWidth = narrow
+    ? size.width - (selectedDay === Day.other ? 0 : 48)
+    : (size.width - 56) / 6;
+  const hourPx = size.height / HOURS;
+  // The hour floor: the shortest block in the grid (any day, so the rows do
+  // not change with the phone's day) keeps its lines whole, never under 24px.
   const shortest = Math.min(
     ...WEEKDAYS.flatMap((day) =>
       grid[day].map(({ entry }) =>
@@ -122,24 +171,41 @@ export function TimetableGrid({
       ),
     ),
   );
+  const floor = brief ? "(2 * 1rem + 0.5rem + 4px)" : BLOCK_MIN_HEIGHT;
   const hourFloor = Number.isFinite(shortest)
-    ? `max(1.5rem, calc(${BLOCK_MIN_HEIGHT} * ${60 / shortest}))`
+    ? `max(1.5rem, calc(${floor} * ${60 / shortest}))`
     : "1.5rem";
   // A class toggle per block, nothing moves.
   const dimmed = (entry: Entry) => highlight !== null && !isHighlighted(entry, highlight);
   const related = (entry: Entry) => hovered !== null && entry.subject.name === hovered;
-  const otherEvents = week?.events[Day.other] ?? [];
-  const showOther = selectedDay === Day.other;
   const unclear = (entry: Entry) => week !== null && isUnclearRepeat(entry.subject.repeat);
+  const labels = Array.from({ length: HOURS + 1 }, (_, i) => FIRST_HOUR + i).filter(
+    (hour) => !short || hour % 2 === 0,
+  );
+
+  const details =
+    content === null ? null : content.kind === "list" ? (
+      <CollectedList
+        entries={content.entries}
+        onPick={(entry) =>
+          setPopup((shown) => shown && { ...shown, keys: [entry.key], open: true })
+        }
+      />
+    ) : (
+      <SubjectDetails
+        entry={content.entry}
+        general={general}
+        unclear={unclear(content.entry)}
+        actions={actions}
+        onClose={closePopup}
+      />
+    );
 
   // touch-pan-y: the browser keeps vertical scrolling, we get horizontal
-  // moves. The swipe covers grid and list, so it moves between them too.
+  // moves.
   return (
     <div
-      // No placeholder for the all-day row in the general view (user
-      // decision): the grid starts right below the toolbar, the hours move
-      // down when the week view adds that row.
-      className="flex flex-1 touch-pan-y flex-col gap-4 text-sm md:flex-row"
+      className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden rounded-r-[10px] border border-l-0"
       onPointerDown={(event) => {
         if (event.pointerType === "mouse") return;
         swipeStart.current = { x: event.clientX, y: event.clientY };
@@ -152,7 +218,7 @@ export function TimetableGrid({
         if (direction === 0) return;
         // A press on a block is no outside press (`SubjectPopup`), so a swipe
         // that starts on one closes the popup here.
-        if (matchMedia(ALL_DAYS_QUERY).matches) {
+        if (!narrow) {
           if (!onSwipeWeek) return;
           closePopup();
           onSwipeWeek(direction);
@@ -166,183 +232,318 @@ export function TimetableGrid({
         swipeStart.current = null;
       }}
     >
-      <div className={cn("flex min-w-0 flex-1 flex-col border", showOther && "hidden md:flex")}>
-        {/* On phones the day toggle in the dock already names the shown day. */}
-        <div className={`${COLUMNS} hidden border-b md:grid`}>
-          <div className="flex items-center justify-center p-2 text-center text-muted-foreground">
-            {m.grid_time()}
-          </div>
-          {WEEKDAYS.map((day) => (
+      {/* Day names (from compact on; phones name the day in the bar below),
+          then the all-day row, one line, reserved in the general view too,
+          so the hours never move between the views (user decision). */}
+      <div
+        className="grid shrink-0 overflow-hidden [scrollbar-gutter:stable]"
+        style={{ gridTemplateColumns: template }}
+      >
+        {!narrow && (
+          <>
+            <div className="h-10 border-b" />
+            {WEEKDAYS.map((day) => (
+              <DayHead key={day} day={day} week={week} />
+            ))}
+            <div className="flex h-10 items-center justify-center border-b border-l bg-surface px-1 text-sm font-medium text-muted-foreground @container">
+              <span className="hidden truncate @[7rem]:inline">{m.grid_other()}</span>
+              <span className="truncate @[7rem]:hidden">{m.grid_other_short()}</span>
+            </div>
+          </>
+        )}
+        <AllDayRow week={week} narrow={narrow} columns={narrow ? [selectedDay] : DAYS} />
+      </div>
+
+      <div
+        ref={bodyRef}
+        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pt-3 pb-2 [scrollbar-gutter:stable]"
+      >
+        <div
+          className="relative grid flex-1"
+          style={{ gridTemplateColumns: template, minHeight: `calc(${HOURS} * ${hourFloor})` }}
+        >
+          {columns.length > 0 && (
+            <div aria-hidden className="relative">
+              {labels.map((hour) => (
+                <span
+                  key={hour}
+                  className={cn(
+                    "absolute right-2 font-mono text-xs leading-4 text-hour",
+                    hour === LAST_HOUR ? "-translate-y-full" : "-translate-y-1/2",
+                  )}
+                  style={{ top: `${((hour - FIRST_HOUR) / HOURS) * 100}%` }}
+                >
+                  {String(hour).padStart(2, "0")}:00
+                </span>
+              ))}
+            </div>
+          )}
+
+          {columns.map((day) => (
+            <div key={day} className="relative border-l border-t-0" style={HOUR_LINES}>
+              {/* A lecture-free day: greyed over with its reason, lectures
+                  gone (listed dates still meet). */}
+              {week?.noLectures.has(day) && (
+                <div className="absolute inset-0 z-[1] flex justify-center bg-surface pt-6 text-xs text-muted-foreground">
+                  {m.grid_no_lectures()}
+                </div>
+              )}
+              {fitDay(grid[day], columnWidth).map((shown) =>
+                shown.kind === "block" ? (
+                  <SubjectBlock
+                    key={shown.entry.key}
+                    entry={shown.entry}
+                    place={{
+                      lane: shown.lane,
+                      lanes: shown.lanes,
+                      start: minutesOf(shown.entry.meeting.startTime),
+                      end: minutesOf(shown.entry.meeting.endTime),
+                    }}
+                    general={general}
+                    brief={brief}
+                    unclear={unclear(shown.entry)}
+                    dimmed={dimmed(shown.entry)}
+                    related={related(shown.entry)}
+                    onHover={setHovered}
+                    expanded={openKey === shown.entry.key}
+                    onPress={press([shown.entry.key])}
+                  />
+                ) : (
+                  <CollectedBlock
+                    key={shown.key}
+                    entries={shown.entries}
+                    place={shown}
+                    rows={Math.floor((((shown.end - shown.start) / 60) * hourPx) / 16) - 1}
+                    dimmed={shown.entries.every(dimmed)}
+                    expanded={openKey === shown.key}
+                    onPress={press(shown.entries.map((entry) => entry.key))}
+                  />
+                ),
+              )}
+              {week?.today === day && <NowLine firstHour={FIRST_HOUR} lastHour={LAST_HOUR} />}
+            </div>
+          ))}
+
+          {/* `other`: what the hour grid cannot hold (weekends, `other`
+              classes, dates and SH1/SH2 in the general view, anything
+              outside the grid hours), in time order, not aligned to the
+              hours. */}
+          {showOther && (
             <div
-              key={day}
-              className={cn("border-l p-2 text-center font-medium", dayColumn(day, selectedDay))}
+              className={cn(
+                "-mt-3 -mb-2 flex flex-col gap-0.5 bg-surface p-0.5",
+                !narrow && "border-l",
+              )}
             >
-              {dayLabel(day)}
-              {week && (
-                <span className="ml-1.5 font-normal text-muted-foreground tabular-nums">
-                  {shortDate(dateOf(week.start, day))}
+              {list.map((entry) => (
+                <SubjectBlock
+                  key={entry.key}
+                  entry={entry}
+                  place={null}
+                  general={general}
+                  brief={short}
+                  unclear={unclear(entry)}
+                  dimmed={dimmed(entry)}
+                  related={related(entry)}
+                  onHover={setHovered}
+                  expanded={openKey === entry.key}
+                  onPress={press([entry.key])}
+                />
+              ))}
+              {narrow && list.length === 0 && (
+                <span className="p-4 text-center text-sm text-muted-foreground">
+                  {m.grid_other_empty()}
                 </span>
               )}
             </div>
-          ))}
-        </div>
-
-        {/* Fixed height, whatever the events: a growing row would move the
-              hours. More events than fit scroll inside their cell. */}
-        {week && (
-          <div className={`${COLUMNS} shrink-0 border-b`} style={{ height: ALLDAY_HEIGHT }}>
-            <div className="flex items-center justify-center p-2 text-center text-muted-foreground">
-              {m.grid_allday()}
-            </div>
-            {WEEKDAYS.map((day) => (
-              <div
-                key={day}
-                className={cn(
-                  "flex min-w-0 flex-col gap-1 overflow-y-auto border-l p-1.5",
-                  dayColumn(day, selectedDay, "md:flex"),
-                )}
-              >
-                {week.events[day].map((event) => (
-                  <EventBadge key={localized(event.title) + event.startDate} event={event} />
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Hour rows draw the grid lines; the subjects sit in an overlay of
-              the same columns so they can span and share a slot freely. */}
-        {/* The hours share the height left over (one viewport, no page
-              scroll), down to a floor that keeps the shortest block's three
-              lines whole (36px for 90 minutes; 24px at least, the hour label
-              still fits); below the floor the grid scrolls (a landscape
-              phone). */}
-        <div className="relative flex flex-1 flex-col">
-          {/* Grid lines and hour labels only: the blocks say their own time. */}
-          {hours.map((hour, index) => (
-            <div
-              key={hour}
-              aria-hidden
-              className={cn(COLUMNS, "flex-1", index < hours.length - 1 && "border-b")}
-              style={{ minHeight: hourFloor }}
-            >
-              <div className="flex items-center justify-center px-2 text-muted-foreground tabular-nums">
-                {String(hour).padStart(2, "0")}:00
-              </div>
-              {WEEKDAYS.map((day) => (
-                <div key={day} className={cn("border-l", dayColumn(day, selectedDay))} />
-              ))}
-            </div>
-          ))}
-
-          <div className={cn(COLUMNS, "pointer-events-none absolute inset-0")}>
-            <div />
-            {WEEKDAYS.map((day) => (
-              <div key={day} className={cn("relative", dayColumn(day, selectedDay))}>
-                {week?.noLectures.has(day) && <div className="absolute inset-0 bg-muted" />}
-                {/* `entry.key` carries the subject's index and meeting, so
-                      the same class listed twice in a day (BEI3 has
-                      ELK1:SU:2.1 twice) stays two distinct keys. */}
-                {grid[day].map(({ entry, lane, lanes }) => (
-                  <SubjectBlock
-                    key={entry.key}
-                    entry={entry}
-                    lane={{ lane, lanes }}
-                    unclear={unclear(entry)}
-                    dimmed={dimmed(entry)}
-                    related={related(entry)}
-                    onHover={setHovered}
-                    expanded={popup?.open === true && popup.key === entry.key}
-                    onPress={pressBlock(entry)}
-                  />
-                ))}
-                {week?.today === day && <NowLine firstHour={FIRST_HOUR} lastHour={LAST_HOUR} />}
-              </div>
-            ))}
-          </div>
-
-          {entries.length === 0 && (
-            <Empty className="pointer-events-none absolute inset-y-0 right-0 left-20 w-auto md:left-24">
-              <EmptyHeader>
-                <EmptyDescription>
-                  {hasFiles ? m.grid_empty_week() : m.grid_empty()}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
           )}
         </div>
-      </div>
 
-      {/* `other`: what the hour grid cannot hold (weekends, `other` classes,
-            dates and SH1/SH2 in the general view, anything outside the grid
-            hours) as a plain list in time order, not aligned to the hours.
-            As tall as the grid (phones: the space it leaves), scrolls inside itself.
-            A third narrower below `xl` (tablets, small laptops), where the
-            weekdays need the room. */}
-      <div
-        className={cn(
-          "flex flex-1 flex-col border md:w-32 md:flex-none xl:w-48",
-          !showOther && "hidden md:flex",
-        )}
-      >
-        <div className="hidden border-b p-2 text-center font-medium md:block">
-          {dayLabel(Day.other)}
-        </div>
-        <div className="relative flex-1">
-          <div className="absolute inset-0 flex flex-col gap-1 overflow-y-auto p-2">
-            {otherEvents.map((event) => (
-              <EventBadge key={localized(event.title) + event.startDate} event={event} />
-            ))}
-            {list.map((entry) => (
-              <SubjectBlock
-                key={entry.key}
-                entry={entry}
-                lane={null}
-                unclear={unclear(entry)}
-                dimmed={dimmed(entry)}
-                related={related(entry)}
-                onHover={setHovered}
-                expanded={popup?.open === true && popup.key === entry.key}
-                onPress={pressBlock(entry)}
-              />
-            ))}
-            {otherEvents.length === 0 && list.length === 0 && (
-              <span className="p-2 text-center text-muted-foreground">{m.grid_other_empty()}</span>
-            )}
+        {overlay && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-6">
+            <div className="pointer-events-auto">{overlay}</div>
           </div>
-        </div>
+        )}
       </div>
 
-      <SubjectPopup
-        open={popup?.open === true}
-        entry={popupEntry}
-        point={popup?.point ?? { x: 0, y: 0 }}
-        block={popup?.block ?? null}
-        keyboard={popup?.keyboard ?? false}
-        unclear={popupEntry !== null && unclear(popupEntry)}
-        onClose={closePopup}
-        onJump={() =>
-          popupEntry &&
-          onJump?.({ timetableName: popupEntry.timetableName, index: popupEntry.index })
-        }
-        onInfo={onInfo}
-      />
+      {step === "narrow" || short ? (
+        <Suspense fallback={null}>
+          <DetailsSheet
+            open={popup?.open === true && content !== null}
+            side={short ? "right" : "bottom"}
+            onClose={closePopup}
+          >
+            {details}
+          </DetailsSheet>
+        </Suspense>
+      ) : (
+        <SubjectPopup
+          open={popup?.open === true}
+          content={content}
+          point={popup?.point ?? { x: 0, y: 0 }}
+          block={popup?.block ?? null}
+          keyboard={popup?.keyboard ?? false}
+          onClose={closePopup}
+        >
+          {details}
+        </SubjectPopup>
+      )}
     </div>
   );
 }
 
-function EventBadge({ event }: { event: GlobalEvent }) {
+// "Mo 19": today's name bright and its date on red.
+function DayHead({ day, week }: { day: Day; week: WeekView | null }) {
+  const today = week?.today === day;
   return (
-    <Badge
-      variant={event.noLectures ? "secondary" : "default"}
-      // Long titles wrap instead of being cut off.
-      className="max-w-full items-start text-left whitespace-normal"
-      title={[event.title, event.description]
-        .filter((text) => text !== undefined)
-        .map(localized)
-        .join("\n")}
+    <div
+      className={cn(
+        "flex h-10 items-center justify-center gap-2 border-b border-l text-sm font-medium whitespace-nowrap",
+        today ? "text-foreground" : "text-muted-foreground",
+      )}
     >
-      {localized(event.title)}
-    </Badge>
+      {dayLabel(day)}
+      {week && (
+        <span className={cn("font-mono", today && "rounded-sm bg-red px-1 text-red-foreground")}>
+          {shortDate(dateOf(week.start, day), false)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// "16.–27.11.": an event's days, short.
+function eventRange(event: GlobalEvent): string {
+  const format = new Intl.DateTimeFormat(getLocale(), { day: "numeric", month: "numeric" });
+  const start = new Date(`${event.startDate}T00:00:00`);
+  if (!event.endDate || event.endDate === event.startDate) return format.format(start);
+  return format.formatRange(start, new Date(`${event.endDate}T00:00:00`));
+}
+
+function eventNote(event: GlobalEvent): string {
+  return [event.description ? localized(event.description) : null, eventRange(event)]
+    .filter((part) => part !== null)
+    .join(" · ");
+}
+
+// The all-day row: one line, a chip per run of days with the same events,
+// "+n" where there are more (user decision). Empty, it says so; in the general
+// view it explains itself.
+function AllDayRow({
+  week,
+  narrow,
+  columns,
+}: {
+  week: WeekView | null;
+  narrow: boolean;
+  columns: readonly Day[];
+}) {
+  const segments = week ? allDaySegments(week.events, columns) : [];
+  const height = narrow ? "h-8" : "h-9";
+  const label = (
+    <div
+      className={cn(
+        "flex items-center justify-end border-b pr-2 text-xs whitespace-nowrap text-hour",
+        height,
+      )}
+    >
+      {m.grid_allday_short()}
+    </div>
+  );
+  const empty = week ? m.grid_allday_none() : m.grid_allday_general();
+  if (narrow) {
+    return (
+      <div className={cn("col-span-full flex items-center border-b px-0.5", height)}>
+        {segments.length === 0 ? (
+          <span className="px-2 text-xs text-muted-foreground">{empty}</span>
+        ) : (
+          segments.map((segment) => (
+            <AllDayChip key={segment.from} segment={segment} prefix={m.grid_allday_short()} />
+          ))
+        )}
+      </div>
+    );
+  }
+  return (
+    <>
+      {label}
+      <div
+        className={cn("relative col-span-6 grid border-b", height)}
+        style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }}
+      >
+        {DAYS.map((day, i) => (
+          <div
+            key={day}
+            className={cn("border-l", day === Day.other && "bg-surface")}
+            style={{ gridColumn: i + 1, gridRow: 1 }}
+          />
+        ))}
+        {segments.length === 0 ? (
+          <span
+            className="flex items-center px-2 text-xs text-muted-foreground"
+            style={{ gridColumn: "1 / -1", gridRow: 1 }}
+          >
+            {empty}
+          </span>
+        ) : (
+          segments.map((segment) => (
+            <div
+              key={segment.from}
+              className="flex min-w-0 items-center px-0.5"
+              style={{ gridColumn: `${segment.from + 1} / ${segment.to + 2}`, gridRow: 1 }}
+            >
+              <AllDayChip segment={segment} />
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+function AllDayChip({ segment, prefix }: { segment: AllDaySegment; prefix?: string }) {
+  const [first, ...rest] = segment.events;
+  const days = DAYS.slice(segment.from, segment.to + 1)
+    .map(dayLabel)
+    .join(", ");
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className={cn(
+              "flex h-7 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-sm px-2 text-left text-xs whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              first.noLectures ? "bg-input" : "bg-secondary",
+            )}
+          />
+        }
+      >
+        {prefix && <span className="text-muted-foreground">{prefix}</span>}
+        <b className="truncate font-semibold">{localized(first.title)}</b>
+        <span className="truncate text-muted-foreground">{eventNote(first)}</span>
+        {rest.length > 0 && (
+          <span
+            className="ml-auto shrink-0 rounded-sm bg-background/40 px-1.5 leading-5"
+            aria-label={m.grid_allday_more({ count: rest.length })}
+          >
+            +{rest.length}
+          </span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 gap-3">
+        <h2 className="text-sm font-semibold">{m.grid_allday_title({ days })}</h2>
+        {segment.events.map((event) => (
+          <div key={localized(event.title) + event.startDate} className="text-sm">
+            <b className="font-semibold">{localized(event.title)}</b>
+            <small className="block text-xs text-muted-foreground">
+              {[event.noLectures ? m.grid_no_lectures_note() : null, eventNote(event)]
+                .filter((part) => part !== null)
+                .join(" · ")}
+            </small>
+          </div>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }

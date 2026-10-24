@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import { addDays, addWeeks, differenceInCalendarWeeks, startOfISOWeek } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, LocateFixed } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
 import { LazyCalendar } from "@/components/LazyCalendar";
-import { cycleCode, isoWeek } from "@/lib/primitives/week";
-import { useNow } from "@/hooks/useNow";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { isoWeek } from "@/lib/primitives/week";
+import { useNow } from "@/hooks/useNow";
+import type { Step } from "@/lib/media";
+
+// The phones' week picker is a drawer (deferred chunk, with the dialogs).
+const WeekDrawer = lazy(() =>
+  import("@/components/deferred").then((d) => ({ default: d.WeekDrawer })),
+);
 
 function relativeWeekLabel(weekStart: Date, now: Date): string {
   const offset = differenceInCalendarWeeks(weekStart, now, {
@@ -20,15 +25,12 @@ function relativeWeekLabel(weekStart: Date, now: Date): string {
   return offset > 0 ? m.week_in({ count: offset }) : m.week_ago({ count: -offset });
 }
 
-// Phones get the short form ("21.–27.9."), so the whole nav fits one row of
-// the bottom dock.
-function weekRangeLabel(weekStart: Date, short = false): string {
-  return new Intl.DateTimeFormat(
-    getLocale(),
-    short
-      ? { day: "numeric", month: "numeric" }
-      : { day: "numeric", month: "short", year: "numeric" },
-  ).formatRange(weekStart, addDays(weekStart, 6));
+// "19.–25.10.": the shown week's days, short.
+function weekRangeLabel(weekStart: Date): string {
+  return new Intl.DateTimeFormat(getLocale(), { day: "numeric", month: "numeric" }).formatRange(
+    weekStart,
+    addDays(weekStart, 6),
+  );
 }
 
 type WeekNavProps = {
@@ -39,98 +41,144 @@ type WeekNavProps = {
   onToday: () => void;
   // Week and day already are today's: nothing to jump to.
   atToday: boolean;
+  step: Step;
+  className?: string;
 };
 
-export function WeekNav({ value, onChange, onToday, atToday }: WeekNavProps) {
+// ‹ label · week [today] ›. The label ("This week", "In 4 weeks") opens a
+// month calendar; today sits between it and ›, disabled while week and day
+// are today's already. Compact (one header row): the week number alone, the
+// range from `md`. The ISO week, never the university's own week number.
+export function WeekNav({ value, onChange, onToday, atToday, step, className }: WeekNavProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   // "This week" moves on by itself on a page left open past Sunday.
   const now = useNow();
+  const compact = step === "compact";
+  const pick = (weekStart: Date) => {
+    onChange(weekStart);
+    setPickerOpen(false);
+  };
+  const label = (
+    <>
+      {!compact && (
+        <span className="shrink-0 text-sm font-medium">{relativeWeekLabel(value, now)}</span>
+      )}
+      <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
+        <span className={cn(compact && "font-medium text-foreground")}>
+          {m.week_number({ number: isoWeek(value) })}
+        </span>
+        <span className={cn(compact ? "hidden md:inline" : "max-[23rem]:hidden")}>
+          {compact ? " " : " · "}
+          {weekRangeLabel(value)}
+        </span>
+      </span>
+    </>
+  );
+  const trigger = (
+    <Button
+      variant="ghost"
+      className="h-9 min-w-0 gap-2 px-2"
+      title={m.week_pick()}
+      aria-haspopup="dialog"
+    />
+  );
+  const picker = <WeekPicker value={value} now={now} onPick={pick} />;
 
   return (
-    <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-4">
-      <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-        <ButtonGroup className="min-w-0 flex-1 sm:flex-none">
+    <div className={cn("flex min-w-0 items-center", className)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={m.week_prev()}
+        onClick={() => onChange(addWeeks(value, -1))}
+      >
+        <ChevronLeft />
+      </Button>
+      {step === "narrow" ? (
+        <>
           <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={m.week_prev()}
-            onClick={() => onChange(addWeeks(value, -1))}
+            variant="ghost"
+            className="h-9 min-w-0 flex-1 gap-2 px-2"
+            title={m.week_pick()}
+            aria-haspopup="dialog"
+            onClick={() => setPickerOpen(true)}
           >
-            <ChevronLeft />
+            {label}
           </Button>
-          <PopoverTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                title={m.week_pick()}
-                className="min-w-0 flex-1 sm:min-w-32"
-              />
-            }
-          >
-            <CalendarDays data-icon="inline-start" />
-            <span className="truncate">{relativeWeekLabel(value, now)}</span>
-          </PopoverTrigger>
-          {/* Icon only (user decision), between label and next. */}
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={m.week_today()}
-            title={m.week_today()}
-            disabled={atToday}
-            onClick={onToday}
-          >
-            <LocateFixed />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={m.week_next()}
-            onClick={() => onChange(addWeeks(value, 1))}
-          >
-            <ChevronRight />
-          </Button>
-        </ButtonGroup>
-        <PopoverContent className="w-auto gap-0 p-0">
-          <LazyCalendar
-            mode="range"
-            defaultMonth={value}
-            selected={{ from: value, to: addDays(value, 6) }}
-            onDayClick={(day) => {
-              onChange(startOfISOWeek(day));
-              setPickerOpen(false);
-            }}
-          />
-          {/* The way back after browsing far off, without paging month by
-              month. Disabled while this week is already shown. */}
-          <div className="border-t p-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              disabled={value.getTime() === startOfISOWeek(now).getTime()}
-              onClick={() => {
-                onChange(startOfISOWeek(now));
-                setPickerOpen(false);
-              }}
-            >
-              {m.week_this()}
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+          <Suspense fallback={null}>
+            <WeekDrawer open={pickerOpen} onOpenChange={setPickerOpen}>
+              {picker}
+            </WeekDrawer>
+          </Suspense>
+        </>
+      ) : (
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger render={trigger}>{label}</PopoverTrigger>
+          <PopoverContent className="w-auto gap-0 p-0">{picker}</PopoverContent>
+        </Popover>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={m.week_today()}
+        title={m.week_today()}
+        disabled={atToday}
+        onClick={onToday}
+      >
+        <CalendarCheck />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={m.week_next()}
+        onClick={() => onChange(addWeeks(value, 1))}
+      >
+        <ChevronRight />
+      </Button>
+    </div>
+  );
+}
 
-      {/* Range above week number, so the pair takes little width. The ISO
-          week (G/U) and the four-week code (G1/G2/U1/U2), never the
-          university's own week number. */}
-      <div className="flex shrink-0 flex-col items-end">
-        <Badge variant="secondary">
-          <span className="sm:hidden">{weekRangeLabel(value, true)}</span>
-          <span className="hidden sm:inline">{weekRangeLabel(value)}</span>
-        </Badge>
-        <Badge variant="secondary">
-          {m.week_label({ number: isoWeek(value), cycle: cycleCode(value) })}
-        </Badge>
+// A month with its week numbers, the shown week marked, today red; under a
+// divider the way back to this week (user request), disabled while it is
+// shown.
+function WeekPicker({
+  value,
+  now,
+  onPick,
+}: {
+  value: Date;
+  now: Date;
+  onPick: (weekStart: Date) => void;
+}): ReactNode {
+  const thisWeek = startOfISOWeek(now);
+  return (
+    <div className="flex flex-col">
+      {/* The shown week is a band, today red (the one accent); no
+          selection of days, a click anywhere picks its week. */}
+      <LazyCalendar
+        showWeekNumber
+        defaultMonth={value}
+        modifiers={{ shown: { from: value, to: addDays(value, 6) } }}
+        modifiersClassNames={{
+          shown: "rounded-none! bg-accent [&:nth-child(2)]:rounded-l-md! last:rounded-r-md!",
+        }}
+        onDayClick={(day) => onPick(startOfISOWeek(day))}
+        className="mx-auto bg-transparent"
+        classNames={{
+          today: "bg-transparent [&>button]:bg-red [&>button]:text-red-foreground",
+        }}
+      />
+      <div className="border-t p-3">
+        <Button
+          variant="secondary"
+          className="w-full"
+          disabled={value.getTime() === thisWeek.getTime()}
+          onClick={() => onPick(thisWeek)}
+        >
+          <CalendarCheck data-icon="inline-start" />
+          {m.week_this()}
+        </Button>
       </div>
     </div>
   );

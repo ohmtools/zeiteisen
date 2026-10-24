@@ -54,6 +54,13 @@ parameter so tests run without a browser.
   catalog only (`catalogUpdate`, by hash). Accepting keeps the name and the
   `enabled` state of subjects that stay; new ones arrive enabled. A refusal is
   stored in `rejected` for good; a later, different version is offered again.
+- What an update changes (`diffSubjects`, the update dialog): subjects
+  compared in every field first, identical ones paired one to one; of the
+  rest, a removed and an added subject with the same `SubjectID` are one
+  `changed` class with the `fields` that differ (day, time, room, lecturer,
+  rhythm, dates, note, on request, degree program) — only where that pair is
+  unique on both sides (user decision): the ID names a class, not an entry
+  (BEI3 lists ELK1:SU:2.1 twice), so ambiguous ones stay removed and added.
 - Any user edit of subjects (`withEditedSubjects`) makes a catalog timetable
   `local` and clears `rejected`: edited content is the user's own.
 - A local upload is named after its file without `.timetable` and stays `local`
