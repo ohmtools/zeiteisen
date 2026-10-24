@@ -148,7 +148,7 @@ export function ProfileMenu({
         <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
           <DrawerTrigger render={trigger}>{content}</DrawerTrigger>
           <DrawerContent>
-            <div className="flex flex-col gap-3 overflow-y-auto px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="flex flex-col gap-3 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <DrawerTitle className="text-base font-semibold">{m.groups_profile()}</DrawerTitle>
               {body}
             </div>

@@ -101,6 +101,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - Transient feedback is a toast, never a panel; on phones above the bottom
   bar (`--bottom-bar`), elsewhere bottom right. Copying the link toasts too
   (user decision), on top of the button's inline "Copied".
+- Drawers (phones: details, all-day events, profile menu): the content
+  starts 16px under the swipe handle (user request, was 8px).
 - Dialogs: centred from compact on, a sheet from the bottom on phones with the
   main button on top, full width (`ui/dialog.tsx`); questions
   (`AlertDialog`) are centred everywhere, destructive buttons red next to

@@ -77,7 +77,7 @@ export function DetailsSheet({
     <Drawer open={open} onOpenChange={change} showSwipeHandle>
       <DrawerContent>
         <DrawerTitle className="sr-only">{title}</DrawerTitle>
-        <div className="overflow-y-auto px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {children}
         </div>
       </DrawerContent>
