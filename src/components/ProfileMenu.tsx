@@ -34,8 +34,8 @@ type Props = {
   // choosing its timetables.
   onOpenAdd: () => void;
   onRename: (from: string, to: string) => void;
-  // A copy of the active profile under a new name; it becomes the active one.
-  onDuplicate: (name: string) => void;
+  // A copy of the profile `source` under a new name; it becomes the active one.
+  onDuplicate: (source: string, name: string) => void;
   onRemove: (name: string) => void;
   onOpenImport: () => void;
 };
@@ -62,9 +62,10 @@ export function ProfileMenu({
   const [open, setOpen] = useState(false);
   // The profile a dialog is about, by name.
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [duplicating, setDuplicating] = useState(false);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const active = profileByName(profiles, activeName);
+  const source = duplicating === null ? undefined : profileByName(profiles, duplicating);
   // A dialog takes over from the menu.
   const then = (run: () => void) => () => {
     setOpen(false);
@@ -99,14 +100,11 @@ export function ProfileMenu({
             >
               <Pencil />
             </RowAction>
-            {/* Copies the active profile: another one is picked first. Works
-                while locked: it only reads. */}
+            {/* Copies this row's profile; only the copy becomes active, so a
+                cancel changes nothing. Works while locked: it only reads. */}
             <RowAction
               label={m.profile_duplicate_named({ name: profile.name })}
-              onClick={then(() => {
-                if (profile.name !== activeName) onSelect(profile.name);
-                setDuplicating(true);
-              })}
+              onClick={then(() => setDuplicating(profile.name))}
             >
               <Copy />
             </RowAction>
@@ -180,12 +178,16 @@ export function ProfileMenu({
       />
 
       <ProfileNameDialog
-        open={duplicating}
+        open={duplicating !== null}
         mode="duplicate"
-        initial={active ? duplicateName(profiles, active) : ""}
+        initial={source ? duplicateName(profiles, source) : ""}
         taken={(name) => nameTaken(profiles, name)}
-        onOpenChange={setDuplicating}
-        onSubmit={onDuplicate}
+        onOpenChange={(next) => {
+          if (!next) setDuplicating(null);
+        }}
+        onSubmit={(name) => {
+          if (duplicating !== null) onDuplicate(duplicating, name);
+        }}
       />
 
       <AlertDialog

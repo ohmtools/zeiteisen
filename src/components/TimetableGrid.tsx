@@ -99,9 +99,10 @@ export function TimetableGrid({
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   // The subject under the mouse: its other blocks get a faint ring.
   const [hovered, setHovered] = useState<string | null>(null);
-  // The body's size: how wide a day column is (lanes narrower than
+  // The hour grid's size: how wide a day column is (lanes narrower than
   // `MIN_LANE_PX` are gathered) and how tall an hour (a collected block's
-  // lines).
+  // lines). The grid itself, not its scroll box: under the hour floor it is
+  // taller than the box and scrolls.
   const bodyRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   useLayoutEffect(() => {
@@ -254,11 +255,9 @@ export function TimetableGrid({
         <AllDayRow week={week} narrow={narrow} columns={narrow ? [selectedDay] : DAYS} />
       </div>
 
-      <div
-        ref={bodyRef}
-        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pt-3 pb-2 [scrollbar-gutter:stable]"
-      >
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pt-3 pb-2 [scrollbar-gutter:stable]">
         <div
+          ref={bodyRef}
           className="relative grid flex-1"
           style={{ gridTemplateColumns: template, minHeight: `calc(${HOURS} * ${hourFloor})` }}
         >

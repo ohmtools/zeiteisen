@@ -11,10 +11,13 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 // button.
 export function PanelSheet({
   open,
+  initialFocus = true,
   onClose,
   children,
 }: {
   open: boolean;
+  // `false`: the panel focuses on its own (the notes after N).
+  initialFocus?: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -28,6 +31,7 @@ export function PanelSheet({
       <SheetContent
         side="right"
         showCloseButton={false}
+        initialFocus={initialFocus}
         className="w-[380px] max-w-[calc(100%-2rem)] gap-0 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] data-[side=right]:sm:max-w-[380px]"
       >
         {children}

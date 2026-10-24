@@ -123,8 +123,12 @@ export function useProfiles() {
     // An imported profile, whole: from a link (the user typed its name, a
     // taken one is refused) or from a file (already made unique).
     addProfileObject: (profile: Profile) => add(profile),
-    // A copy of the active profile, unlocked, under a name the user typed.
-    duplicate: (name: ProfileName) => (active ? add(duplicateProfile(active, name)) : false),
+    // A copy of the profile `source`, unlocked, under a name the user typed;
+    // the copy becomes the active one.
+    duplicate: (source: ProfileName, name: ProfileName) => {
+      const profile = profileByName(state.profiles, source);
+      return profile ? add(duplicateProfile(profile, name)) : false;
+    },
     // `false` when there is no active profile or it is locked (another tab
     // may have locked it while a dialog was open).
     addTimetables: (sources: readonly TimetableSource[]): boolean => {

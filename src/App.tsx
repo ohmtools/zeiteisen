@@ -171,8 +171,11 @@ export default function App() {
   const [category, setCategory] = useState<CategoryRef | null>(null);
   // The group cell lighting its blocks in the grid (tree ↔ grid, below).
   const [highlight, setHighlight] = useState<Highlight | null>(null);
+  // The notes came by N: the compact sheet leaves the focus to them.
+  const [notesByKey, setNotesByKey] = useState(false);
   const openPanel = (next: Panel | null) => {
     setPanel(next);
+    setNotesByKey(false);
     if (next !== "groups") {
       setCategory(null);
       // The tree goes without a blur or pointer leave: its highlight with it.
@@ -181,19 +184,34 @@ export default function App() {
   };
 
   // N, anywhere but in a field, a dialog or a menu: to the notes, caret at
-  // the end. Escape in them goes back to the grid.
-  const notesRef = useRef<NotesHandle>(null);
+  // the end. Escape in them goes back to the grid. Before the deferred chunk
+  // has arrived the notes are not there yet: the caret waits for them.
+  const notesRef = useRef<NotesHandle | null>(null);
+  const editPending = useRef(false);
+  const notesHandle = (handle: NotesHandle | null) => {
+    notesRef.current = handle;
+    if (handle && editPending.current) {
+      editPending.current = false;
+      handle.edit();
+    }
+  };
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isNotesShortcut(event)) return;
       event.preventDefault();
+      editPending.current = true;
       // The notes have to be on screen before the text area takes the focus.
       flushSync(() => {
         setPanel("notes");
+        setNotesByKey(true);
         setHighlight(null);
       });
-      notesRef.current?.edit();
+      // Already on screen, no new handle came: edit now.
+      if (editPending.current && notesRef.current) {
+        editPending.current = false;
+        notesRef.current.edit();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -318,10 +336,11 @@ export default function App() {
       <EmptyState
         title={m.week_empty_title()}
         text={
+          // A weekly class outside Mon-Fri has no single date: then the week.
           next
-            ? m.week_empty_next({
-                date: next.first.date ? dateLabel(next.first.date) : shortDate(next.start),
-              })
+            ? next.first.date
+              ? m.week_empty_next({ date: dateLabel(next.first.date) })
+              : m.week_empty_next_week({ date: shortDate(startOfISOWeek(next.start)) })
             : m.week_empty_none()
         }
         action={
@@ -393,7 +412,7 @@ export default function App() {
       />
     ) : panel === "notes" ? (
       <NotesSection
-        ref={notesRef}
+        ref={notesHandle}
         step={step}
         notes={notes}
         onChange={setNotes}
@@ -491,7 +510,11 @@ export default function App() {
             {/* Compact: a sheet from the right, over the grid. */}
             {step === "compact" && (
               <Suspense fallback={null}>
-                <PanelSheet open={panel !== null} onClose={() => openPanel(null)}>
+                <PanelSheet
+                  open={panel !== null}
+                  initialFocus={!(panel === "notes" && notesByKey)}
+                  onClose={() => openPanel(null)}
+                >
                   {panelContent}
                 </PanelSheet>
               </Suspense>
