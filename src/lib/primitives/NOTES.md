@@ -100,8 +100,8 @@ parameter so tests run without a browser.
 - Profiles parse one at a time: a broken one is dropped alone, a repeated name
   keeps the first.
 - Backup (`loadBackup` / `getBackupFile` / `parseBackupFile` / `saveBackup`) =
-  every key except the catalog cache (the catalog hands it out again), the
-  iOS hint and the notes strip (about this device only): profiles in their stored shape incl.
+  every key except the catalog cache (the catalog hands it out again) and the
+  iOS hint (about this device only): profiles in their stored shape incl.
   `locked` and `rejected`, active profile, dates, own locations and
   degree files, sources, catalog mode and URL, notes. Fields an older file
   lacks (own files, mode, URL, notes) restore as their defaults. The
@@ -134,10 +134,9 @@ parameter so tests run without a browser.
   `MAX_NOTES_LENGTH` (1,000,000 characters, user decision) is what the app
   lets the user type; reading never checks it, so longer stored notes still
   load.
-- `tt.notesstrip.v1` = the desktop notes strip's dragged height (CSS px,
-  `null` = default) and folding; folded by default (user decision), so the
-  grid keeps its height until the user opens the notes. About this screen: not in the backup,
-  deleted with the settings.
+- `tt.notesstrip.v1` = retired: the desktop notes strip's height and
+  folding, gone with the redesign. Only its key (`NOTES_STRIP_KEY`) stays,
+  for `@/lib/retired` (dropped on start) and "Delete data…" (settings).
 - `tt.ioshint.v1` = the one-time "add to home screen" hint was shown.
 
 ## Lookup tables (`overrides.ts`)

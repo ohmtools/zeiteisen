@@ -9,7 +9,6 @@ import {
   loadCatalogCache,
   loadDates,
   loadNotes,
-  loadNotesStrip,
   loadOwnDegrees,
   loadOwnLocations,
   loadProfiles,
@@ -23,7 +22,6 @@ import {
   saveCatalogUrl,
   saveDates,
   saveNotes,
-  saveNotesStrip,
   saveOwnDegrees,
   saveOwnLocations,
   saveProfiles,
@@ -133,21 +131,6 @@ test("notes round trip, anything but a string reads as none", () => {
   expect(loadNotes(store)).toBe("Room 3.14\n\nBring the lab coat");
   store.data.set("tt.notes.v1", "42");
   expect(loadNotes(store)).toBe("");
-});
-
-test("notes strip: default, round trip, broken reads as the default", () => {
-  const store = memory();
-  expect(loadNotesStrip(store)).toEqual({ height: null, collapsed: true });
-  expect(saveNotesStrip({ height: 180, collapsed: false }, store)).toBe(true);
-  expect(loadNotesStrip(store)).toEqual({ height: 180, collapsed: false });
-  store.data.set("tt.notesstrip.v1", JSON.stringify({ height: -1, collapsed: false }));
-  expect(loadNotesStrip(store)).toEqual({ height: null, collapsed: true });
-});
-
-test("the notes strip stays out of the backup", () => {
-  const store = memory();
-  saveNotesStrip({ height: 180, collapsed: true }, store);
-  expect(JSON.stringify(getBackupFile(loadBackup(store)))).not.toContain("180");
 });
 
 test("saving null dates removes them", () => {
