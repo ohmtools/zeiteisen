@@ -3,84 +3,63 @@
     <style>
       @font-face { font-family: Geist; src: url("../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
       text { font-family: Geist, sans-serif; letter-spacing: -0.01em; }
-      .day { font-size: 22px; font-weight: 600; fill: #D6D3CE; }
-      .subject { font-size: 24px; font-weight: 700; }
-      .kind { font-size: 20px; font-weight: 500; }
+      .day { font-size: 22px; font-weight: 500; fill: #A3A3A3; }
+      .subject { font-size: 24px; font-weight: 600; fill: #FAFAFA; }
+      .kind { font-size: 20px; font-weight: 500; fill: #D4D4D4; }
     </style>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="#1E232D"/>
-      <stop offset="100%" stop-color="#101216"/>
-    </linearGradient>
-    <radialGradient id="face" cx="42%" cy="32%" r="75%">
-      <stop offset="0%" stop-color="#262B35"/>
-      <stop offset="100%" stop-color="#12151A"/>
-    </radialGradient>
-    <linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#F5F5F4"/>
-      <stop offset="45%" stop-color="#D6D3CE"/>
-      <stop offset="100%" stop-color="#8C8884"/>
-    </linearGradient>
-    <linearGradient id="scarlet" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#E23A46"/>
-      <stop offset="100%" stop-color="#9E0711"/>
-    </linearGradient>
-    <linearGradient id="maroon" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#9E0711"/>
-      <stop offset="100%" stop-color="#5C040A"/>
-    </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect x="0" y="0" width="1200" height="8" fill="#C10007"/>
+  <rect width="1200" height="630" fill="#000000"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#DC2626"/>
   <svg x="64" y="76" width="104" height="104" viewBox="64 64 384 384">
-  <rect x="244" y="112" width="24" height="30" rx="7" fill="url(#bezel)"/>
-  <circle cx="256" cy="100" r="20" fill="none" stroke="url(#bezel)" stroke-width="18"/>
-  <circle cx="256" cy="288" r="144" fill="url(#face)" stroke="url(#bezel)" stroke-width="22"/>
-  <rect x="174" y="202" width="70" height="80" rx="12" fill="url(#scarlet)"/>
-  <rect x="174" y="294" width="70" height="80" rx="12" fill="#FFFFFF"/>
-  <rect x="258" y="202" width="80" height="172" rx="12" fill="url(#maroon)"/>
+  <rect x="244" y="112" width="24" height="30" rx="7" fill="#FAFAFA"/>
+  <circle cx="256" cy="100" r="20" fill="none" stroke="#FAFAFA" stroke-width="18"/>
+  <circle cx="256" cy="288" r="144" fill="#0A0A0A" stroke="#FAFAFA" stroke-width="22"/>
+  <rect x="174" y="202" width="70" height="80" rx="12" fill="#DC2626"/>
+  <rect x="174" y="294" width="70" height="80" rx="12" fill="#FAFAFA"/>
+  <rect x="258" y="202" width="80" height="172" rx="12" fill="#F97316"/>
   </svg>
-  <text x="184" y="148" font-size="60" font-weight="700" fill="#FFFFFF">Zeiteisen</text>
-  <text x="72" y="340" font-size="52" font-weight="700" fill="#FFFFFF">Stundenplan</text>
-  <text x="72" y="404" font-size="52" font-weight="700" fill="#FFFFFF">geteilt</text>
-  <text x="72" y="480" font-size="28" font-weight="500" fill="#D6D3CE">Öffnen, um die</text>
-  <text x="72" y="520" font-size="28" font-weight="500" fill="#D6D3CE">Gruppen anzusehen</text>
+  <text x="184" y="148" font-size="60" font-weight="600" fill="#FAFAFA">Zeiteisen</text>
+  <text x="72" y="340" font-size="52" font-weight="600" fill="#FAFAFA">Stundenplan</text>
+  <text x="72" y="404" font-size="52" font-weight="600" fill="#FAFAFA">geteilt</text>
+  <text x="72" y="480" font-size="28" font-weight="500" fill="#A3A3A3">Öffnen, um die</text>
+  <text x="72" y="520" font-size="28" font-weight="500" fill="#A3A3A3">Gruppen anzusehen</text>
   <text x="674.8" y="118" text-anchor="middle" class="day">Mo</text>
   <text x="776.4" y="118" text-anchor="middle" class="day">Di</text>
   <text x="878" y="118" text-anchor="middle" class="day">Mi</text>
   <text x="979.5999999999999" y="118" text-anchor="middle" class="day">Do</text>
   <text x="1081.2" y="118" text-anchor="middle" class="day">Fr</text>
-  <line x1="628" x2="1128" y1="136" y2="136" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <line x1="628" x2="1128" y1="203" y2="203" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <line x1="628" x2="1128" y1="270" y2="270" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <line x1="628" x2="1128" y1="337" y2="337" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <line x1="628" x2="1128" y1="404" y2="404" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <line x1="628" x2="1128" y1="471" y2="471" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <line x1="628" x2="1128" y1="538" y2="538" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <rect x="628" y="140" width="93.6" height="126" rx="12" fill="#9E0711"/>
-  <text x="642" y="172" class="subject" fill="#FFFFFF">I2</text>
-  <text x="642" y="198" class="kind" fill="#FFFFFF" fill-opacity="0.8">Pr</text>
-  <rect x="628" y="341" width="93.6" height="126" rx="12" fill="#E23A46"/>
-  <text x="642" y="373" class="subject" fill="#FFFFFF">M1</text>
-  <text x="642" y="399" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
-  <rect x="729.6" y="207" width="93.6" height="126" rx="12" fill="#C10007"/>
-  <text x="743.6" y="239" class="subject" fill="#FFFFFF">EM</text>
-  <text x="743.6" y="265" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
-  <rect x="729.6" y="408" width="93.6" height="126" rx="12" fill="#FFFFFF"/>
-  <text x="743.6" y="440" class="subject" fill="#12151A">M1</text>
-  <text x="743.6" y="466" class="kind" fill="#12151A" fill-opacity="0.8">Ue</text>
-  <rect x="831.2" y="140" width="93.6" height="126" rx="12" fill="#6E050C"/>
-  <text x="845.2" y="172" class="subject" fill="#FFFFFF">ELK1</text>
-  <text x="845.2" y="198" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
-  <rect x="831.2" y="274" width="93.6" height="126" rx="12" fill="#E23A46"/>
-  <text x="845.2" y="306" class="subject" fill="#FFFFFF">EM</text>
-  <text x="845.2" y="332" class="kind" fill="#FFFFFF" fill-opacity="0.8">Tu</text>
-  <rect x="932.8" y="274" width="93.6" height="193" rx="12" fill="#9E0711"/>
-  <text x="946.8" y="306" class="subject" fill="#FFFFFF">SDS</text>
-  <text x="946.8" y="332" class="kind" fill="#FFFFFF" fill-opacity="0.8">S</text>
-  <rect x="1034.4" y="140" width="93.6" height="126" rx="12" fill="#C10007"/>
-  <text x="1048.4" y="172" class="subject" fill="#FFFFFF">ELK1</text>
-  <text x="1048.4" y="198" class="kind" fill="#FFFFFF" fill-opacity="0.8">Pr</text>
-  <rect x="1034.4" y="341" width="93.6" height="126" rx="12" fill="#6E050C"/>
-  <text x="1048.4" y="373" class="subject" fill="#FFFFFF">I2</text>
-  <text x="1048.4" y="399" class="kind" fill="#FFFFFF" fill-opacity="0.8">SU</text>
+  <line x1="628" x2="1128" y1="136" y2="136" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="203" y2="203" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="270" y2="270" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="337" y2="337" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="404" y2="404" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="471" y2="471" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="538" y2="538" stroke="#1F1F1F" stroke-width="2"/>
+  <rect x="629" y="141" width="91.6" height="124" rx="11" fill="#4A1A04" stroke="#F97316" stroke-width="2"/>
+  <text x="642" y="172" class="subject">I2</text>
+  <text x="642" y="198" class="kind">Pr</text>
+  <rect x="629" y="342" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="642" y="373" class="subject">M1</text>
+  <text x="642" y="399" class="kind">SU</text>
+  <rect x="730.6" y="208" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="743.6" y="239" class="subject">EM</text>
+  <text x="743.6" y="265" class="kind">SU</text>
+  <rect x="730.6" y="409" width="91.6" height="124" rx="11" fill="#0D1F3C" stroke="#2563EB" stroke-width="2"/>
+  <text x="743.6" y="440" class="subject">M1</text>
+  <text x="743.6" y="466" class="kind">Ue</text>
+  <rect x="832.2" y="141" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="845.2" y="172" class="subject">ELK1</text>
+  <text x="845.2" y="198" class="kind">SU</text>
+  <rect x="832.2" y="275" width="91.6" height="124" rx="11" fill="#062B2A" stroke="#0D9488" stroke-width="2"/>
+  <text x="845.2" y="306" class="subject">EM</text>
+  <text x="845.2" y="332" class="kind">Tu</text>
+  <rect x="933.8" y="275" width="91.6" height="191" rx="11" fill="#25104D" stroke="#7C3AED" stroke-width="2"/>
+  <text x="946.8" y="306" class="subject">SDS</text>
+  <text x="946.8" y="332" class="kind">S</text>
+  <rect x="1035.4" y="141" width="91.6" height="124" rx="11" fill="#4A1A04" stroke="#F97316" stroke-width="2"/>
+  <text x="1048.4" y="172" class="subject">ELK1</text>
+  <text x="1048.4" y="198" class="kind">Pr</text>
+  <rect x="1035.4" y="342" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="1048.4" y="373" class="subject">I2</text>
+  <text x="1048.4" y="399" class="kind">SU</text>
 </svg>
