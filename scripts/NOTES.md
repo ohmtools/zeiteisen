@@ -76,6 +76,10 @@
   black, Geist, the app's font, from `node_modules`) and render them with `web-shot` to `public/og.png` /
   `public/og-share.png`, 1200×630, both committed. PNG because WhatsApp
   refuses SVG; keep each under 300 KB (WhatsApp's limit).
+  `social-preview` is the og card on GitHub's 1280×640 (the 1200×630 card
+  centred, the ground and the red bar full width), rendered to
+  `scripts/og/social-preview.png`, not served: it is uploaded by hand in the
+  repository settings (Social preview).
 - `scripts/bump-version.mjs`, run by `.githooks/pre-commit` (`npm install`
   points `core.hooksPath` there through `prepare` → `npm run hooks`): bumps
   the patch version in `package.json` and `package-lock.json` on every commit

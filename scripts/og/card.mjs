@@ -1,7 +1,9 @@
 // Link preview cards (Open Graph image) for WhatsApp / Discord: writes
 // `scripts/og/og.svg` + `og-share.svg` from one template and renders each to
 // `public/og.png` / `public/og-share.png` (1200×630) with `web-shot`
-// (headless chromium). Run by hand after a design change, commit the PNGs:
+// (headless chromium). `social-preview` is the og card on GitHub's 1280×640,
+// rendered next to its SVG: uploaded by hand in the repository settings.
+// Run by hand after a design change, commit the PNGs:
 // `node scripts/og/card.mjs`. Marketing, not app UI, but in the app's
 // colours: OLED black, the red accent, blocks coloured by kind.
 import { execFileSync } from "node:child_process";
@@ -77,14 +79,14 @@ function gridSvg() {
   return out.join("\n  ");
 }
 
-function card(lines) {
+function card(lines, [width, height] = [1200, 630]) {
   const text = lines
     .map(
       ([y, size, weight, colour, value]) =>
         `<text x="72" y="${y}" font-size="${size}" font-weight="${weight}" fill="${colour}">${value}</text>`,
     )
     .join("\n  ");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <defs>
     <style>
       @font-face { font-family: Geist; src: url("${font}") format("woff2"); font-weight: 100 900; }
@@ -94,35 +96,43 @@ function card(lines) {
       .kind { font-size: 20px; font-weight: 500; fill: #D4D4D4; }
     </style>
   </defs>
-  <rect width="1200" height="630" fill="#000000"/>
-  <rect x="0" y="0" width="1200" height="8" fill="#DC2626"/>
+  <rect width="${width}" height="${height}" fill="#000000"/>
+  <rect x="0" y="0" width="${width}" height="8" fill="#DC2626"/>
+  <g transform="translate(${(width - 1200) / 2} ${(height - 630) / 2})">
   <svg x="64" y="76" width="104" height="104" viewBox="64 64 384 384">${watch}
   </svg>
   <text x="184" y="148" font-size="60" font-weight="600" fill="#FAFAFA">Zeiteisen</text>
   ${text}
   ${gridSvg()}
+  </g>
 </svg>
 `;
 }
 
+const ogLines = [
+  [350, 46, 600, "#FAFAFA", "Gruppen kombinieren,"],
+  [408, 46, 600, "#FAFAFA", "Stundenplan"],
+  [466, 46, 600, "#FAFAFA", "ausprobieren"],
+];
+
+// [svg, size, PNG path]
 const cards = {
-  og: card([
-    [350, 46, 600, "#FAFAFA", "Gruppen kombinieren,"],
-    [408, 46, 600, "#FAFAFA", "Stundenplan"],
-    [466, 46, 600, "#FAFAFA", "ausprobieren"],
-  ]),
-  "og-share": card([
-    [340, 52, 600, "#FAFAFA", "Stundenplan"],
-    [404, 52, 600, "#FAFAFA", "geteilt"],
-    [480, 28, 500, "#A3A3A3", "Öffnen, um die"],
-    [520, 28, 500, "#A3A3A3", "Gruppen anzusehen"],
-  ]),
+  og: [card(ogLines), "1200x630", path.join(root, "public", "og.png")],
+  "og-share": [
+    card([
+      [340, 52, 600, "#FAFAFA", "Stundenplan"],
+      [404, 52, 600, "#FAFAFA", "geteilt"],
+      [480, 28, 500, "#A3A3A3", "Öffnen, um die"],
+      [520, 28, 500, "#A3A3A3", "Gruppen anzusehen"],
+    ]),
+    "1200x630",
+    path.join(root, "public", "og-share.png"),
+  ],
+  "social-preview": [card(ogLines, [1280, 640]), "1280x640", path.join(here, "social-preview.png")],
 };
 
-for (const [name, svg] of Object.entries(cards)) {
+for (const [name, [svg, size, png]] of Object.entries(cards)) {
   const source = path.join(here, `${name}.svg`);
   fs.writeFileSync(source, svg);
-  execFileSync("web-shot", ["-s", "1200x630", source, path.join(root, "public", `${name}.png`)], {
-    stdio: "inherit",
-  });
+  execFileSync("web-shot", ["-s", size, source, png], { stdio: "inherit" });
 }

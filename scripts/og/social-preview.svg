@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <style>
+      @font-face { font-family: Geist; src: url("../../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+      text { font-family: Geist, sans-serif; letter-spacing: -0.01em; }
+      .day { font-size: 22px; font-weight: 500; fill: #A3A3A3; }
+      .subject { font-size: 24px; font-weight: 600; fill: #FAFAFA; }
+      .kind { font-size: 20px; font-weight: 500; fill: #D4D4D4; }
+    </style>
+  </defs>
+  <rect width="1280" height="640" fill="#000000"/>
+  <rect x="0" y="0" width="1280" height="8" fill="#DC2626"/>
+  <g transform="translate(40 5)">
+  <svg x="64" y="76" width="104" height="104" viewBox="64 64 384 384">
+  <rect x="244" y="112" width="24" height="30" rx="7" fill="#FAFAFA"/>
+  <circle cx="256" cy="100" r="20" fill="none" stroke="#FAFAFA" stroke-width="18"/>
+  <circle cx="256" cy="288" r="144" fill="#0A0A0A" stroke="#FAFAFA" stroke-width="22"/>
+  <rect x="174" y="202" width="70" height="80" rx="12" fill="#DC2626"/>
+  <rect x="174" y="294" width="70" height="80" rx="12" fill="#FAFAFA"/>
+  <rect x="258" y="202" width="80" height="172" rx="12" fill="#F97316"/>
+  </svg>
+  <text x="184" y="148" font-size="60" font-weight="600" fill="#FAFAFA">Zeiteisen</text>
+  <text x="72" y="350" font-size="46" font-weight="600" fill="#FAFAFA">Gruppen kombinieren,</text>
+  <text x="72" y="408" font-size="46" font-weight="600" fill="#FAFAFA">Stundenplan</text>
+  <text x="72" y="466" font-size="46" font-weight="600" fill="#FAFAFA">ausprobieren</text>
+  <text x="674.8" y="118" text-anchor="middle" class="day">Mo</text>
+  <text x="776.4" y="118" text-anchor="middle" class="day">Di</text>
+  <text x="878" y="118" text-anchor="middle" class="day">Mi</text>
+  <text x="979.5999999999999" y="118" text-anchor="middle" class="day">Do</text>
+  <text x="1081.2" y="118" text-anchor="middle" class="day">Fr</text>
+  <line x1="628" x2="1128" y1="136" y2="136" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="203" y2="203" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="270" y2="270" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="337" y2="337" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="404" y2="404" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="471" y2="471" stroke="#1F1F1F" stroke-width="2"/>
+  <line x1="628" x2="1128" y1="538" y2="538" stroke="#1F1F1F" stroke-width="2"/>
+  <rect x="629" y="141" width="91.6" height="124" rx="11" fill="#4A1A04" stroke="#F97316" stroke-width="2"/>
+  <text x="642" y="172" class="subject">I2</text>
+  <text x="642" y="198" class="kind">Pr</text>
+  <rect x="629" y="342" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="642" y="373" class="subject">M1</text>
+  <text x="642" y="399" class="kind">SU</text>
+  <rect x="730.6" y="208" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="743.6" y="239" class="subject">EM</text>
+  <text x="743.6" y="265" class="kind">SU</text>
+  <rect x="730.6" y="409" width="91.6" height="124" rx="11" fill="#0D1F3C" stroke="#2563EB" stroke-width="2"/>
+  <text x="743.6" y="440" class="subject">M1</text>
+  <text x="743.6" y="466" class="kind">Ue</text>
+  <rect x="832.2" y="141" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="845.2" y="172" class="subject">ELK1</text>
+  <text x="845.2" y="198" class="kind">SU</text>
+  <rect x="832.2" y="275" width="91.6" height="124" rx="11" fill="#062B2A" stroke="#0D9488" stroke-width="2"/>
+  <text x="845.2" y="306" class="subject">EM</text>
+  <text x="845.2" y="332" class="kind">Tu</text>
+  <rect x="933.8" y="275" width="91.6" height="191" rx="11" fill="#25104D" stroke="#7C3AED" stroke-width="2"/>
+  <text x="946.8" y="306" class="subject">SDS</text>
+  <text x="946.8" y="332" class="kind">S</text>
+  <rect x="1035.4" y="141" width="91.6" height="124" rx="11" fill="#4A1A04" stroke="#F97316" stroke-width="2"/>
+  <text x="1048.4" y="172" class="subject">ELK1</text>
+  <text x="1048.4" y="198" class="kind">Pr</text>
+  <rect x="1035.4" y="342" width="91.6" height="124" rx="11" fill="#111111" stroke="#2E2E2E" stroke-width="2"/>
+  <text x="1048.4" y="373" class="subject">I2</text>
+  <text x="1048.4" y="399" class="kind">SU</text>
+  </g>
+</svg>
