@@ -75,9 +75,9 @@ directory-specific knowledge there, not here.
 
 - `src/lib/primitives/NOTES.md` — domain model, storage, backup, catalog.
 - `src/NOTES.md` — `App` / deferred chunk, tests, i18n.
-- `src/lib/NOTES.md` — app glue: picker rows, share link, ICS, tint, backup.
+- `src/lib/NOTES.md` — app glue: picker rows, share link, ICS, kind colours, backup.
 - `src/hooks/NOTES.md` — persisted state.
-- `src/components/NOTES.md` — shell, tab bar, grid, tree ↔ grid, group tree.
+- `src/components/NOTES.md` — shell, panels, bottom bar, grid, tree ↔ grid, group tree.
 - `src/components/ui/NOTES.md` — shadcn rules and hand-edits.
 - `scripts/NOTES.md` — schema, catalog index and AI skill zip generators.
 - `skill/zeiteisen-generator/` — the downloadable AI skill (settings), also
