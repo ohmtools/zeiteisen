@@ -34,12 +34,15 @@ export function allDaySegments(
   days: readonly Day[] = DAYS,
 ): AllDaySegment[] {
   const segments: AllDaySegment[] = [];
-  days.forEach((day, i) => {
+  for (const day of days) {
     const here = ordered(events[day]);
-    if (here.length === 0) return;
+    if (here.length === 0) continue;
+    // Indexes into `DAYS`, whatever `days` holds: the chip names its days by
+    // them, so a phone's single column is its own day, not Monday.
+    const i = DAYS.indexOf(day);
     const last = segments.at(-1);
     if (last && last.to === i - 1 && same(last.events, here)) last.to = i;
     else segments.push({ from: i, to: i, events: here });
-  });
+  }
   return segments;
 }

@@ -52,6 +52,17 @@ test("another group or kind is another class", () => {
   expect(diff.removed).toEqual([before]);
 });
 
+test("an empty note against none is no change", () => {
+  const before = subject("A", { note: "" });
+  const after = subject("A");
+  expect(diffSubjects([before], [after])).toEqual({
+    added: [],
+    removed: [],
+    changed: [],
+    sameCount: 1,
+  });
+});
+
 test("changedFields names what differs", () => {
   const base = subject("A", { repeat: weekly("monday") });
   expect(

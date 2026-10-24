@@ -97,7 +97,11 @@ export function diffSubjects(before: readonly Subject[], after: readonly Subject
     const was = goneById.get(id);
     if (freshById.get(id)?.length !== 1 || was?.length !== 1) continue;
     paired.add(subject).add(was[0]);
-    changed.push({ before: was[0], after: subject, fields: changedFields(was[0], subject) });
+    // Differing only in a way the dialog cannot name (an empty note against
+    // none): unchanged, not a change without lines.
+    const fields = changedFields(was[0], subject);
+    if (fields.length === 0) sameCount++;
+    else changed.push({ before: was[0], after: subject, fields });
   }
 
   return {
