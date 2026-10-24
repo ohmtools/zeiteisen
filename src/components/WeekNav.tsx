@@ -1,19 +1,20 @@
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { Suspense, useRef, useState, type ReactNode } from "react";
 import { addDays, addWeeks, differenceInCalendarWeeks, startOfISOWeek } from "date-fns";
 import { CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
+import { lazyDeferred } from "@/components/lazyDeferred";
 import { Button } from "@/components/ui/button";
 import { LazyCalendar } from "@/components/LazyCalendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { isoWeek } from "@/lib/primitives/week";
 import { useNow } from "@/hooks/useNow";
+import { useSlideOnChange } from "@/hooks/useSlideOnChange";
+import { slideIn } from "@/lib/motion";
 import type { Step } from "@/lib/media";
 
 // The phones' week picker is a drawer (deferred chunk, with the dialogs).
-const WeekDrawer = lazy(() =>
-  import("@/components/deferred").then((d) => ({ default: d.WeekDrawer })),
-);
+const WeekDrawer = lazyDeferred((d) => d.WeekDrawer);
 
 function relativeWeekLabel(weekStart: Date, now: Date): string {
   const offset = differenceInCalendarWeeks(weekStart, now, {
@@ -58,8 +59,13 @@ export function WeekNav({ value, onChange, onToday, atToday, step, className }: 
     onChange(weekStart);
     setPickerOpen(false);
   };
+  // Another week: the label slides in from its side, like the grid.
+  const labelRef = useRef<HTMLSpanElement>(null);
+  useSlideOnChange(value.getTime(), (direction) => {
+    if (labelRef.current) slideIn(labelRef.current, direction, { distance: 12 });
+  });
   const label = (
-    <>
+    <span ref={labelRef} className="flex min-w-0 items-center gap-2">
       {!compact && (
         <span className="shrink-0 text-sm font-medium">{relativeWeekLabel(value, now)}</span>
       )}
@@ -72,7 +78,7 @@ export function WeekNav({ value, onChange, onToday, atToday, step, className }: 
           {weekRangeLabel(value)}
         </span>
       </span>
-    </>
+    </span>
   );
   const trigger = (
     <Button

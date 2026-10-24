@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -20,6 +20,8 @@ import {
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
 import { toast } from "@/lib/toast";
+import { slideIn } from "@/lib/motion";
+import { useSlideOnChange } from "@/hooks/useSlideOnChange";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -193,27 +195,36 @@ export function GroupTree({
       toggleGroup(node.timetable.subjects, group, keptOf(node.timetable.name).get(groupKey(group))),
     );
   const lock = narrow && <LockButton locked={locked} onToggle={onToggleLock} />;
+  // Into a category and back: the new view slides in from that side.
+  const viewRef = useRef<HTMLDivElement>(null);
+  useSlideOnChange(openNode && openCategory ? 1 : 0, (direction) => {
+    if (viewRef.current) slideIn(viewRef.current, direction, { distance: 32 });
+  });
 
   if (openNode && openCategory) {
     return (
-      <CategoryView
-        node={openNode}
-        category={openCategory}
-        locked={locked}
-        narrow={narrow}
-        lock={lock}
-        onBack={() => onCategory(null)}
-        onClose={onClose}
-        onToggle={toggleGroupOf(openNode)}
-        onSetEnabled={(indexes, enabled) => onSetEnabled(openNode.timetable.name, indexes, enabled)}
-        onEdit={(index) => onEdit({ name: openNode.timetable.name, index })}
-        onHighlight={highlight(openNode.timetable.name)}
-      />
+      <div ref={viewRef} className="flex min-h-0 flex-1 flex-col">
+        <CategoryView
+          node={openNode}
+          category={openCategory}
+          locked={locked}
+          narrow={narrow}
+          lock={lock}
+          onBack={() => onCategory(null)}
+          onClose={onClose}
+          onToggle={toggleGroupOf(openNode)}
+          onSetEnabled={(indexes, enabled) =>
+            onSetEnabled(openNode.timetable.name, indexes, enabled)
+          }
+          onEdit={(index) => onEdit({ name: openNode.timetable.name, index })}
+          onHighlight={highlight(openNode.timetable.name)}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div ref={viewRef} className="flex min-h-0 flex-1 flex-col">
       <PanelHeader
         title={m.panel_groups()}
         actions={
@@ -358,7 +369,10 @@ function TimetableSection({
               onClick={onUpdate}
             >
               <RefreshCw />
-              <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-red" />
+              <span
+                aria-hidden
+                className="absolute top-1.5 right-1.5 size-2 animate-in rounded-full bg-red duration-500 ease-out zoom-in-0"
+              />
             </Button>
           )}
           {!locked && (
@@ -683,24 +697,32 @@ function SubjectFold({
   const shown = others ? [...used, ...rest] : used.length > 0 ? used : rest;
   return (
     <Collapsible>
-      <CollapsibleTrigger className="group flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
-        <span className="font-semibold">{row.name}</span>
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">{row.kinds}</span>
-        {grouped &&
-          used.map(({ group }) => (
-            <span
-              key={groupKey(group)}
-              className={cn(
-                "rounded-sm px-1.5 font-mono text-xs leading-5",
-                problem ? "border border-warning text-warning" : "bg-secondary",
-              )}
-            >
-              {groupKey(group)}
-            </span>
-          ))}
+      {/* Many used groups wrap into more lines of badges, at most half the
+          row wide, instead of running out of the panel. */}
+      <CollapsibleTrigger className="group flex min-h-9 w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+        <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
+        <span className="leading-6 font-semibold">{row.name}</span>
+        <span className="flex-1 leading-6 whitespace-nowrap text-muted-foreground">
+          {row.kinds}
+        </span>
+        {grouped && used.length > 0 && (
+          <span className="flex max-w-1/2 flex-wrap justify-end gap-1 py-px">
+            {used.map(({ group }) => (
+              <span
+                key={groupKey(group)}
+                className={cn(
+                  "rounded-sm border px-1.5 font-mono text-xs leading-5",
+                  problem ? "border-warning text-warning" : "border-transparent bg-secondary",
+                )}
+              >
+                {groupKey(group)}
+              </span>
+            ))}
+          </span>
+        )}
       </CollapsibleTrigger>
-      <CollapsibleContent>
+      {/* Opens and closes by its height (Base UI measures it). */}
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
         <div className="mb-2 ml-4 flex flex-col gap-1 border-l pl-4">
           {problem && <WarningLine>{problem}</WarningLine>}
           {shown.map((one, i) => (

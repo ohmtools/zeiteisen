@@ -32,7 +32,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   name, chevrons; a disabled look-alike until the deferred chunk arrives),
   lock, a divider, the view tabs "Week | General", the week nav or the
   filter; right "Groups" (with its label on wide screens), notes, settings,
-  8px apart. An open panel's button is filled. A first visit (one empty
+  8px apart. An open panel's button is filled, hovered too (dark mode's ghost
+  hover is darker than the fill). A first visit (one empty
   profile) shows the app's name and settings only, and the grid's place
   shows the welcome with three ways in (catalog, import, empty timetable).
 - Lock applies to the profile, so its button sits on every view of it (header,
@@ -130,7 +131,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   piece carries its offset as `data-start`); a drag selection stays a
   selection for copying. Leaving the text area returns to the view. Empty
   notes are the text area alone (its placeholder explains links, tasks and
-  N). The view copies the text area's box and type so no line moves. No
+  N). The view copies the text area's box and type so no line moves. The
+  text area sits inside the panel's padding like everything else, the same
+  space left, right and below (user request; a negative margin to line its
+  text up with the hint shifted it left only, `w-full` kept its width). No
   underline on either, focused or not (user decision).
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
@@ -249,7 +253,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   Disabled while locked.
 - Category view (the chevron at the category): the same ruler, a search,
   every subject (same name and kinds) as a fold with its used groups as
-  badges (amber when it breaks a rule: several groups, or every class off).
+  badges (amber when it breaks a rule: several groups, or every class off),
+  at most half the row wide, wrapping into more lines (twelve of category 12
+  overflowed the panel).
   Open: per used group "Only this one" and its classes with a checkbox and a
   pen; "Show other groups · n" adds the rest, each switchable alike. One row
   per entry, never merged (user decision): a class listed twice with
@@ -293,6 +299,33 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   `SubjectID` pairs up uniquely, `diffSubjects`) and "Dropped", then "Later",
   "Reject" (never offered again for that version) and "Apply". Never applied
   by itself.
+
+## Motion
+
+The app moves where state changes, never for decoration; how it is done is in
+`src/lib/NOTES.md` (`motion.ts`). One easing, `cubic-bezier(0.2, 0, 0, 1)`,
+~200–300 ms. Everything stops under `prefers-reduced-motion`
+(`src/motion.css`).
+
+- Week and phone day: the day heads' labels, the columns' contents (never the
+  hour lines or borders) and the all-day row slide in from the side the week
+  moved to (the general view counts as after every week: second tab), one
+  column 24ms after the other. The week nav's label slides with them.
+- Blocks fade and zoom in when they mount (a group switched on, another filter,
+  a collected block split up, the first paint); dimming and the related ring
+  ease; hover lifts the colour a little, a press shrinks it a little. CSS only:
+  a block's cost multiplies by hundreds.
+- Tabs: one indicator glides to the picked tab (`ui/tabs.tsx`); the phones'
+  day bar: the red pill glides from day to day (each date eases to its own
+  colour, never inheriting the button's mid-fade grey).
+- Wide sidebar: slides in and out from the right, the grid takes its new
+  width at once (a crossfade of the two widths showed every block twice).
+  Phones: a panel's page comes in from the right, back goes the other way.
+- Groups: the category view slides in from the right and back from the left;
+  a subject's fold opens by its height; cells ease between on, off and
+  partial and give a little under a press.
+- The now-line's dot pulses slowly and the line glides on with the minute.
+  Welcome and empty-grid cards rise in.
 
 ## Checking
 

@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { addWeeks, startOfISOWeek } from "date-fns";
 import { CalendarDays } from "lucide-react";
+import { cn } from "cn";
 import { m } from "@/i18n";
 import { AppHeader, type Panel } from "@/components/AppHeader";
 import { BottomBar } from "@/components/BottomBar";
+import { lazyDeferred } from "@/components/lazyDeferred";
 import { DayToggle } from "@/components/DayToggle";
 import { ProfileTriggerFallback } from "@/components/ProfileTrigger";
 import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
@@ -47,21 +49,21 @@ import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
 import { currentStep, isWide } from "@/lib/media";
+import { transition } from "@/lib/motion";
 import { dateLabel, shortDate } from "@/lib/subjects";
 import { dayPickedIn, defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
 
 // Everything but the grid comes from one deferred chunk (see
 // `components/deferred`): rendering any of these on the first render starts
 // the download, and the grid paints without waiting for it.
-const deferred = () => import("@/components/deferred");
-const ProfileMenu = lazy(() => deferred().then((d) => ({ default: d.ProfileMenu })));
-const PanelSheet = lazy(() => deferred().then((d) => ({ default: d.PanelSheet })));
-const GroupTree = lazy(() => deferred().then((d) => ({ default: d.GroupTree })));
-const AppDialogs = lazy(() => deferred().then((d) => ({ default: d.AppDialogs })));
-const SubjectInfoDialog = lazy(() => deferred().then((d) => ({ default: d.SubjectInfoDialog })));
-const AppToaster = lazy(() => deferred().then((d) => ({ default: d.AppToaster })));
-const SettingsPage = lazy(() => deferred().then((d) => ({ default: d.SettingsPage })));
-const NotesSection = lazy(() => deferred().then((d) => ({ default: d.NotesSection })));
+const ProfileMenu = lazyDeferred((d) => d.ProfileMenu);
+const PanelSheet = lazyDeferred((d) => d.PanelSheet);
+const GroupTree = lazyDeferred((d) => d.GroupTree);
+const AppDialogs = lazyDeferred((d) => d.AppDialogs);
+const SubjectInfoDialog = lazyDeferred((d) => d.SubjectInfoDialog);
+const AppToaster = lazyDeferred((d) => d.AppToaster);
+const SettingsPage = lazyDeferred((d) => d.SettingsPage);
+const NotesSection = lazyDeferred((d) => d.NotesSection);
 
 export default function App() {
   // "Now" ticks every minute, so a page left open moves on with the clock.
@@ -174,13 +176,24 @@ export default function App() {
   // The notes came by N: the compact sheet leaves the focus to them.
   const [notesByKey, setNotesByKey] = useState(false);
   const openPanel = (next: Panel | null) => {
-    setPanel(next);
-    setNotesByKey(false);
-    if (next !== "groups") {
-      setCategory(null);
-      // The tree goes without a blur or pointer leave: its highlight with it.
-      setHighlight(null);
-    }
+    const update = () => {
+      setPanel(next);
+      setNotesByKey(false);
+      if (next !== "groups") {
+        setCategory(null);
+        // The tree goes without a blur or pointer leave: its highlight with it.
+        setHighlight(null);
+      }
+    };
+    // The sidebar slides in or out beside the grid; a phone's page comes in
+    // from the right and goes back the way it came (`src/motion.css`). The
+    // compact sheet brings its own animation.
+    // A panel not shown before waits for the deferred chunk's render.
+    const ready = () =>
+      next === null || (document.querySelector("[data-panel-host]")?.childElementCount ?? 0) > 0;
+    if (next === panel || step === "compact") update();
+    else if (step === "wide") transition("panel", update, ready);
+    else transition(next === null ? "back" : "forward", update, ready);
   };
 
   // N, anywhere but in a field, a dialog or a menu: to the notes, caret at
@@ -435,7 +448,10 @@ export default function App() {
         <h1 className="sr-only">{m.app_title()}</h1>
 
         {page ? (
-          <div className="flex min-h-0 flex-1 flex-col pt-[env(safe-area-inset-top)]">
+          <div
+            data-panel-host
+            className="flex min-h-0 flex-1 flex-col pt-[env(safe-area-inset-top)]"
+          >
             <Suspense fallback={null}>{panelContent}</Suspense>
           </div>
         ) : (
@@ -491,7 +507,11 @@ export default function App() {
               </main>
               {/* Wide: the panel beside the grid, closable (user decision). */}
               {step === "wide" && panel !== null && (
-                <aside className="flex min-h-0 w-[340px] shrink-0 flex-col border-l pr-[env(safe-area-inset-right)]">
+                <aside
+                  data-vt="panel"
+                  data-panel-host
+                  className="flex min-h-0 w-[340px] shrink-0 flex-col border-l pr-[env(safe-area-inset-right)]"
+                >
                   <Suspense fallback={null}>{panelContent}</Suspense>
                 </aside>
               )}
@@ -581,7 +601,7 @@ function EmptyState({
   action: React.ReactNode;
 }) {
   return (
-    <div className="flex max-w-xs flex-col items-center gap-4 rounded-[10px] bg-background/80 p-4 text-center backdrop-blur-sm">
+    <div className="flex max-w-xs animate-in flex-col items-center gap-4 rounded-[10px] bg-background/80 p-4 text-center backdrop-blur-sm duration-300 ease-out fade-in-0 zoom-in-95">
       <span className="flex size-9 items-center justify-center rounded-md bg-secondary">
         <CalendarDays className="size-4" />
       </span>
@@ -593,6 +613,9 @@ function EmptyState({
     </div>
   );
 }
+
+// Rises into place on mount, held back until its delay (`fill-mode-both`).
+const RISE = "animate-in fade-in-0 slide-in-from-bottom-2 duration-500 ease-out fill-mode-both";
 
 // A first visit (one empty profile): three ways in.
 function Welcome({
@@ -607,14 +630,15 @@ function Welcome({
   return (
     <div className="flex flex-1 items-center justify-center">
       <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
-        <span className="flex size-10 items-center justify-center rounded-md bg-red text-red-foreground">
+        {/* One after the other: tile, words, the three ways in. */}
+        <span className="flex size-10 animate-in items-center justify-center rounded-md bg-red text-red-foreground duration-500 ease-out fade-in-0 zoom-in-50 spin-in-12">
           <CalendarDays className="size-5" />
         </span>
-        <div className="flex flex-col gap-2">
+        <div className={cn("flex flex-col gap-2 delay-100", RISE)}>
           <h2 className="text-base font-semibold">{m.welcome_title()}</h2>
           <p className="text-sm text-muted-foreground">{m.welcome_text()}</p>
         </div>
-        <div className="flex w-full flex-col gap-2">
+        <div className={cn("flex w-full flex-col gap-2 delay-200", RISE)}>
           <Button className="w-full" onClick={onCatalog}>
             {m.welcome_catalog()}
           </Button>

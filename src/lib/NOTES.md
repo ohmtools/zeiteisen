@@ -157,6 +157,21 @@ re-implements primitive logic.
 - `media.ts` — the `compact`, `wide` and `short` variants as media queries
   for script, and the step (`narrow` | `compact` | `wide`) they make
   (`useStep`).
+- `motion.ts` — the app's motion, without a library (user: "animate the
+  app", libraries allowed; none taken: `motion` & co. cost first load and a
+  component per block, of which there are hundreds). Three tools: View
+  Transitions (`transition()`) where the layout changes — the wide sidebar
+  opening, closing or switching (`panel`), a phone's panel page coming and
+  going (`forward` / `back`), their CSS in `src/motion.css`; the Web
+  Animations API (`slideIn`, via `useSlideOnChange`) where only something
+  new comes in — week, phone day, category view, week label; plain CSS for
+  the rest (blocks, tabs, day bar, cells, folds, now-line). `transition()`
+  waits (≤ 400 ms) for `ready`: a panel opened before the deferred chunk
+  arrived renders its Suspense fallback first; without the wait the page slid
+  in empty. Once the chunk is here the panel renders at once
+  (`lazyDeferred`, `src/NOTES.md`) and `ready` holds right away. Missing browser support or `prefers-reduced-motion`:
+  the change just happens. The compact sheet is never wrapped (it has its
+  own animation), nor N for the notes (the focus must land at once).
 - `launch.ts` / `debug.ts` — the "Debug info" (settings → About).
   `launch.ts` sits in the entry chunk (`startLaunchLog` first in `main.tsx`,
   keep it tiny): performance marks for the first render and the deferred

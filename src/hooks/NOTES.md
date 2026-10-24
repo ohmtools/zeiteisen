@@ -71,6 +71,9 @@ goes through primitives `storage.ts`.
 - `useStep` — the layout step (`@/lib/media`) and `useShort`, live through
   `useSyncExternalStore` on their media queries: turning a phone moves a
   panel between page, sheet and sidebar. Owns nothing.
+- `useSlideOnChange` — owns nothing: calls back with the direction a number
+  moved (week, day, category) in a layout effect, so the animation started
+  there covers the new state from its first frame; never on mount.
 - `useOnline` — owns nothing; only explains the catalog, nothing waits on it.
 - `useShareLink` — `useStripSharedUrl` (App) strips the address bar once the
   import dialog closes: the URL never mirrors state. `shareLinkOf` builds the

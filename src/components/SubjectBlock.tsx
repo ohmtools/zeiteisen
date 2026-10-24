@@ -48,6 +48,13 @@ function placeStyle(place: NonNullable<BlockPlace>): React.CSSProperties {
 // for the popup.
 const BLOCK_SELECTOR = "[data-subject-block]";
 
+// A block comes in with a short fade and zoom (a group switched on, another
+// filter, the first paint); dimming, the related ring and the press ease
+// instead of snapping; hover lifts its colour a little. All CSS: a block's
+// cost multiplies by hundreds.
+const BLOCK_MOTION =
+  "animate-in fade-in-0 zoom-in-95 duration-200 ease-out transition-[opacity,box-shadow,scale,filter] hover:brightness-[0.97] active:scale-[0.97] dark:hover:brightness-125";
+
 // A tap that moved this far is a swipe (day change), not a click on the block.
 const TAP_MAX_PX = 10;
 
@@ -190,7 +197,8 @@ export function SubjectBlock({
       {...press}
       aria-expanded={expanded}
       className={cn(
-        "flex cursor-pointer flex-col overflow-hidden rounded-sm border px-2 py-1 text-left text-xs leading-4 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex cursor-pointer flex-col overflow-hidden rounded-sm border px-2 py-1 text-left text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        BLOCK_MOTION,
         kindClass(subject.kind),
         place ? "pointer-events-auto absolute z-[2]" : "relative shrink-0",
         dimmed && "opacity-30",
@@ -255,6 +263,7 @@ export function CollectedBlock({
       aria-label={m.grid_collected({ subjects: entries.map((e) => e.subject.name).join(", ") })}
       className={cn(
         "pointer-events-auto absolute z-[2] flex cursor-pointer flex-col overflow-hidden rounded-sm border border-dashed border-muted-foreground/50 bg-surface px-2 py-1 text-left text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        BLOCK_MOTION,
         dimmed && "opacity-30",
         expanded && "outline-2 -outline-offset-1 outline-foreground",
       )}

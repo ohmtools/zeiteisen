@@ -13,6 +13,7 @@ import {
   type Press,
 } from "@/components/SubjectBlock";
 import { NowLine } from "@/components/NowLine";
+import { useSlideOnChange } from "@/hooks/useSlideOnChange";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { GlobalEvent } from "@/lib/primitives/meta";
 import { Day, minutesOf } from "@/lib/primitives/subject";
@@ -21,6 +22,7 @@ import { allDaySegments, type AllDaySegment } from "@/lib/allday";
 import { byDay, FIRST_HOUR, fitDay, LAST_HOUR, WEEKDAYS, type Entry } from "@/lib/layout";
 import { isHighlighted, type Highlight } from "@/lib/link";
 import type { Step } from "@/lib/media";
+import { slideIn } from "@/lib/motion";
 import { dateOf, dayName as dayLabel, shortDate } from "@/lib/subjects";
 
 // On phones the details are a drawer from the bottom, on a phone turned
@@ -52,6 +54,14 @@ function swipeDirection(dx: number, dy: number): -1 | 0 | 1 {
 function swipeTarget(from: Day, direction: -1 | 1): Day {
   const index = DAYS.indexOf(from) + direction;
   return DAYS[Math.max(0, Math.min(DAYS.length - 1, index))];
+}
+
+// Where the grid stands, as one number that grows forward: the week (or the
+// general view, after every week: it is the second tab), plus the phone's day.
+// A change slides the days in from that side.
+function pageOf(week: WeekView | null, narrow: boolean, day: Day): number {
+  const base = week ? week.start.getTime() : Number.MAX_SAFE_INTEGER / 2;
+  return narrow ? base + DAYS.indexOf(day) : base;
 }
 
 const HOURS = LAST_HOUR - FIRST_HOUR;
@@ -97,6 +107,14 @@ export function TimetableGrid({
   const narrow = step === "narrow";
   const brief = short;
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  // Another week or day: its day heads, columns and all-day row slide in from
+  // that side, one column after the other (`data-slide` = the column).
+  const rootRef = useRef<HTMLDivElement>(null);
+  useSlideOnChange(pageOf(week, narrow, selectedDay), (direction) => {
+    for (const element of rootRef.current?.querySelectorAll<HTMLElement>("[data-slide]") ?? []) {
+      slideIn(element, direction, { delay: Number(element.dataset.slide) * 24 });
+    }
+  });
   // The subject under the mouse: its other blocks get a faint ring.
   const [hovered, setHovered] = useState<string | null>(null);
   // The hour grid's size: how wide a day column is (lanes narrower than
@@ -206,6 +224,7 @@ export function TimetableGrid({
   // moves.
   return (
     <div
+      ref={rootRef}
       className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden rounded-r-[10px] border border-l-0"
       onPointerDown={(event) => {
         if (event.pointerType === "mouse") return;
@@ -243,8 +262,8 @@ export function TimetableGrid({
         {!narrow && (
           <>
             <div className="h-10 border-b" />
-            {WEEKDAYS.map((day) => (
-              <DayHead key={day} day={day} week={week} />
+            {WEEKDAYS.map((day, i) => (
+              <DayHead key={day} day={day} week={week} slide={i} />
             ))}
             <div className="flex h-10 items-center justify-center border-b border-l bg-surface px-1 text-sm font-medium text-muted-foreground @container">
               <span className="hidden truncate @[7rem]:inline">{m.grid_other()}</span>
@@ -278,48 +297,51 @@ export function TimetableGrid({
             </div>
           )}
 
-          {columns.map((day) => (
+          {columns.map((day, i) => (
             <div key={day} className="relative border-l border-t-0" style={HOUR_LINES}>
-              {/* A lecture-free day: greyed over with its reason, lectures
-                  gone (listed dates still meet). */}
-              {week?.noLectures.has(day) && (
-                <div className="absolute inset-0 z-[1] flex justify-center bg-surface pt-6 text-xs text-muted-foreground">
-                  {m.grid_no_lectures()}
-                </div>
-              )}
-              {fitDay(grid[day], columnWidth).map((shown) =>
-                shown.kind === "block" ? (
-                  <SubjectBlock
-                    key={shown.entry.key}
-                    entry={shown.entry}
-                    place={{
-                      lane: shown.lane,
-                      lanes: shown.lanes,
-                      start: minutesOf(shown.entry.meeting.startTime),
-                      end: minutesOf(shown.entry.meeting.endTime),
-                    }}
-                    general={general}
-                    brief={brief}
-                    unclear={unclear(shown.entry)}
-                    dimmed={dimmed(shown.entry)}
-                    related={related(shown.entry)}
-                    onHover={setHovered}
-                    expanded={openKey === shown.entry.key}
-                    onPress={press([shown.entry.key])}
-                  />
-                ) : (
-                  <CollectedBlock
-                    key={shown.key}
-                    entries={shown.entries}
-                    place={shown}
-                    rows={Math.floor((((shown.end - shown.start) / 60) * hourPx) / 16) - 1}
-                    dimmed={shown.entries.every(dimmed)}
-                    expanded={openKey === shown.key}
-                    onPress={press(shown.entries.map((entry) => entry.key))}
-                  />
-                ),
-              )}
-              {week?.today === day && <NowLine firstHour={FIRST_HOUR} lastHour={LAST_HOUR} />}
+              {/* What slides on another week or day; the lines stay. */}
+              <div data-slide={i} className="absolute inset-0">
+                {/* A lecture-free day: greyed over with its reason, lectures
+                    gone (listed dates still meet). */}
+                {week?.noLectures.has(day) && (
+                  <div className="absolute inset-0 z-[1] flex justify-center bg-surface pt-6 text-xs text-muted-foreground">
+                    {m.grid_no_lectures()}
+                  </div>
+                )}
+                {fitDay(grid[day], columnWidth).map((shown) =>
+                  shown.kind === "block" ? (
+                    <SubjectBlock
+                      key={shown.entry.key}
+                      entry={shown.entry}
+                      place={{
+                        lane: shown.lane,
+                        lanes: shown.lanes,
+                        start: minutesOf(shown.entry.meeting.startTime),
+                        end: minutesOf(shown.entry.meeting.endTime),
+                      }}
+                      general={general}
+                      brief={brief}
+                      unclear={unclear(shown.entry)}
+                      dimmed={dimmed(shown.entry)}
+                      related={related(shown.entry)}
+                      onHover={setHovered}
+                      expanded={openKey === shown.entry.key}
+                      onPress={press([shown.entry.key])}
+                    />
+                  ) : (
+                    <CollectedBlock
+                      key={shown.key}
+                      entries={shown.entries}
+                      place={shown}
+                      rows={Math.floor((((shown.end - shown.start) / 60) * hourPx) / 16) - 1}
+                      dimmed={shown.entries.every(dimmed)}
+                      expanded={openKey === shown.key}
+                      onPress={press(shown.entries.map((entry) => entry.key))}
+                    />
+                  ),
+                )}
+                {week?.today === day && <NowLine firstHour={FIRST_HOUR} lastHour={LAST_HOUR} />}
+              </div>
             </div>
           ))}
 
@@ -334,26 +356,28 @@ export function TimetableGrid({
                 !narrow && "border-l",
               )}
             >
-              {list.map((entry) => (
-                <SubjectBlock
-                  key={entry.key}
-                  entry={entry}
-                  place={null}
-                  general={general}
-                  brief={short}
-                  unclear={unclear(entry)}
-                  dimmed={dimmed(entry)}
-                  related={related(entry)}
-                  onHover={setHovered}
-                  expanded={openKey === entry.key}
-                  onPress={press([entry.key])}
-                />
-              ))}
-              {narrow && list.length === 0 && (
-                <span className="p-4 text-center text-sm text-muted-foreground">
-                  {m.grid_other_empty()}
-                </span>
-              )}
+              <div data-slide={columns.length} className="flex flex-col gap-0.5">
+                {list.map((entry) => (
+                  <SubjectBlock
+                    key={entry.key}
+                    entry={entry}
+                    place={null}
+                    general={general}
+                    brief={short}
+                    unclear={unclear(entry)}
+                    dimmed={dimmed(entry)}
+                    related={related(entry)}
+                    onHover={setHovered}
+                    expanded={openKey === entry.key}
+                    onPress={press([entry.key])}
+                  />
+                ))}
+                {narrow && list.length === 0 && (
+                  <span className="p-4 text-center text-sm text-muted-foreground">
+                    {m.grid_other_empty()}
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -392,21 +416,23 @@ export function TimetableGrid({
 }
 
 // "Mo 19": today's name bright and its date on red.
-function DayHead({ day, week }: { day: Day; week: WeekView | null }) {
+function DayHead({ day, week, slide }: { day: Day; week: WeekView | null; slide: number }) {
   const today = week?.today === day;
   return (
     <div
       className={cn(
-        "flex h-10 items-center justify-center gap-2 border-b border-l text-sm font-medium whitespace-nowrap",
+        "flex h-10 items-center justify-center border-b border-l text-sm font-medium whitespace-nowrap",
         today ? "text-foreground" : "text-muted-foreground",
       )}
     >
-      {dayLabel(day)}
-      {week && (
-        <span className={cn("font-mono", today && "rounded-sm bg-red px-1 text-red-foreground")}>
-          {shortDate(dateOf(week.start, day), false)}
-        </span>
-      )}
+      <span data-slide={slide} className="flex items-center gap-2">
+        {dayLabel(day)}
+        {week && (
+          <span className={cn("font-mono", today && "rounded-sm bg-red px-1 text-red-foreground")}>
+            {shortDate(dateOf(week.start, day), false)}
+          </span>
+        )}
+      </span>
     </div>
   );
 }
@@ -454,10 +480,17 @@ function AllDayRow({
     return (
       <div className={cn("col-span-full flex items-center border-b px-0.5", height)}>
         {segments.length === 0 ? (
-          <span className="px-2 text-xs text-muted-foreground">{empty}</span>
+          <span data-slide={0} className="px-2 text-xs text-muted-foreground">
+            {empty}
+          </span>
         ) : (
           segments.map((segment) => (
-            <AllDayChip key={segment.from} segment={segment} prefix={m.grid_allday_short()} />
+            <AllDayChip
+              key={segment.from}
+              segment={segment}
+              prefix={m.grid_allday_short()}
+              slide={0}
+            />
           ))
         )}
       </div>
@@ -479,6 +512,7 @@ function AllDayRow({
         ))}
         {segments.length === 0 ? (
           <span
+            data-slide={0}
             className="flex items-center px-2 text-xs text-muted-foreground"
             style={{ gridColumn: "1 / -1", gridRow: 1 }}
           >
@@ -488,6 +522,7 @@ function AllDayRow({
           segments.map((segment) => (
             <div
               key={segment.from}
+              data-slide={segment.from}
               className="flex min-w-0 items-center px-0.5"
               style={{ gridColumn: `${segment.from + 1} / ${segment.to + 2}`, gridRow: 1 }}
             >
@@ -500,7 +535,16 @@ function AllDayRow({
   );
 }
 
-function AllDayChip({ segment, prefix }: { segment: AllDaySegment; prefix?: string }) {
+function AllDayChip({
+  segment,
+  prefix,
+  slide,
+}: {
+  segment: AllDaySegment;
+  prefix?: string;
+  // Narrow: the chip itself slides with the day (`data-slide`).
+  slide?: number;
+}) {
   const [first, ...rest] = segment.events;
   const days = DAYS.slice(segment.from, segment.to + 1)
     .map(dayLabel)
@@ -511,6 +555,7 @@ function AllDayChip({ segment, prefix }: { segment: AllDaySegment; prefix?: stri
         render={
           <button
             type="button"
+            data-slide={slide}
             className={cn(
               "flex h-7 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-sm px-2 text-left text-xs whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring",
               first.noLectures ? "bg-input" : "bg-secondary",

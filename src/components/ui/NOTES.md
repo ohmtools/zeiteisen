@@ -39,6 +39,11 @@ app's own, in `src/index.css`.
     ghost unless they are the main action).
   - The overlays of `Dialog`, `AlertDialog`, `Sheet` and `Drawer` are a plain
     scrim, `bg-black/40 dark:bg-black/70`, no blur (the design darkens).
+  - `TabsList` (default variant): one indicator span before the tabs glides
+    to the active tab (`translate` + `width`, measured from `offsetLeft` /
+    `offsetWidth`, re-measured on `data-active` changes and resizes); the
+    active tab itself has no fill, border or shadow any more. Not Base UI's
+    `Tabs.Indicator`: it put 3 KB gzip into the first load.
   - `checkbox.tsx`: the indicator renders `MinusIcon` instead of `CheckIcon`
     when `indeterminate` is set, so a partial pick reads as partial.
   - `sonner.tsx`: shadcn's version imports `useTheme` from `next-themes`,

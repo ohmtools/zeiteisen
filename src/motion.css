@@ -1,0 +1,87 @@
+/* The view transitions (`@/lib/motion`, `transition()`): the browser shoots
+   the page before and after a change and animates between the shots.
+   `html[data-transition]` names the kind for as long as it runs; outside it
+   nothing carries a `view-transition-name`. */
+
+@keyframes vt-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+@keyframes vt-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+}
+@keyframes vt-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+}
+@keyframes vt-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Wide: the sidebar slides in from the right (out the same way); the rest
+   of the page, the grid at its new width, stands at once. A crossfade of the
+   grid's two widths showed every block twice. */
+html[data-transition="panel"] [data-vt="panel"] {
+  view-transition-name: panel;
+}
+html[data-transition="panel"]::view-transition-old(root) {
+  display: none;
+}
+html[data-transition="panel"]::view-transition-new(root) {
+  animation: none;
+}
+html[data-transition="panel"]::view-transition-new(panel):only-child {
+  animation-name: vt-in-right;
+}
+html[data-transition="panel"]::view-transition-old(panel):only-child {
+  animation-name: vt-out-right;
+  animation-duration: 200ms;
+}
+
+/* Phones: a panel's page comes in from the right, the grid steps aside to
+   the left; back is the mirror. */
+html[data-transition="forward"]::view-transition-old(root) {
+  animation-name: vt-out-left;
+  animation-duration: 200ms;
+}
+html[data-transition="forward"]::view-transition-new(root) {
+  animation-name: vt-in-right;
+}
+html[data-transition="back"]::view-transition-old(root) {
+  animation-name: vt-out-right;
+  animation-duration: 200ms;
+}
+html[data-transition="back"]::view-transition-new(root) {
+  animation-name: vt-in-left;
+}
+
+/* Reduced motion: no movement anywhere, the app's own or shadcn's; state
+   changes still show, at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}

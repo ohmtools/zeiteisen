@@ -10,8 +10,11 @@ import type { Step } from "@/lib/media";
 // sheet from the right on compact ones, a page of their own on phones.
 export type Panel = "groups" | "notes" | "settings";
 
-// Header icon buttons stand 8px apart; an open panel's button is filled.
-const ICON = "aria-pressed:bg-accent";
+// Header icon buttons stand 8px apart; an open panel's button is filled, and
+// stays so under the pointer (the ghost hover is darker than the fill in dark
+// mode: the button looked switched off).
+const ICON =
+  "aria-pressed:bg-accent aria-pressed:hover:bg-accent dark:aria-pressed:hover:bg-accent";
 
 // The one header row. Left the profile (menu and lock), then from compact on
 // the view tabs and the week (or the week filter); right the panels. Phones

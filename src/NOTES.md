@@ -9,7 +9,12 @@
   state hooks and what they need. The panels (groups, notes, settings), the
   profile menu, the sheets and drawers (panel sheet, details, week picker),
   dialogs and toaster come from ONE deferred chunk: `components/deferred.ts`
-  re-exports them and App `lazy()`s each through the same `import()`. Anything
+  re-exports them and App takes each through `lazyDeferred` (same `import()`).
+  Never plain `lazy()` for it: that suspends on a component's first render
+  even when the chunk came long ago, and React then holds the content back
+  ~300 ms after the fallback; every panel, sheet and drawer opened for the
+  first time hung that long. `lazyDeferred` answers synchronously once the
+  chunk is in. Anything
   new that is not the grid goes behind that import. Fallbacks never shift the
   layout (panels: `null`, the sidebar keeps its width; the profile menu: a
   disabled look-alike trigger). `vite.config.ts` names only a
@@ -50,7 +55,9 @@
 - Toasts only through `@/lib/toast`, never `sonner` directly.
 - `src/index.css` is shadcn's generated CSS with the app's theme (colours,
   kind colours, red accent, warning, grid lines, Geist) and the `compact`,
-  `wide` and `short` variants, nothing else.
+  `wide` and `short` variants, nothing else. The view transitions and the
+  reduced-motion switch-off live in `src/motion.css`, imported from it
+  (`src/lib/NOTES.md`, `motion.ts`).
 - Tests sit beside their module, pure logic only (no component tests), and
   reuse `primitives/fixtures.test-util.ts`. `src/test-setup.ts` stubs
   `localStorage` because paraglide reads the locale from it.

@@ -57,7 +57,7 @@ export function GroupCell({
       ref={ref}
       type="button"
       className={cn(
-        "flex h-[30px] min-w-0 items-center justify-center overflow-hidden rounded-md border border-transparent font-mono text-(length:--cell-font) outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
+        "flex h-[30px] min-w-0 items-center justify-center overflow-hidden rounded-md border border-transparent font-mono text-(length:--cell-font) transition-[background-color,border-color,color,box-shadow,scale] duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring not-disabled:active:scale-95 disabled:cursor-not-allowed",
         state === "all" &&
           "bg-background font-semibold text-foreground shadow-sm dark:border-input dark:bg-input/30",
         state === "partial" && "border-dashed border-muted-foreground/50 text-foreground",

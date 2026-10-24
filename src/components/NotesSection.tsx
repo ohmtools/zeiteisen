@@ -206,7 +206,7 @@ export function NotesSection({
               event.currentTarget.blur();
               onLeave();
             }}
-            className="-mx-2.5 min-h-0 flex-1 field-sizing-fixed"
+            className="min-h-0 flex-1 field-sizing-fixed"
           />
         ) : (
           <div
@@ -215,7 +215,7 @@ export function NotesSection({
             aria-label={m.notes_title()}
             aria-keyshortcuts="n"
             tabIndex={0}
-            className={cn(VIEW, "-mx-2.5")}
+            className={VIEW}
             onFocus={onViewFocus}
             onClick={onViewClick}
           >

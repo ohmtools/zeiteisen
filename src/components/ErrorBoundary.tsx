@@ -1,5 +1,6 @@
-import { Component, lazy, Suspense, type ReactNode } from "react";
+import { Component, Suspense, type ReactNode } from "react";
 import { m } from "@/i18n";
+import { lazyDeferred } from "@/components/lazyDeferred";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
@@ -7,9 +8,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 // app loads it right after the first paint, so a tab that fails later (a chunk
 // gone after a deploy) already holds it, and a start that fails fetches it
 // now. It stays out of the first load, the grid's.
-const ErrorTools = lazy(() =>
-  import("@/components/deferred").then((d) => ({ default: d.ErrorTools })),
-);
+const ErrorTools = lazyDeferred((d) => d.ErrorTools);
 
 // The last line behind the lazy chunks: a tab left open across a deploy may
 // ask for a chunk that no longer exists (`main.tsx` reloads on that first).
