@@ -492,6 +492,7 @@
   "welcome_empty": "Leeren Stundenplan anlegen",
   "week_empty_title": "Keine Termine in dieser Woche",
   "week_empty_next": "Die nächsten Termine sind ab {date}",
+  "week_empty_next_week": "Die nächsten Termine sind in der Woche ab {date}",
   "week_empty_none": "Danach folgen keine Termine mehr.",
   "week_empty_jump": "Zur Woche ab {date}",
   "details_title": "Termin",

@@ -492,6 +492,7 @@
   "welcome_empty": "Create an empty timetable",
   "week_empty_title": "No classes this week",
   "week_empty_next": "The next classes start {date}",
+  "week_empty_next_week": "The next classes are in the week of {date}",
   "week_empty_none": "No classes follow.",
   "week_empty_jump": "To the week of {date}",
   "details_title": "Class",
