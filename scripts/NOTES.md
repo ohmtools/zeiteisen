@@ -65,11 +65,15 @@
   (Android crops to its own shape; without it, the icon shrinks onto a white
   plate). The watch stays inside the maskable safe zone (circle of 40%
   radius) as drawn: check that after a logo change. The service worker skips
-  all four (read once, at install).
+  all four (read once, at install). The logo is the old pocket watch, flat in
+  the redesign's colours (user decision): black backdrop, white bezel, the
+  blocks red `#dc2626`, white and orange `#f97316`. `favicon.svg` is the
+  same watch without backdrop, with a black halo so the white bezel shows on
+  light tab strips.
 - `scripts/og/card.mjs` (`node scripts/og/card.mjs`, by hand) write the link
   preview cards `og.svg` / `og-share.svg` from one template (favicon watch,
-  mini Mo–Fr grid in the favicon's reds, Geist, the app's font, from
-  `node_modules`) and render them with `web-shot` to `public/og.png` /
+  mini Mo–Fr grid with blocks coloured by kind as in the dark theme, OLED
+  black, Geist, the app's font, from `node_modules`) and render them with `web-shot` to `public/og.png` /
   `public/og-share.png`, 1200×630, both committed. PNG because WhatsApp
   refuses SVG; keep each under 300 KB (WhatsApp's limit).
 - `scripts/bump-version.mjs`, run by `.githooks/pre-commit` (`npm install`

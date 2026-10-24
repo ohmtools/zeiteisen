@@ -1,43 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="0.15" y2="1">
-      <stop offset="0%" stop-color="#1E232D"/>
-      <stop offset="100%" stop-color="#101216"/>
-    </linearGradient>
-    <radialGradient id="faceGrad" cx="42%" cy="32%" r="75%">
-      <stop offset="0%" stop-color="#262B35"/>
-      <stop offset="100%" stop-color="#12151A"/>
-    </radialGradient>
-    <linearGradient id="bezelGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#F5F5F4"/>
-      <stop offset="45%" stop-color="#D6D3CE"/>
-      <stop offset="100%" stop-color="#8C8884"/>
-    </linearGradient>
-    <linearGradient id="scarletGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#E23A46"/>
-      <stop offset="100%" stop-color="#9E0711"/>
-    </linearGradient>
-    <linearGradient id="maroonGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#9E0711"/>
-      <stop offset="100%" stop-color="#5C040A"/>
-    </linearGradient>
-  </defs>
+  <!-- Flat, in the app's colours: OLED black, white, the red accent and
+       orange (the Pr kind's border in the dark theme). -->
 
   <!-- Squircle backdrop -->
-  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="url(#bgGrad)"/>
+  <rect x="0" y="0" width="512" height="512" rx="112" ry="112" fill="#000000"/>
   <rect x="0.75" y="0.75" width="510.5" height="510.5" rx="111.3" ry="111.3" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1.5"/>
 
   <!-- Pocket watch glyph -->
   <g>
     <!-- Winding stem -->
-    <rect x="244" y="112" width="24" height="30" rx="7" fill="url(#bezelGrad)"/>
-    <!-- Crown / chain loop (now neutral, not blue) -->
-    <circle cx="256" cy="100" r="20" fill="none" stroke="url(#bezelGrad)" stroke-width="18"/>
+    <rect x="244" y="112" width="24" height="30" rx="7" fill="#FAFAFA"/>
+    <!-- Crown / chain loop -->
+    <circle cx="256" cy="100" r="20" fill="none" stroke="#FAFAFA" stroke-width="18"/>
     <!-- Bezel & face -->
-    <circle cx="256" cy="288" r="144" fill="url(#faceGrad)" stroke="url(#bezelGrad)" stroke-width="22"/>
+    <circle cx="256" cy="288" r="144" fill="#0A0A0A" stroke="#FAFAFA" stroke-width="22"/>
     <!-- Timetable grid: centered, sized to clear the inner ring edge -->
-    <rect x="174" y="202" width="70" height="80" rx="12" fill="url(#scarletGrad)"/>
-    <rect x="174" y="294" width="70" height="80" rx="12" fill="#FFFFFF"/>
-    <rect x="258" y="202" width="80" height="172" rx="12" fill="url(#maroonGrad)"/>
+    <rect x="174" y="202" width="70" height="80" rx="12" fill="#DC2626"/>
+    <rect x="174" y="294" width="70" height="80" rx="12" fill="#FAFAFA"/>
+    <rect x="258" y="202" width="80" height="172" rx="12" fill="#F97316"/>
   </g>
 </svg>

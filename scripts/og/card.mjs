@@ -2,7 +2,8 @@
 // `scripts/og/og.svg` + `og-share.svg` from one template and renders each to
 // `public/og.png` / `public/og-share.png` (1200×630) with `web-shot`
 // (headless chromium). Run by hand after a design change, commit the PNGs:
-// `node scripts/og/card.mjs`. Marketing, not app UI: own colours allowed.
+// `node scripts/og/card.mjs`. Marketing, not app UI, but in the app's
+// colours: OLED black, the red accent, blocks coloured by kind.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,29 +15,35 @@ const font = path.relative(
   path.join(root, "node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2"),
 );
 
-// The favicon's reds (light → dark).
-const tints = ["#E23A46", "#C10007", "#9E0711", "#6E050C"];
+// Blocks as in the app's dark theme: coloured by kind, [fill, border].
+const kinds = {
+  SU: ["#111111", "#2E2E2E"],
+  Ue: ["#0D1F3C", "#2563EB"],
+  Pr: ["#4A1A04", "#F97316"],
+  Tu: ["#062B2A", "#0D9488"],
+  S: ["#25104D", "#7C3AED"],
+};
 
 // The pocket watch of `public/favicon.svg`, drawn in its own 384-unit box.
 const watch = `
-  <rect x="244" y="112" width="24" height="30" rx="7" fill="url(#bezel)"/>
-  <circle cx="256" cy="100" r="20" fill="none" stroke="url(#bezel)" stroke-width="18"/>
-  <circle cx="256" cy="288" r="144" fill="url(#face)" stroke="url(#bezel)" stroke-width="22"/>
-  <rect x="174" y="202" width="70" height="80" rx="12" fill="url(#scarlet)"/>
-  <rect x="174" y="294" width="70" height="80" rx="12" fill="#FFFFFF"/>
-  <rect x="258" y="202" width="80" height="172" rx="12" fill="url(#maroon)"/>`;
+  <rect x="244" y="112" width="24" height="30" rx="7" fill="#FAFAFA"/>
+  <circle cx="256" cy="100" r="20" fill="none" stroke="#FAFAFA" stroke-width="18"/>
+  <circle cx="256" cy="288" r="144" fill="#0A0A0A" stroke="#FAFAFA" stroke-width="22"/>
+  <rect x="174" y="202" width="70" height="80" rx="12" fill="#DC2626"/>
+  <rect x="174" y="294" width="70" height="80" rx="12" fill="#FAFAFA"/>
+  <rect x="258" y="202" width="80" height="172" rx="12" fill="#F97316"/>`;
 
-// Mini week: [day 0–4, start row, rows, subject, kind, tint (-1 = white)].
+// Mini week: [day 0–4, start row, rows, subject, kind].
 const blocks = [
-  [0, 0, 2, "I2", "Pr", 2],
-  [0, 3, 2, "M1", "SU", 0],
-  [1, 1, 2, "EM", "SU", 1],
-  [1, 4, 2, "M1", "Ue", -1],
-  [2, 0, 2, "ELK1", "SU", 3],
-  [2, 2, 2, "EM", "Tu", 0],
-  [3, 2, 3, "SDS", "S", 2],
-  [4, 0, 2, "ELK1", "Pr", 1],
-  [4, 3, 2, "I2", "SU", 3],
+  [0, 0, 2, "I2", "Pr"],
+  [0, 3, 2, "M1", "SU"],
+  [1, 1, 2, "EM", "SU"],
+  [1, 4, 2, "M1", "Ue"],
+  [2, 0, 2, "ELK1", "SU"],
+  [2, 2, 2, "EM", "Tu"],
+  [3, 2, 3, "SDS", "S"],
+  [4, 0, 2, "ELK1", "Pr"],
+  [4, 3, 2, "I2", "SU"],
 ];
 
 const grid = { x: 628, y: 92, w: 500, h: 446, head: 44, rows: 6, gap: 8 };
@@ -53,20 +60,19 @@ function gridSvg() {
   for (let r = 0; r <= grid.rows; r++) {
     const y = grid.y + grid.head + r * rowH;
     out.push(
-      `<line x1="${grid.x}" x2="${grid.x + grid.w}" y1="${y}" y2="${y}" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>`,
+      `<line x1="${grid.x}" x2="${grid.x + grid.w}" y1="${y}" y2="${y}" stroke="#1F1F1F" stroke-width="2"/>`,
     );
   }
-  for (const [day, row, rows, subject, kind, tint] of blocks) {
+  for (const [day, row, rows, subject, kind] of blocks) {
     const x = grid.x + day * (colW + grid.gap);
     const y = grid.y + grid.head + row * rowH + 4;
     const h = rows * rowH - 8;
-    const fill = tint < 0 ? "#FFFFFF" : tints[tint];
-    const ink = tint < 0 ? "#12151A" : "#FFFFFF";
-    out.push(`<rect x="${x}" y="${y}" width="${colW}" height="${h}" rx="12" fill="${fill}"/>`);
-    out.push(`<text x="${x + 14}" y="${y + 32}" class="subject" fill="${ink}">${subject}</text>`);
+    const [fill, border] = kinds[kind];
     out.push(
-      `<text x="${x + 14}" y="${y + 58}" class="kind" fill="${ink}" fill-opacity="0.8">${kind}</text>`,
+      `<rect x="${x + 1}" y="${y + 1}" width="${colW - 2}" height="${h - 2}" rx="11" fill="${fill}" stroke="${border}" stroke-width="2"/>`,
     );
+    out.push(`<text x="${x + 14}" y="${y + 32}" class="subject">${subject}</text>`);
+    out.push(`<text x="${x + 14}" y="${y + 58}" class="kind">${kind}</text>`);
   }
   return out.join("\n  ");
 }
@@ -83,37 +89,16 @@ function card(lines) {
     <style>
       @font-face { font-family: Geist; src: url("${font}") format("woff2"); font-weight: 100 900; }
       text { font-family: Geist, sans-serif; letter-spacing: -0.01em; }
-      .day { font-size: 22px; font-weight: 600; fill: #D6D3CE; }
-      .subject { font-size: 24px; font-weight: 700; }
-      .kind { font-size: 20px; font-weight: 500; }
+      .day { font-size: 22px; font-weight: 500; fill: #A3A3A3; }
+      .subject { font-size: 24px; font-weight: 600; fill: #FAFAFA; }
+      .kind { font-size: 20px; font-weight: 500; fill: #D4D4D4; }
     </style>
-    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="#1E232D"/>
-      <stop offset="100%" stop-color="#101216"/>
-    </linearGradient>
-    <radialGradient id="face" cx="42%" cy="32%" r="75%">
-      <stop offset="0%" stop-color="#262B35"/>
-      <stop offset="100%" stop-color="#12151A"/>
-    </radialGradient>
-    <linearGradient id="bezel" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#F5F5F4"/>
-      <stop offset="45%" stop-color="#D6D3CE"/>
-      <stop offset="100%" stop-color="#8C8884"/>
-    </linearGradient>
-    <linearGradient id="scarlet" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#E23A46"/>
-      <stop offset="100%" stop-color="#9E0711"/>
-    </linearGradient>
-    <linearGradient id="maroon" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#9E0711"/>
-      <stop offset="100%" stop-color="#5C040A"/>
-    </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect x="0" y="0" width="1200" height="8" fill="#C10007"/>
+  <rect width="1200" height="630" fill="#000000"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#DC2626"/>
   <svg x="64" y="76" width="104" height="104" viewBox="64 64 384 384">${watch}
   </svg>
-  <text x="184" y="148" font-size="60" font-weight="700" fill="#FFFFFF">Zeiteisen</text>
+  <text x="184" y="148" font-size="60" font-weight="600" fill="#FAFAFA">Zeiteisen</text>
   ${text}
   ${gridSvg()}
 </svg>
@@ -122,15 +107,15 @@ function card(lines) {
 
 const cards = {
   og: card([
-    [350, 46, 700, "#FFFFFF", "Gruppen kombinieren,"],
-    [408, 46, 700, "#FFFFFF", "Stundenplan"],
-    [466, 46, 700, "#FFFFFF", "ausprobieren"],
+    [350, 46, 600, "#FAFAFA", "Gruppen kombinieren,"],
+    [408, 46, 600, "#FAFAFA", "Stundenplan"],
+    [466, 46, 600, "#FAFAFA", "ausprobieren"],
   ]),
   "og-share": card([
-    [340, 52, 700, "#FFFFFF", "Stundenplan"],
-    [404, 52, 700, "#FFFFFF", "geteilt"],
-    [480, 28, 500, "#D6D3CE", "Öffnen, um die"],
-    [520, 28, 500, "#D6D3CE", "Gruppen anzusehen"],
+    [340, 52, 600, "#FAFAFA", "Stundenplan"],
+    [404, 52, 600, "#FAFAFA", "geteilt"],
+    [480, 28, 500, "#A3A3A3", "Öffnen, um die"],
+    [520, 28, 500, "#A3A3A3", "Gruppen anzusehen"],
   ]),
 };
 

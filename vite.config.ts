@@ -161,9 +161,10 @@ export default defineConfig({
         name: "Zeiteisen",
         short_name: "Zeiteisen",
         description: "Personal university timetable builder.",
-        theme_color: "#08060d",
-        // Splash color: shadcn light --primary oklch(0.505 0.213 27.518) as hex.
-        background_color: "#c10007",
+        // OLED black, the dark theme's ground and the logo's backdrop: the
+        // splash screen shows the icon on the colour it is drawn on.
+        theme_color: "#000000",
+        background_color: "#000000",
         display: "standalone",
         start_url: "/",
         // The SVG for browsers that take one; PNGs for Android browsers that
