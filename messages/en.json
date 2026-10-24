@@ -5,7 +5,7 @@
   "cancel": "Cancel",
   "catalog_error_fetch": "Could not download {file} from the catalog.",
   "dates_catalog_again": "Use catalog dates",
-  "dates_manual": "Load own dates…",
+  "dates_manual": "Load dates…",
   "day_friday": "Fri",
   "day_monday": "Mon",
   "day_thursday": "Thu",
@@ -18,13 +18,13 @@
   "export_text": "No global dates file is loaded, so choose the period to export. Classes are expanded week by week, one calendar entry per date.",
   "export_title": "Export calendar",
   "source_code": "Source code on GitHub",
-  "footer_note": "Data stays in your browser.",
+  "footer_note": "Your data stays in this browser.",
   "grid_allday": "All day",
   "grid_day_pick": "Day",
   "grid_empty": "Add a timetable to your profile to see it here.",
   "grid_empty_week": "No classes this week.",
   "grid_other": "Other",
-  "grid_other_empty": "Nothing here",
+  "grid_other_empty": "Nothing on other days",
   "grid_other_short": "Other",
   "grid_time": "Time",
   "groups_export": "Export",
@@ -43,10 +43,10 @@
   "import_back": "Back",
   "import_confirm": "Import",
   "import_error": "Not a valid share link or profile file.",
-  "import_file": "Choose profile file",
+  "import_file": "Choose profile file…",
   "import_found_catalog": "In the catalog as “{name}”",
   "import_found_local": "On this device as “{name}”",
-  "import_link": "Share link",
+  "import_link": "Link",
   "import_link_placeholder": "Paste link…",
   "import_missing": "Timetable file missing",
   "import_none": "This link holds no timetables.",
@@ -57,8 +57,13 @@
   "import_title": "Import profile",
   "import_unresolved": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} timetable could not be imported.",
         "countPlural=other": "{count} timetables could not be imported."
@@ -73,14 +78,19 @@
   "kind_seminar": "Seminar",
   "kind_tutorial": "Tutorial",
   "language_label": "Language",
-  "location_maps": "Maps",
+  "location_maps": "Map",
   "location_site": "Campus",
-  "picker_add_text": "Choose the timetables to copy into this profile. Copies are yours: an update is only ever applied when you ask for it.",
+  "picker_add_text": "The picked timetables are copied into this profile. Catalog updates are only ever offered.",
   "picker_add_title": "Add timetables",
   "picker_added": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} timetable added.",
         "countPlural=other": "{count} timetables added."
@@ -89,7 +99,7 @@
   ],
   "picker_added_as": "added as “{name}”",
   "picker_confirm": "Add",
-  "picker_empty": "New empty timetable",
+  "picker_empty": "Empty timetable",
   "picker_modified": "changed {date}",
   "picker_new_text": "Choose the timetables the new profile starts with. It gets its own copy of each one.",
   "picker_new_title": "New profile",
@@ -97,17 +107,17 @@
   "picker_offline_warning": "You are offline. Catalog timetables are not listed until you are back online.",
   "picker_source_catalog": "Catalog",
   "picker_source_empty": "Empty, fill it in yourself",
-  "picker_source_profile": "In profile “{name}”",
+  "picker_source_profile": "Copy from “{name}”",
   "picker_source_upload": "Uploaded file",
-  "picker_upload": "Upload file",
-  "profile_add": "Add profile",
+  "picker_upload": "Upload file…",
+  "profile_add": "New profile",
   "profile_add_timetables": "Add timetables",
   "profile_create": "Create",
   "profile_default": "Profile",
   "profile_delete": "Delete profile",
   "profile_delete_confirm": "Delete",
-  "profile_delete_text": "“{name}”, its timetable copies and its group selection are removed from this device. Other profiles keep theirs.",
-  "profile_delete_title": "Delete this profile?",
+  "profile_delete_text": "The profile and its copies of the timetables are deleted from this device. This cannot be undone.",
+  "profile_delete_title": "Delete {name}?",
   "profile_description": "Each profile is a saved variant of your timetables.",
   "profile_name": "Name",
   "profile_name_taken": "A profile with this name already exists.",
@@ -133,22 +143,22 @@
   "subject_add_confirm": "Add",
   "subject_add_date": "Add date",
   "subject_add_title": "Add subject",
-  "subject_catalog_add_confirm": "Add anyway",
-  "subject_catalog_add_text": "“{timetable}” comes from the catalog. Adding a subject makes it your own copy: it no longer receives catalog updates when the university changes its subjects. To keep them, add a new empty timetable under “Add timetables” and put your own subjects there instead.",
-  "subject_catalog_add_title": "Add a subject to a catalog timetable?",
-  "subject_catalog_edit_confirm": "Edit anyway",
-  "subject_catalog_edit_text": "“{timetable}” comes from the catalog. Changing or deleting one of its subjects makes it your own copy: it no longer receives catalog updates when the university changes its subjects.",
-  "subject_catalog_edit_title": "Edit a subject of a catalog timetable?",
+  "subject_catalog_add_confirm": "Add to {timetable} anyway",
+  "subject_catalog_add_text": "“{timetable}” comes from the catalog and would get no more updates. Better put your own subjects in an empty timetable.",
+  "subject_catalog_add_title": "Add a subject to {timetable}?",
+  "subject_catalog_edit_confirm": "Edit",
+  "subject_catalog_edit_text": "“{timetable}” comes from the catalog. After a change it is your own timetable and gets no more catalog updates. The change applies to “{profile}” only.",
+  "subject_catalog_edit_title": "Edit {timetable}?",
   "subject_catalog_warning": "“{timetable}” comes from the catalog. Once you save a change, it no longer receives catalog updates.",
   "subject_date": "Date",
   "subject_dates": "Dates",
   "subject_day": "Day",
-  "subject_delete": "Delete",
+  "subject_delete": "Delete class…",
   "subject_delete_confirm": "Delete",
   "subject_delete_text": "{subject} is removed from “{timetable}”. This cannot be undone.",
-  "subject_delete_title": "Delete this subject?",
+  "subject_delete_title": "Delete this class?",
   "subject_dialog_text": "Changes apply to “{timetable}” in this profile only.",
-  "subject_edit_title": "Edit subject",
+  "subject_edit_title": "Edit class",
   "subject_end": "End",
   "subject_error_date": "Every date needs a day.",
   "subject_error_dates": "Add at least one date.",
@@ -160,14 +170,14 @@
   "subject_group": "Group {group}",
   "subject_group_label": "Group",
   "subject_group_placeholder": "e.g. 2.1, empty for no group",
-  "subject_kinds": "Kind",
+  "subject_kinds": "Kind (several possible)",
   "subject_location": "Room",
   "subject_name": "Subject",
   "subject_degree_program": "Degree program",
   "subject_degree_program_none": "None",
   "subject_next_date": "A week later",
   "subject_note": "Note",
-  "subject_on_demand": "On demand",
+  "subject_on_demand": "On request only",
   "subject_pick_dates": "Pick in calendar",
   "subject_professor": "Lecturer",
   "subject_remove_date": "Remove date",
@@ -182,8 +192,13 @@
   "toast_ics_failed": "Could not build the calendar file.",
   "toast_ics_saved": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} calendar entry saved.",
         "countPlural=other": "{count} calendar entries saved."
@@ -192,8 +207,13 @@
   ],
   "toast_ics_undated": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} class has no fixed weekday and is not in the file.",
         "countPlural=other": "{count} classes have no fixed weekday and are not in the file."
@@ -215,17 +235,17 @@
   "tree_description": "Try out different subject variations for this profile.",
   "tree_download": "Download {name}",
   "tree_edit_subject": "Edit {subject}",
-  "tree_empty": "Groups appear here once the profile holds a timetable.",
+  "tree_empty": "Groups show here once the profile has a timetable.",
   "tree_expand": "Show the classes of {name}",
   "tree_no_group": "No group",
-  "tree_pick": "Choose single classes in category {category}",
-  "tree_pick_ungrouped": "Choose single classes without a group",
+  "tree_pick": "Open category {category}",
+  "tree_pick_ungrouped": "Open classes without a group",
   "tree_pick_title": "Classes in category {category}",
   "tree_pick_title_ungrouped": "Classes without a group",
   "tree_remove": "Remove {name}",
   "tree_remove_confirm": "Remove",
   "tree_remove_text": "“{name}” and its group selection are removed from this profile. Other profiles keep their copy.",
-  "tree_remove_title": "Remove this timetable?",
+  "tree_remove_title": "Remove {name}?",
   "tree_rename": "Rename timetable",
   "tree_rename_empty": "The name cannot be empty.",
   "tree_rename_taken": "This profile already holds a timetable with that name.",
@@ -239,31 +259,41 @@
   "tree_update": "Update available for {name}",
   "tree_warning_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} warning",
         "countPlural=other": "{count} warnings"
       }
     }
   ],
-  "update_added": "New classes",
-  "update_confirm": "Update",
+  "update_added": "New",
+  "update_confirm": "Apply",
   "update_from_catalog": "The catalog serves a new version of {file}.",
   "update_loading": "Downloading the new version…",
-  "update_reject": "Never for this version",
-  "update_removed": "Classes that go",
+  "update_reject": "Reject",
+  "update_removed": "Dropped",
   "update_summary": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} class stays as it is.",
         "countPlural=other": "{count} classes stay as they are."
       }
     }
   ],
-  "update_title": "Update {name}",
+  "update_title": "Update for {name}",
   "upload_dates_loaded": "Global dates loaded.",
   "upload_error_dates_shape": "does not match the expected global dates format:",
   "upload_error_json": "cannot be read.",
@@ -272,22 +302,28 @@
   "upload_error_shape": "does not match the expected timetable format:",
   "upload_error_storage": "Your browser refused to save the profile; the change will be gone after a reload.",
   "view_general": "General",
-  "view_week": "Current week",
+  "view_week": "Week",
   "warn_empty_category": [
     {
-      "declarations": ["input count", "input categories", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "input categories",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "No group selected for category {categories}.",
         "countPlural=other": "No group selected for categories {categories}."
       }
     }
   ],
-  "warn_multi_group": "More than one group selected for {subjects}: {groups}.",
-  "warn_no_class_for_subject": "No class selected for {subjects}.",
+  "warn_multi_group": "{subjects} picked in several groups: {groups}. One group per subject.",
+  "warn_no_class_for_subject": "Every class of {subjects} is switched off.",
   "warn_quoted": "“{text}”",
-  "warn_non_overlap": "Selected groups do not overlap: {group} does not fit.",
-  "warn_sh_range": "Date range unclear for SH1/SH2 subjects.",
+  "warn_non_overlap": "“{group}” does not overlap with the other picked groups.",
+  "warn_sh_range": "The half of the semester is not known, SH1/SH2 classes are under “Other”.",
   "week_ago": "{count} weeks ago",
   "week_following": "Next week",
   "week_in": "In {count} weeks",
@@ -301,21 +337,21 @@
   "data_menu": "Data",
   "data_section_own": "Own files",
   "data_section_catalog": "Catalog",
-  "data_section_backup": "Backup and reset",
+  "data_section_backup": "Backup",
   "data_section_about": "About",
   "backup_save": "Save backup",
   "backup_load": "Load backup…",
   "backup_error": "This is no backup of this app, or it is damaged. Nothing was changed.",
-  "backup_restore_title": "Replace all data?",
-  "backup_restore_text": "Profiles, dates and settings on this device are replaced by the backup. Profiles now: {current}, in the backup: {count}.",
+  "backup_restore_title": "Load backup?",
+  "backup_restore_text": "Profiles now: {current}, in the backup: {count}. The backup replaces everything but the catalog cache.",
   "backup_save_first": "Save current backup first",
-  "backup_restore_confirm": "Replace",
+  "backup_restore_confirm": "Load and replace",
   "ios_hint": "Add Zeiteisen to your home screen: Safari deletes the data of websites you have not opened for 7 days.",
   "profile_duplicate": "Duplicate",
   "profile_duplicate_title": "Duplicate profile",
   "profile_duplicate_text": "The copy gets every timetable and the whole group selection of this profile. It starts unlocked.",
   "profile_duplicate_confirm": "Duplicate",
-  "picker_selection": "{enabled} of {total} selected",
+  "picker_selection": "{enabled} of {total} picked",
   "tab_timetable": "Timetable",
   "tab_groups": "Subjects",
   "tab_notes": "Notes",
@@ -334,16 +370,21 @@
   "subject_on_demand_hint": "Only takes place if enough students sign up.",
   "import_missing_hint": "Ask whoever sent you the link for the missing timetable files. They can download each one with the button next to the timetable's name.",
   "toast_link_copied": "Link copied.",
-  "locations_manual": "Load own locations…",
+  "locations_manual": "Load locations…",
   "locations_catalog_again": "Use catalog locations",
-  "degrees_manual": "Load own degree programs…",
+  "degrees_manual": "Load degree programs…",
   "data_own_file": "own file",
-  "data_own_hint": "Your own dates and locations replace the catalog's, an own degree program replaces the catalog's of the same name. The catalog never updates your own files.",
+  "data_own_hint": "Your own files replace the catalog's of the same name. The catalog never changes them.",
   "upload_locations_loaded": "Locations loaded.",
   "upload_degrees_loaded": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} degree program loaded.",
         "countPlural=other": "{count} degree programs loaded."
@@ -357,8 +398,8 @@
   "upload_error_degree_empty": "contains no subjects.",
   "toast_catalog_locations_again": "Using the catalog's locations again.",
   "upload_degrees_precedence": "Each replaces the catalog's degree program of the same name. A subject uses the one it names as its degree program. The catalog never changes your own files.",
-  "degrees_add": "Add own degree programs…",
-  "data_own_files": "{count} own files",
+  "degrees_add": "Add degree programs…",
+  "data_own_files": "{count} own",
   "toast_own_degrees_removed": "Own degree programs removed; the catalog's apply again.",
   "toast_catalog_dates_removed": "Global dates from the catalog removed.",
   "catalog_mode": "Mode",
@@ -388,7 +429,7 @@
   "degrees_remove_all": "Remove all",
   "close": "Close",
   "toast_own_degree_removed": "{file} removed.",
-  "skill_menu": "Create own files with AI…",
+  "skill_menu": "Create with AI…",
   "skill_title": "Create own files with AI",
   "skill_text": "This AI skill turns the university's documents into files for this app: a timetable PDF into a .timetable file, abbreviation lists and module handbooks into a .degree file per degree program, the semester dates page into dates and the locations page into locations. Upload a .timetable file under “Add timetables”, everything else in the Data menu.",
   "skill_steps_claude": "Claude: Settings → Capabilities → Skills, upload the zip.",
@@ -422,7 +463,7 @@
   "data_delete_catalog": "Catalog cache",
   "data_delete_catalog_text": "What was downloaded from the catalog; the catalog hands it out again.",
   "data_delete_settings": "Settings",
-  "data_delete_settings_text": "Catalog mode and URL (the catalog cache with them), hints already shown, the height of the notes.",
+  "data_delete_settings_text": "Catalog mode and URL (the catalog cache with them) and hints already shown.",
   "data_delete_all": "Everything selected: this device forgets the app, as on a first visit.",
   "data_delete_confirm": "Delete",
   "data_delete_error": "Your browser refused to delete the data.",
@@ -453,5 +494,123 @@
   "debug_loading": "Collecting…",
   "debug_copy": "Copy",
   "toast_debug_copied": "Debug info copied.",
-  "toast_debug_failed": "Could not copy. Select the text and copy it by hand."
+  "toast_debug_failed": "Could not copy. Select the text and copy it by hand.",
+  "week_number": "CW {number}",
+  "view_label": "View",
+  "filter_label": "Weeks",
+  "filter_all": "All weeks",
+  "filter_even": "Even weeks",
+  "filter_odd": "Odd weeks",
+  "rhythm_even": "even weeks",
+  "rhythm_odd": "odd weeks",
+  "grid_collected": "Several classes: {subjects}",
+  "grid_collected_title": "Classes at the same time",
+  "details_running": "on now",
+  "details_module": "Module description",
+  "details_disable": "Switch class off",
+  "details_edit": "Edit class",
+  "details_show_group": "Show in groups",
+  "grid_no_lectures": "No lectures",
+  "grid_no_lectures_note": "No lectures, classes are off",
+  "grid_allday_short": "all day",
+  "grid_allday_none": "No all-day events",
+  "grid_allday_general": "Regular classes, whatever the week",
+  "grid_allday_title": "All day: {days}",
+  "grid_allday_more": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "1 more all-day event",
+        "countPlural=other": "{count} more all-day events"
+      }
+    }
+  ],
+  "panel_groups": "Groups",
+  "profile_menu": "Switch and export profiles",
+  "panel_back": "Back",
+  "panel_close": "Close",
+  "empty_title": "“{name}” has no timetables yet",
+  "empty_text": "Pick timetables from the catalog or upload a file of your own.",
+  "empty_add": "Add timetable",
+  "welcome_title": "Welcome to Zeiteisen",
+  "welcome_text": "Try out group combinations for your timetable. All data stays in this browser.",
+  "welcome_catalog": "Pick a timetable from the catalog",
+  "welcome_import": "Import profile…",
+  "welcome_empty": "Create an empty timetable",
+  "week_empty_title": "No classes this week",
+  "week_empty_next": "The next classes start {date}",
+  "week_empty_none": "No classes follow.",
+  "week_empty_jump": "To the week of {date}",
+  "details_title": "Class",
+  "profile_locked": "locked",
+  "profile_rename_named": "Rename “{name}”",
+  "profile_duplicate_named": "Duplicate “{name}”",
+  "profile_delete_named": "Delete “{name}”",
+  "profile_import": "Import…",
+  "profile_export": "Export {name}",
+  "tree_status_own": "Own timetable · no updates",
+  "tree_status_current": "From the catalog · current",
+  "tree_status_update": "From the catalog · outdated",
+  "tree_status_unreachable": "From the catalog · catalog unreachable",
+  "tree_status_ignored": "From the catalog · catalog ignored",
+  "tree_locked_text": "The profile is locked. Groups and classes can be changed once it is unlocked.",
+  "tree_no_group_title": "Classes without a group",
+  "tree_all_classes": "All classes",
+  "tree_category_empty": "No group picked yet",
+  "tree_partial": "{groups} partly picked",
+  "tree_add_subject_short": "Add subject",
+  "tree_manage": "Rename or remove {name}",
+  "tree_groups": "Groups",
+  "tree_search": "Search subjects, e.g. {example}",
+  "tree_search_label": "Search subjects",
+  "tree_subject_multi": "Picked in several groups. One group per subject.",
+  "tree_subject_none": "Every class is switched off.",
+  "tree_only_this": "Only this one",
+  "tree_others_show": "Show other groups · {count}",
+  "tree_others_hide": "Hide other groups",
+  "timetable_manage_title": "Manage timetable",
+  "timetable_remove": "Remove timetable…",
+  "subject_catalog_add_empty": "Create an empty timetable",
+  "picker_unreachable_title": "Catalog unreachable",
+  "picker_unreachable_text": "You are offline or the catalog does not answer right now. Your own files still work.",
+  "picker_retry": "Try again",
+  "picker_search": "Search timetables, e.g. BEI5",
+  "picker_search_label": "Search timetables",
+  "picker_skill": "Let an AI create it…",
+  "picker_catalog_folder": "Catalog · {folder}",
+  "picker_other_profiles": "From other profiles",
+  "picker_in_profile": "Already in the profile",
+  "update_later": "Later",
+  "import_next": "Next",
+  "import_detected": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "Link with 1 timetable found",
+        "countPlural=other": "Link with {count} timetables found"
+      }
+    }
+  ],
+  "update_changed": "Changed",
+  "update_change_repeat": "{from} → {to}",
+  "update_change_day": "{from} → {to}",
+  "update_change_time": "{from} → {to}",
+  "update_change_location": "Room {from} → {to}",
+  "update_change_professor": "Lecturer {from} → {to}",
+  "update_change_dates": "Dates changed",
+  "update_change_note": "Note changed",
+  "update_change_on_demand": "“On request only” changed",
+  "update_change_degree": "Degree program {from} → {to}"
 }

@@ -1,8 +1,8 @@
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Download, Upload } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
-import { Section } from "@/components/Section";
+import { PanelHeader } from "@/components/PanelHeader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,36 +14,25 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { dayStamp, downloadText } from "@/lib/download";
 import { notesFromFile, notesLines, toggleTask, type NotesPiece } from "@/lib/notes";
 import { toast } from "@/lib/toast";
-import { MAX_NOTES_LENGTH, type NotesStrip } from "@/lib/primitives/storage";
-
-// The strip's height bounds in CSS px, the same as the `clamp()` on its
-// wrapper in App (the default, 144px, is there too).
-const MIN_HEIGHT = 112;
-const MAX_SHARE = 0.6;
-const RESIZE_STEP = 16;
+import { MAX_NOTES_LENGTH } from "@/lib/primitives/storage";
+import type { Step } from "@/lib/media";
 
 // From 90% of the limit on, the count shows.
 const SHOW_COUNT_FROM = MAX_NOTES_LENGTH * 0.9;
 
-// The read view mirrors the text area's box and type, so switching between
-// them moves no line. Neither has the input's underline (user decision).
+// The read view mirrors the text area's box and type (a 1px border, the
+// text area's padding), so switching between them moves no line. Neither has
+// the input's underline (user decision).
 const VIEW =
-  "min-h-0 flex-1 cursor-text overflow-y-auto border-0 text-base whitespace-pre-wrap wrap-break-word outline-none md:text-sm";
+  "min-h-0 flex-1 cursor-text overflow-y-auto rounded-lg border border-transparent px-2.5 py-2 text-base whitespace-pre-wrap wrap-break-word outline-none md:text-sm";
 
 export type NotesHandle = {
-  // Unfolds the strip and puts the caret at the end (the N shortcut).
+  // Puts the caret at the end (the N shortcut).
   edit: () => void;
 };
 
@@ -51,40 +40,33 @@ export type NotesHandle = {
 // `- [ ]` lines are checkboxes; a click on the text (or Tab to it, or N) turns
 // it into the text area with the caret there, leaving it turns it back.
 // Every keystroke is saved (`useNotes`): there is no edit or save button. Empty
-// notes are the text area alone. Desktop: a strip between grid and footer —
-// a title row that folds it, and a top edge to drag its height by; phones:
-// the Notes tab, titled, filling the page. The strip's height comes from App,
-// so the deferred chunk loading shifts nothing. Lives in the deferred chunk.
+// notes are the text area alone. A panel: sidebar, sheet or page (user
+// decision, was a strip under the grid). Lives in the deferred chunk.
 export function NotesSection({
   ref,
+  step,
   notes,
   onChange,
-  strip,
-  onStripPreview,
-  onStripSave,
+  onClose,
   onLeave,
 }: {
   ref?: React.Ref<NotesHandle>;
+  step: Step;
   notes: string;
   onChange: (notes: string) => void;
-  strip: NotesStrip;
-  onStripPreview: (strip: NotesStrip) => void;
-  onStripSave: (strip: NotesStrip) => void;
+  onClose: () => void;
   // Escape in the text area: back to the grid.
   onLeave: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const sectionRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Where the caret goes once the text area is on screen, and how far it is
   // scrolled (`null` = to the end).
   const pending = useRef<{ at: number; scrollTop: number | null } | null>(null);
-  const drag = useRef<{ startY: number; startHeight: number } | null>(null);
   const uploadInput = useRef<HTMLInputElement>(null);
   // An uploaded file waiting for "Replace", while there are notes to lose.
   const [replacing, setReplacing] = useState<{ file: string; text: string } | null>(null);
   const showTextarea = editing || notes === "";
-  const collapsed = strip.collapsed;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -98,11 +80,10 @@ export function NotesSection({
 
   const startEditing = (at: number, scrollTop: number | null) => {
     pending.current = { at, scrollTop };
-    if (collapsed) onStripSave({ ...strip, collapsed: false });
     setEditing(true);
     // Already on screen: no render follows to run the effect.
     const textarea = textareaRef.current;
-    if (textarea && !collapsed) {
+    if (textarea) {
       pending.current = null;
       textarea.focus();
       textarea.setSelectionRange(at, at);
@@ -129,44 +110,6 @@ export function NotesSection({
       startEditing(notes.length, null);
   };
 
-  // --- the strip's height (desktop) ---
-
-  const clampHeight = (height: number) =>
-    Math.round(Math.min(Math.max(height, MIN_HEIGHT), window.innerHeight * MAX_SHARE));
-  const currentHeight = () =>
-    sectionRef.current?.parentElement?.getBoundingClientRect().height ?? MIN_HEIGHT;
-  const draggedHeight = (event: React.PointerEvent) =>
-    drag.current
-      ? clampHeight(drag.current.startHeight + drag.current.startY - event.clientY)
-      : null;
-
-  const onResizeStart = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { startY: event.clientY, startHeight: currentHeight() };
-  };
-  const onResizeMove = (event: React.PointerEvent) => {
-    const height = draggedHeight(event);
-    if (height !== null) onStripPreview({ ...strip, height });
-  };
-  const onResizeEnd = (event: React.PointerEvent) => {
-    const height = draggedHeight(event);
-    drag.current = null;
-    if (height !== null) onStripSave({ ...strip, height });
-  };
-  const onResizeKey = (event: React.KeyboardEvent) => {
-    const height = currentHeight();
-    const next = {
-      ArrowUp: height + RESIZE_STEP,
-      ArrowDown: height - RESIZE_STEP,
-      Home: MIN_HEIGHT,
-      End: Infinity,
-    }[event.key];
-    if (next === undefined) return;
-    event.preventDefault();
-    onStripSave({ ...strip, height: clampHeight(next) });
-  };
-
   // --- pieces ---
 
   const count = new Intl.NumberFormat(getLocale());
@@ -188,11 +131,7 @@ export function NotesSection({
       "text/plain;charset=utf-8",
     );
 
-  // Unfolds the strip: the new text is what the user wants to see.
-  const replaceNotes = (text: string) => {
-    onChange(text);
-    if (collapsed) onStripSave({ ...strip, collapsed: false });
-  };
+  const replaceNotes = (text: string) => onChange(text);
 
   const onUpload = async (file: File) => {
     const read = notesFromFile(await file.arrayBuffer(), MAX_NOTES_LENGTH);
@@ -213,10 +152,10 @@ export function NotesSection({
 
   // Kept from taking the focus: downloading leaves the text area as it is.
   const actions = (
-    <div className="flex gap-1">
+    <>
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon"
         aria-label={m.notes_upload()}
         title={m.notes_upload()}
         onMouseDown={(event) => event.preventDefault()}
@@ -226,7 +165,7 @@ export function NotesSection({
       </Button>
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon"
         aria-label={m.notes_download()}
         title={m.notes_download()}
         disabled={notes === ""}
@@ -235,67 +174,21 @@ export function NotesSection({
       >
         <Download />
       </Button>
-    </div>
+    </>
   );
 
+  const narrow = step === "narrow";
   return (
-    <Section
-      ref={sectionRef}
-      className={cn(
-        "relative min-h-0 flex-1 desktop:gap-0 desktop:pt-0",
-        collapsed && "desktop:pb-0",
-      )}
-    >
-      {/* Desktop: the strip's top edge, dragged (or arrowed) to its height;
-        a double click goes back to the default. */}
-      {!collapsed && (
-        <div
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label={m.notes_resize()}
-          aria-valuemin={MIN_HEIGHT}
-          aria-valuenow={strip.height ?? undefined}
-          tabIndex={0}
-          className="absolute inset-x-0 top-0 z-10 hidden h-2 cursor-row-resize touch-none outline-none hover:bg-border focus-visible:bg-ring/50 desktop:block"
-          onPointerDown={onResizeStart}
-          onPointerMove={onResizeMove}
-          onPointerUp={onResizeEnd}
-          onPointerCancel={onResizeEnd}
-          onKeyDown={onResizeKey}
-          onDoubleClick={() => onStripSave({ ...strip, height: null })}
-        />
-      )}
-
-      {/* Desktop: one row, the title folds the strip. */}
-      <div className="hidden h-12 shrink-0 items-center gap-4 px-6 desktop:flex">
-        <Button
-          variant="ghost"
-          size="xs"
-          className="-ml-2"
-          aria-expanded={!collapsed}
-          title={collapsed ? m.notes_show() : m.notes_hide()}
-          onClick={() => onStripSave({ ...strip, collapsed: !collapsed })}
-        >
-          {collapsed ? (
-            <ChevronRight data-icon="inline-start" />
-          ) : (
-            <ChevronDown data-icon="inline-start" />
-          )}
-          {m.notes_title()}
-        </Button>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PanelHeader
+        title={m.notes_title()}
+        actions={actions}
+        onBack={narrow ? onClose : undefined}
+        onClose={narrow ? undefined : onClose}
+      />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] compact:px-6 compact:pb-6">
+        <p className="text-xs text-muted-foreground">{m.notes_text()}</p>
         {limit}
-        <div className="ml-auto">{actions}</div>
-      </div>
-
-      {/* Phones: the tab's title. */}
-      <CardHeader className="desktop:hidden">
-        <CardTitle>{m.notes_title()}</CardTitle>
-        <CardDescription>{m.notes_text()}</CardDescription>
-        <CardAction>{actions}</CardAction>
-        {limit}
-      </CardHeader>
-
-      <CardContent className={cn("flex min-h-0 flex-1 flex-col", collapsed && "desktop:hidden")}>
         {showTextarea ? (
           <Textarea
             ref={textareaRef}
@@ -313,7 +206,7 @@ export function NotesSection({
               event.currentTarget.blur();
               onLeave();
             }}
-            className="min-h-0 flex-1 field-sizing-fixed border-0 py-0"
+            className="-mx-2.5 min-h-0 flex-1 field-sizing-fixed"
           />
         ) : (
           <div
@@ -322,7 +215,7 @@ export function NotesSection({
             aria-label={m.notes_title()}
             aria-keyshortcuts="n"
             tabIndex={0}
-            className={VIEW}
+            className={cn(VIEW, "-mx-2.5")}
             onFocus={onViewFocus}
             onClick={onViewClick}
           >
@@ -357,7 +250,7 @@ export function NotesSection({
             ))}
           </div>
         )}
-      </CardContent>
+      </div>
 
       <input
         ref={uploadInput}
@@ -385,7 +278,7 @@ export function NotesSection({
             </AlertDialogDescription>
           </AlertDialogHeader>
           {/* The way back, should the file turn out to be the wrong one. */}
-          <Button variant="outline" className="sm:justify-self-start" onClick={downloadNotes}>
+          <Button variant="secondary" onClick={downloadNotes}>
             <Download data-icon="inline-start" />
             {m.notes_download_first()}
           </Button>
@@ -402,7 +295,7 @@ export function NotesSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Section>
+    </div>
   );
 }
 

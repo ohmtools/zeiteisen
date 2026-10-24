@@ -13,7 +13,7 @@ import {
   SOURCES_KEY,
 } from "@/lib/primitives/storage";
 
-// What the Data menu's "Delete data…" can delete: storage parts, each a set
+// What the settings' "Delete data…" can delete: storage parts, each a set
 // of keys, and the offline app files. Dates and their sources go together:
 // one key holds catalog and own dates alike. The settings take the catalog
 // cache along, as a restore does: back on the built-in URL, another catalog's

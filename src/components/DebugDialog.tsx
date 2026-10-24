@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { debugReport } from "@/lib/debug";
 import { toast } from "@/lib/toast";
 
-// "Debug info" in the desktop footer and on the Settings page: the button and
+// "Debug info" under About in the settings: the button and
 // its dialog in one, from the deferred chunk (App's footer shows a disabled
 // look-alike, `DebugTriggerContent`, until it arrives).
 export function DebugButton(props: Omit<ComponentProps<typeof Button>, "onClick" | "children">) {
@@ -97,7 +97,7 @@ export function DebugDialog({
           onFocus={(event) => event.currentTarget.select()}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.close()}
           </Button>
           <Button disabled={report === null} onClick={copy}>

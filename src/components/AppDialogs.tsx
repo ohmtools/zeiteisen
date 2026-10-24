@@ -1,5 +1,6 @@
 import { m } from "@/i18n";
 import { ImportDialog } from "@/components/ImportDialog";
+import { SubjectEditor, type EditRequest } from "@/components/SubjectEditor";
 import { TimetablePickerDialog } from "@/components/TimetablePickerDialog";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import type { useProfiles } from "@/hooks/useProfiles";
@@ -8,9 +9,10 @@ import { timetableByName } from "@/lib/primitives/profile";
 import type { SharedTimetable, TimetableName } from "@/lib/primitives/timetable";
 import { toast } from "@/lib/toast";
 
-// App's three dialogs, lazy with the sidebar (`components/deferred`). Which
-// one is open stays in App: a share link opened directly sets `importing` on
-// the first render, and the dialog shows once this chunk has arrived.
+// App's dialogs, lazy with the panels (`components/deferred`). Which one is
+// open stays in App: a share link opened directly sets `importing` on the
+// first render, and the dialog shows once this chunk has arrived. The subject
+// editor sits here because both the tree and a block's details open it.
 export function AppDialogs({
   profiles,
   catalog,
@@ -23,6 +25,10 @@ export function AppDialogs({
   onImportingChange,
   linkPayload,
   onLinkPayloadChange,
+  editing,
+  onEditingChange,
+  onAddEmpty,
+  onRefreshCatalog,
 }: {
   profiles: ReturnType<typeof useProfiles>;
   // Already `Catalog.empty` while offline.
@@ -36,9 +42,24 @@ export function AppDialogs({
   onImportingChange: (importing: boolean) => void;
   linkPayload: SharedTimetable[] | null;
   onLinkPayloadChange: (payload: SharedTimetable[] | null) => void;
+  editing: EditRequest | null;
+  onEditingChange: (editing: EditRequest | null) => void;
+  onAddEmpty: () => TimetableName | null;
+  onRefreshCatalog: () => void;
 }) {
   return (
     <>
+      <SubjectEditor
+        request={editing}
+        timetables={profiles.timetables}
+        library={profiles.profiles.flatMap((profile) => profile.timetables)}
+        profileName={profiles.activeName}
+        locked={profiles.locked}
+        onClose={() => onEditingChange(null)}
+        onSave={profiles.editSubjects}
+        onAddEmpty={onAddEmpty}
+      />
+
       <TimetablePickerDialog
         open={picking !== null}
         mode={picking ?? "add"}
@@ -49,6 +70,7 @@ export function AppDialogs({
         catalog={catalog}
         offline={!online}
         target={picking === "add" ? profiles.active : undefined}
+        onRetry={onRefreshCatalog}
         onConfirm={(name, sources) => {
           // A profile and its timetables are created in one state change.
           const added =
@@ -72,7 +94,7 @@ export function AppDialogs({
         onReplace={profiles.replaceTimetable}
       />
 
-      {/* Outside the sidebar: a fresh device opening a share link has nothing
+      {/* Outside the panels: a fresh device opening a share link has nothing
           in the tree yet, while this still has to show. */}
       <ImportDialog
         open={importing}

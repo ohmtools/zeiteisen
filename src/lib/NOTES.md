@@ -12,9 +12,17 @@ re-implements primitive logic.
   catalog dates (not a first install, a removal or a switch from or to own
   dates).
 - `layout.ts` — grid blocks (`Entry`: timetable name + subject index, since
-  `SubjectID` is not unique). Hours fixed 8–20, Mon–Fri columns; `other` is a
-  list, not a column (user decision). Listed dates with the same slot merge
-  into one block in the general view.
+  `SubjectID` is not unique). Hours fixed 8–19, Mon–Fri columns plus `other`
+  as a column of its own, in time order. Listed dates with the same slot
+  merge into one block in the general view. `fitDay` puts a laid out day into
+  a column of a given width: no lane under `MIN_LANE_PX` (48px), the rest of a
+  cluster gathered into its last lane as a collected block. `colourKind`: the
+  kind a block is coloured by (Pr, Ue, Tu, S, WF, SU; `kinds.ts` holds the
+  class names). `weekFilterMatches`: the general view's filter, G and U only.
+  `nextWeekWithEntries`: where an empty week's next classes are (only asked
+  for an empty week, it walks up to a year).
+- `allday.ts` — the all-day row's chips: neighbouring columns with the very
+  same events share one, a lecture-free event leads its day.
 - `subjects.ts` — words for subjects. `subjectName` spells a code out from
   the lookup tables in `primitives/overrides.ts` (only the file its
   `degreeProgram` names; unknown codes stay themselves, `/` variants spell out
@@ -29,7 +37,7 @@ re-implements primitive logic.
 - `upload.ts` — reads files and words failures; dates, locations and
   degree files go through one `readJsonFile`, and the latter two refuse a
   file listing nothing (every list defaults to empty, so a dates file would
-  otherwise pass as locations). `toastUploadError` = the Data menu's error
+  otherwise pass as locations). `toastUploadError` = the settings' error
   toast (zod details capped at 5 +
   "n more"). Runs `z.config(de() | en())` once: zod/mini ships no locale, so
   messages read "Invalid input" wherever this module was not loaded. Off the
@@ -49,7 +57,8 @@ re-implements primitive logic.
   always, plus slots the device's timetables use often (double blocks).
 - `groupToggle.ts` — what a group cell or a category's "all" icon switches,
   and the pick a partial group remembers while off (kept with its subjects,
-  so an entry whose subject moved is dropped).
+  so an entry whose subject moved is dropped; `GroupTree` keeps it per
+  timetable).
 - `library.ts` — the picker's rows. ONE ROW PER SOURCE, never merged or hidden
   (user decision): each catalog file, every profile's copy, uploads, new empty
   timetables. A profile row copies its timetable WITH its `enabled` flags and
@@ -93,21 +102,14 @@ re-implements primitive logic.
   university's "Block / n.V. / Samstag" column, no known weekday) has no date
   and never goes in; the export names those in a warning toast
   (`undatedClasses`) with the way in: give them dates in the editor.
-- `tint.ts` — per-timetable tint by rank in the profile's name order (the
-  tree order): the top timetable is `--primary`, each further one a step
-  darker, so up to 4 timetables never share a tint (a name hash collided far
-  too often: BEI1/2/5/6 all landed on one step). Independent of upload order;
-  adding or renaming one may shift the others. Hue never changes, all red
-  (user decision); only lightness + chroma step down so `--primary-foreground`
-  keeps contrast. Colour is never the only cue.
 - `uploader.ts` — `loadUpload()`: the lazy `@/lib/upload` import of the Data
   menu uploads, `null` plus a toast when the chunk is gone after a deploy.
-- `backup.ts` — footer "Data" menu backup: `zeiteisen-<date>.backup`; a restore
+- `backup.ts` — the settings' backup: `zeiteisen-<date>.backup`; a restore
   writes storage (a refused write puts every key back as it was, so storage and
   the running page agree) and reloads the page, because every hook read its
   state on the first render. A backup reading another catalog URL (or `ignore`)
-  empties the catalog cache too, as the Data menu's switch does.
-- `reset.ts` — the Data menu's "Delete data…": parts as key lists
+  empties the catalog cache too, as the settings' switch does.
+- `reset.ts` — the settings' "Delete data…": parts as key lists
   (`STORAGE_PARTS`), removed with `removeItem` rather than written empty, so it
   works on a full or broken storage. Dates go with their sources; the
   settings take the catalog cache along (like a restore on another URL). All
@@ -120,8 +122,13 @@ re-implements primitive logic.
   unregisters the service worker and empties Cache Storage, so that reload
   fetches every file from the server; the worker precaches again on it.
   Everything ticked = a first visit.
-  `resetAndReload` is the one way to do it, for the Data menu's dialog and
+  `resetAndReload` is the one way to do it, for the settings' dialog and
   the error screen alike.
+- `retired.ts` — keys no version reads any more, dropped on start
+  (`main.tsx`): `tt.notesstrip.v1`, the desktop notes strip's height and
+  folding, which the notes panel replaced with nothing to carry over (user
+  decision). "Delete data…" still lists it with the settings, for a tab of an
+  older version that wrote it again.
 - `persist.ts` — `navigator.storage.persist()` once per page load, after the
   first real write (not the load-time rewrite: Firefox prompts).
 - `view.ts` — the app opens on Current week while today is inside the lecture
@@ -144,12 +151,13 @@ re-implements primitive logic.
 - `degrees.ts` / `ownDegrees.ts` — own degree file names follow the name
   rule: unique in any case; a name matching a catalog file in another case
   takes its spelling (subjects look it up exactly), so it really replaces it.
-  Two modules so the Data menu's check stays out of the first load.
+  Two modules so the settings' check stays out of the first load.
 - `link.ts` — tree ↔ grid: a group cell's `indexes` meet a block's timetable
   name + index.
-- `media.ts` — the `desktop` variant as a media query for script.
-- `launch.ts` / `debug.ts` — the "Debug info" (desktop footer, Settings →
-  About).
+- `media.ts` — the `compact`, `wide` and `short` variants as media queries
+  for script, and the step (`narrow` | `compact` | `wide`) they make
+  (`useStep`).
+- `launch.ts` / `debug.ts` — the "Debug info" (settings → About).
   `launch.ts` sits in the entry chunk (`startLaunchLog` first in `main.tsx`,
   keep it tiny): performance marks for the first render and the deferred
   chunk, every return from the background (hidden for how long, the next

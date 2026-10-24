@@ -2,9 +2,9 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
   InfoIcon,
-  TriangleAlertIcon,
-  OctagonXIcon,
   Loader2Icon,
+  OctagonXIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 
 const Toaster = ({ ...props }: ToasterProps) => {
@@ -29,7 +29,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast: "rounded-2xl",
         },
       }}
       {...props}

@@ -1,152 +1,140 @@
+import type { ReactNode } from "react";
 import { cn } from "cn";
 import { getLocale, locales, m, setLocale } from "@/i18n";
 import { Brand } from "@/components/Brand";
 import { DebugButton } from "@/components/DebugDialog";
 import { GitHubLink } from "@/components/GitHubLink";
+import { PanelHeader } from "@/components/PanelHeader";
 import {
   CATALOG_MODES,
-  MODE_ICON,
   MODE_OPTION,
   MODE_TEXT,
   useDataControls,
   type DataAction,
   type DataProps,
 } from "@/components/DataControls";
-import { Section } from "@/components/Section";
 import { Button } from "@/components/ui/button";
-import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CatalogMode } from "@/lib/primitives/catalog";
+import type { Step } from "@/lib/media";
 
-function isCatalogMode(value: string | undefined): value is CatalogMode {
+function isCatalogMode(value: unknown): value is CatalogMode {
   return CATALOG_MODES.some((mode) => mode === value);
 }
 
-// The phones' Settings tab: the language first, then the desktop footer's
-// Data menu as a page, one section each (own files, catalog, backup), then the
-// footer's name and note. Unlike the menu, the catalog
-// mode is picked directly and applied at once — nothing passes through
-// "ignore" on the way. Lives in the deferred chunk.
-export function SettingsPage({ className, ...props }: DataProps & { className?: string }) {
+// The settings, for this whole device: a panel (sidebar, sheet or page). The
+// language first, then own files, the catalog, backup and reset, and about
+// (name, version, GitHub, debug info). The catalog mode is picked directly
+// and applied at once — nothing passes through "ignore" on the way. Lives in
+// the deferred chunk.
+export function SettingsPage({
+  step,
+  onClose,
+  ...props
+}: DataProps & { step: Step; onClose: () => void }) {
   const { own, ownHint, catalogUrl, backup, elements } = useDataControls(props);
   const mode = props.catalogMode;
+  const narrow = step === "narrow";
 
-  // The inputs and dialogs stay out of the sections' list: `divide-y` would
-  // draw a line under the last section for them.
   return (
-    <>
-      <div className={cn("flex flex-col divide-y", className)}>
-        <Section>
-          <CardHeader>
-            <CardTitle>{m.language_label()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Languages are named in themselves, the way a lost reader finds
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PanelHeader
+        title={m.tab_settings()}
+        onBack={narrow ? onClose : undefined}
+        onClose={narrow ? undefined : onClose}
+      />
+      <div className="flex min-h-0 flex-1 flex-col divide-y overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)] compact:px-6">
+        <Group title={m.language_label()}>
+          {/* Languages are named in themselves, the way a lost reader finds
               theirs. */}
-            <ToggleGroup
-              variant="outline"
-              spacing={0}
-              className="w-full"
-              aria-label={m.language_label()}
-              value={[getLocale()]}
-              onValueChange={([value]) => {
-                const locale = locales.find((one) => one === value);
-                if (locale) void setLocale(locale);
-              }}
-            >
+          <Tabs
+            value={getLocale()}
+            onValueChange={(value) => {
+              const locale = locales.find((one) => one === value);
+              if (locale && locale !== getLocale()) void setLocale(locale);
+            }}
+          >
+            <TabsList aria-label={m.language_label()} className="h-9 w-full">
               {locales.map((locale) => (
-                <ToggleGroupItem key={locale} value={locale} lang={locale} className="flex-1">
+                <TabsTrigger key={locale} value={locale} lang={locale}>
                   {new Intl.DisplayNames([locale], { type: "language" }).of(locale)}
-                </ToggleGroupItem>
+                </TabsTrigger>
               ))}
-            </ToggleGroup>
-          </CardContent>
-        </Section>
+            </TabsList>
+          </Tabs>
+        </Group>
 
-        <Section>
-          <CardHeader>
-            <CardTitle>{m.data_section_own()}</CardTitle>
-            {ownHint && <CardDescription>{ownHint}</CardDescription>}
-          </CardHeader>
-          <CardContent>
-            <Actions actions={own} />
-          </CardContent>
-        </Section>
+        <Group title={m.data_section_own()}>
+          <Actions actions={own} />
+          {ownHint && <p className="text-xs text-muted-foreground">{ownHint}</p>}
+        </Group>
 
-        <Section>
-          <CardHeader>
-            <CardTitle>{m.data_section_catalog()}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <ToggleGroup
-              variant="outline"
-              orientation="vertical"
-              spacing={0}
-              className="w-full"
-              aria-label={m.catalog_mode()}
-              value={[mode]}
-              onValueChange={([next]) => {
-                if (isCatalogMode(next) && next !== mode) props.onCatalogMode(next);
-              }}
-            >
-              {CATALOG_MODES.map((one) => {
-                const Icon = MODE_ICON[one];
-                return (
-                  <ToggleGroupItem key={one} value={one} className="justify-start">
-                    <Icon data-icon="inline-start" />
-                    {MODE_OPTION[one]()}
-                  </ToggleGroupItem>
-                );
-              })}
-            </ToggleGroup>
-            <p className="text-muted-foreground">{MODE_TEXT[mode]()}</p>
-            <Actions actions={[catalogUrl]} className="mt-2" />
-          </CardContent>
-        </Section>
+        <Group title={m.data_section_catalog()}>
+          <Tabs
+            value={mode}
+            onValueChange={(next) => {
+              if (isCatalogMode(next) && next !== mode) props.onCatalogMode(next);
+            }}
+          >
+            <TabsList aria-label={m.catalog_mode()} className="h-9 w-full">
+              {CATALOG_MODES.map((one) => (
+                <TabsTrigger key={one} value={one}>
+                  {MODE_OPTION[one]()}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <p className="text-xs text-muted-foreground">{MODE_TEXT[mode]()}</p>
+          <Actions actions={[catalogUrl]} />
+        </Group>
 
-        <Section>
-          <CardHeader>
-            <CardTitle>{m.data_section_backup()}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Actions actions={backup} />
-          </CardContent>
-        </Section>
+        <Group title={m.data_section_backup()}>
+          <Actions actions={backup} />
+        </Group>
 
-        <Section>
-          <CardHeader>
-            <CardTitle>{m.data_section_about()}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <Brand />
-              <GitHubLink />
-            </div>
-            <p className="text-muted-foreground">{m.footer_note()}</p>
-            <DebugButton variant="outline" className="mt-2 w-full justify-start" />
-          </CardContent>
-        </Section>
+        <Group>
+          <div className="flex items-center justify-between gap-2">
+            <Brand />
+            <GitHubLink className="-mr-2" />
+          </div>
+          <p className="text-xs text-muted-foreground">{m.footer_note()}</p>
+          <DebugButton variant="ghost" className="-mx-2.5 justify-start px-2.5" />
+        </Group>
       </div>
       {elements}
-    </>
+    </div>
   );
 }
 
-// The page's form of menu items: full-width buttons, the note trailing.
+// One section: a title over its controls, divider lines between sections
+// (no boxes, user decision), 24px around each.
+function Group({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3 py-6 first:pt-2">
+      {title && <h3 className="text-sm font-semibold">{title}</h3>}
+      {children}
+    </section>
+  );
+}
+
+// The settings' rows: ghost buttons flush with the text edge, the note
+// trailing.
 function Actions({ actions, className }: { actions: DataAction[]; className?: string }) {
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
+    <div className={cn("-mx-2.5 flex flex-col", className)}>
       {actions.map(({ key, icon: Icon, label, note, disabled, destructive, onSelect }) => (
         <Button
           key={key}
-          variant={destructive ? "destructive" : "outline"}
-          className="w-full justify-start"
+          variant="ghost"
+          className={cn("w-full justify-start px-2.5", destructive && "text-destructive")}
           disabled={disabled}
           onClick={onSelect}
         >
           <Icon data-icon="inline-start" />
           <span className="truncate">{label}</span>
-          {note && <span className="ml-auto pl-4 font-normal text-muted-foreground">{note}</span>}
+          {note && (
+            <span className="ml-auto pl-4 text-xs font-normal text-muted-foreground">{note}</span>
+          )}
         </Button>
       ))}
     </div>

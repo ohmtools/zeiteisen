@@ -77,7 +77,7 @@ export function ProfileNameDialog({ open, mode, initial, taken, onOpenChange, on
           {problem && <p className="text-sm text-destructive">{problem}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.cancel()}
           </Button>
           <Button disabled={invalid} onClick={submit}>

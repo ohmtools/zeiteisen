@@ -32,7 +32,7 @@ import {
 import { overridesOf, type Overrides } from "@/lib/primitives/overrides";
 
 type Options = {
-  // The Data menu's "Catalog". `freeze`: the index is still read (the picker
+  // The settings' catalog mode. `freeze`: the index is still read (the picker
   // lists need it), but nothing already on the device is refreshed. `ignore`:
   // nothing is read and none of the catalog's data is used.
   mode: CatalogMode;
@@ -86,9 +86,9 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
   // `Catalog.empty` while ignored.
   catalog: Catalog;
   refresh: () => void;
-  // Reads the current catalog, for the Data menu's "Use catalog dates".
+  // Reads the current catalog, for the settings' "Use catalog dates".
   fetchJson: FetchJson;
-  // Called right before the Data menu changes mode or URL to `next`.
+  // Called right before the settings change mode or URL to `next`.
   dropFor: (next: CatalogSetting) => void;
   // The lookup tables of names and building links (`OverridesContext`).
   overrides: Overrides;
@@ -149,7 +149,7 @@ export function useCatalog({ mode, url, sources, onDates, onDropDates, own }: Op
 
       // The catalog's dates file is the one thing it installs by itself: when
       // the device has none, or (auto-update) when the file changed — unless
-      // the user uploaded their own, which they undo in the Data menu.
+      // the user uploaded their own, which they undo in the settings.
       const { sources: recorded, onDates: install } = optionsRef.current;
       const entry = datesToInstall(recorded, fresh, current === "auto");
       if (!entry) return;

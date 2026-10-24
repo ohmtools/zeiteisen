@@ -30,8 +30,8 @@ it("says each kind of warning once, where its first one stood", () => {
   ]);
   expect(lines.map((line) => line.text)).toEqual([
     "No group selected for categories “3”, “6”, and “12”.",
-    "More than one group selected for “M1 (SU)”, “M2 (SU)”, and “M3 (SU)”: 10.1, 10.2, 10.3, 10.10; 2.1, 2.2.",
-    "No class selected for “PH (SU)”, “DT (SU)”, and “IN (SU)”.",
+    "“M1 (SU)”, “M2 (SU)”, and “M3 (SU)” picked in several groups: 10.1, 10.2, 10.3, 10.10; 2.1, 2.2. One group per subject.",
+    "Every class of “PH (SU)”, “DT (SU)”, and “IN (SU)” is switched off.",
   ]);
   expect(new Set(lines.map((line) => line.key)).size).toBe(lines.length);
 });
@@ -40,6 +40,6 @@ it("names a single category or subject alone", () => {
   const lines = warningLines([{ code: Warn.EmptyCategory, category: 3 }, noClass("PH")]);
   expect(lines.map((line) => line.text)).toEqual([
     "No group selected for category “3”.",
-    "No class selected for “PH (SU)”.",
+    "Every class of “PH (SU)” is switched off.",
   ]);
 });

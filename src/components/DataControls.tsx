@@ -1,16 +1,13 @@
 import { useRef, useState, type ReactNode } from "react";
 import {
-  BookA,
-  BookX,
   CalendarDays,
-  CircleOff,
   Download,
   Eraser,
   Globe,
+  GraduationCap,
   MapPin,
-  RefreshCw,
-  Snowflake,
   Sparkles,
+  Trash2,
   Upload,
   type LucideIcon,
 } from "lucide-react";
@@ -38,7 +35,7 @@ import type { Backup, OwnDegreeFile } from "@/lib/primitives/storage";
 import { downloadBackup, readBackupFile, restoreBackup } from "@/lib/backup";
 import { toast } from "@/lib/toast";
 
-// What App hands the desktop "Data" menu and the phone's Settings page alike.
+// What App hands the settings panel.
 export type DataProps = {
   catalogMode: CatalogMode;
   onCatalogMode: (mode: CatalogMode) => void;
@@ -66,8 +63,8 @@ export type DataProps = {
   profileCount: number;
 };
 
-// One entry of the menu or the page: a menu item there, a button here. The
-// note is the muted trailing text: what is in use right now.
+// One row of the settings. The note is the muted trailing text: what is in
+// use right now.
 export type DataAction = {
   key: string;
   icon: LucideIcon;
@@ -80,14 +77,7 @@ export type DataAction = {
 
 export const CATALOG_MODES: readonly CatalogMode[] = ["ignore", "auto", "freeze"];
 
-// The mode as the menu's trailing note (lower case, it follows "Mode").
-export const MODE_NAME: Record<CatalogMode, () => string> = {
-  ignore: m.catalog_mode_ignore,
-  auto: m.catalog_mode_auto,
-  freeze: m.catalog_mode_freeze,
-};
-
-// The mode as a choice of its own, on the Settings page.
+// The mode as a choice of its own.
 export const MODE_OPTION: Record<CatalogMode, () => string> = {
   ignore: m.catalog_mode_ignore_option,
   auto: m.catalog_mode_auto_option,
@@ -100,16 +90,9 @@ export const MODE_TEXT: Record<CatalogMode, () => string> = {
   freeze: m.catalog_mode_freeze_text,
 };
 
-export const MODE_ICON: Record<CatalogMode, LucideIcon> = {
-  ignore: CircleOff,
-  auto: RefreshCw,
-  freeze: Snowflake,
-};
-
-// Everything the Data menu and the Settings page do besides showing the
-// catalog mode: its three sections as actions, and the hidden file inputs and
-// dialogs behind them (`elements`, rendered once beside the menu or page —
-// outside the menu, which unmounts its content on closing).
+// Everything the settings do besides showing the catalog mode: own files,
+// catalog URL and backup as actions, and the hidden file inputs and dialogs
+// behind them (`elements`, rendered once beside the rows).
 export function useDataControls({
   catalogMode,
   catalogUrl,
@@ -194,7 +177,7 @@ export function useDataControls({
     // gives it, so there is always room for one more file.
     {
       key: "degrees",
-      icon: BookA,
+      icon: GraduationCap,
       label: ownCount > 0 ? m.degrees_add() : m.degrees_manual(),
       note:
         ownCount === 0
@@ -208,7 +191,7 @@ export function useDataControls({
       ? [
           {
             key: "degrees-manage",
-            icon: BookX,
+            icon: Trash2,
             label: m.degrees_manage(),
             onSelect: () => setRemovingDegrees(true),
           },
@@ -303,11 +286,7 @@ export function useDataControls({
             </AlertDialogDescription>
           </AlertDialogHeader>
           {/* The way back, should the backup turn out to be the wrong one. */}
-          <Button
-            variant="outline"
-            className="sm:justify-self-start"
-            onClick={() => downloadBackup()}
-          >
+          <Button variant="secondary" onClick={() => downloadBackup()}>
             <Download data-icon="inline-start" />
             {m.backup_save_first()}
           </Button>

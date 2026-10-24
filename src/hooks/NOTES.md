@@ -24,7 +24,7 @@ goes through primitives `storage.ts`.
 - `useSemesterDates` — `tt.dates.v1`, one dates file at a time. A hand upload
   sets `datesManual`, so the catalog keeps its hands off until the user asks
   for the catalog dates again. A refused dates file is a toast with zod's
-  details (the Data menu has no panel). Only a successful write records where
+  details (the settings has no panel). Only a successful write records where
   the dates came from, and only the user's own uploads ask for persistent
   storage — the catalog's first install must not trigger Firefox's prompt.
 - `useOwnData` — `tt.locations.v1` + `tt.degrees.v1`. Own locations
@@ -34,12 +34,12 @@ goes through primitives `storage.ts`.
   same name, never merged (user decision; `useCatalog` builds one
   table per file, keyed by `degreeProgram`):
   `readDegrees` checks picked files without storing them, `addDegrees`
-  stores them under the names the user gave (Data menu dialog, file name
+  stores them under the names the user gave (settings dialog, file name
   without `.degree` filled in); a held name, in any case, is replaced and moves last,
   removing goes by name. Upload toasts say the catalog never touches
   own files.
 - `useCatalogSources` — `tt.sources.v1` (where the dates came from,
-  `datesManual`), `tt.catalogmode.v1` (the Data menu's cycling "Catalog":
+  `datesManual`), `tt.catalogmode.v1` (the settings' cycling "Catalog":
   ignore → auto-update → freeze) and `tt.catalogurl.v1`. New catalog dates
   another tab installed are toasted here (`catalogDatesNews`), with the id
   of `useSemesterDates`' own toast, so a tab never says it twice.
@@ -53,7 +53,7 @@ goes through primitives `storage.ts`.
   one. `ignore` reads nothing and hands out `Catalog.empty`; switching to it
   or to another URL empties the cache and removes catalog-installed dates
   (user decision: `freeze` is the mode that keeps catalog data). That drop is
-  `dropFor`, called by the Data menu's handlers right before the setting is
+  `dropFor`, called by the settings' handlers right before the setting is
   written, never an effect on `mode` / `url`: another tab following the
   setting would drop what the new catalog had already brought. Own files
   always stay. A first download is no news (no toast), nor is a file an own
@@ -68,9 +68,9 @@ goes through primitives `storage.ts`.
   auto-updated**: the catalog only offers, on the user's click.
 - `useNotes` — `tt.notes.v1`, written on every change (no debounce: a few
   KB of text). A refused write toasts once until a write succeeds again.
-- `useNotesStrip` — `tt.notesstrip.v1`. A drag previews the height without
-  writing (every pointer move would reach the other tabs) and saves on
-  release. A refused write only loses the layout: no toast.
+- `useStep` — the layout step (`@/lib/media`) and `useShort`, live through
+  `useSyncExternalStore` on their media queries: turning a phone moves a
+  panel between page, sheet and sidebar. Owns nothing.
 - `useOnline` — owns nothing; only explains the catalog, nothing waits on it.
 - `useShareLink` — `useStripSharedUrl` (App) strips the address bar once the
   import dialog closes: the URL never mirrors state. `shareLinkOf` builds the

@@ -33,7 +33,7 @@ function DatePicker({ label, value, onChange }: PickerProps) {
     <Field>
       <FieldLabel>{label}</FieldLabel>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger render={<Button variant="outline" className="justify-start" />}>
+        <PopoverTrigger render={<Button variant="secondary" className="justify-start" />}>
           <CalendarDays data-icon="inline-start" />
           {dateLabel(value)}
         </PopoverTrigger>
@@ -80,7 +80,7 @@ export function ExportDialog({ open, onOpenChange, onExport }: Props) {
           {invalid && <p className="text-sm text-destructive">{m.export_invalid()}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.cancel()}
           </Button>
           <Button

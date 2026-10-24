@@ -338,12 +338,16 @@ function SubjectEditor({
         {duplicate && <Notice destructive>{m.subject_error_duplicate()}</Notice>}
         <DialogFooter>
           {original !== null && (
-            <Button variant="destructive" className="sm:mr-auto" onClick={() => setDeleting(true)}>
+            <Button
+              variant="ghost"
+              className="text-destructive compact:mr-auto"
+              onClick={() => setDeleting(true)}
+            >
               <Trash2 data-icon="inline-start" />
               {m.subject_delete()}
             </Button>
           )}
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {m.cancel()}
           </Button>
           <Button disabled={duplicate || unchanged} onClick={save}>
@@ -662,7 +666,7 @@ function DatesEditor({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => onChange([...dates, nextDate(draft, new Date())])}
         >
@@ -670,7 +674,7 @@ function DatesEditor({
           {dates.length === 0 ? m.subject_add_date() : m.subject_next_date()}
         </Button>
         <Popover>
-          <PopoverTrigger render={<Button type="button" variant="outline" size="sm" />}>
+          <PopoverTrigger render={<Button type="button" variant="secondary" size="sm" />}>
             <CalendarRange data-icon="inline-start" />
             {m.subject_pick_dates()}
           </PopoverTrigger>

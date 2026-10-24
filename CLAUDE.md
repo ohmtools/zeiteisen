@@ -53,9 +53,9 @@ semesters.
   are offered, never applied, per profile.
 - The catalog (`VITE_CATALOG_URL`, dev copy `srv/catalog/`, mounted in
   `npm run dev` only) is optional and read-only: missing, broken or offline
-  changes nothing; the user can also point it elsewhere or ignore it (Data
-  menu). Building links and subject full names live ONLY there (or in the
-  user's own files uploaded in the Data menu); a subject's full name comes
+  changes nothing; the user can also point it elsewhere or ignore it
+  (settings). Building links and subject full names live ONLY there (or in the
+  user's own files uploaded in the settings); a subject's full name comes
   only from the degree file its `degreeProgram` names (`B-EI` ->
   `degrees/B-EI.degree`, flat), never merged.
   Re-run `npm run catalog -- ./srv/catalog` after editing it.
@@ -64,7 +64,7 @@ semesters.
 - All UI strings via paraglide (`messages/en.json` + `messages/de.json`,
   then `npm run messages`), imported from `@/i18n`. Catalog / dates texts are
   `{ de, en }` rendered with `localized()`.
-- Keep the entry chunk free of sidebar, dialog and menu code
+- Keep the entry chunk free of panel, sheet, dialog and menu code
   (`src/components/deferred.ts`; toasts via `@/lib/toast`).
 
 ## Where the details live
@@ -80,7 +80,7 @@ directory-specific knowledge there, not here.
 - `src/components/NOTES.md` — shell, tab bar, grid, tree ↔ grid, group tree.
 - `src/components/ui/NOTES.md` — shadcn rules and hand-edits.
 - `scripts/NOTES.md` — schema, catalog index and AI skill zip generators.
-- `skill/zeiteisen-generator/` — the downloadable AI skill (Data menu), also
+- `skill/zeiteisen-generator/` — the downloadable AI skill (settings), also
   the plugin `zeiteisen` of the `ohmtools/claude-plugins` marketplace, which
   names this path: moving the folder breaks the plugin. Its manifest is
   `.claude-plugin/plugin.json` there (Claude.ai refuses the plugin without
@@ -112,20 +112,32 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
 
 ## Global UI decisions
 
-- shadcn defaults, no custom styling until the user asks for a customization
-  pass: Tailwind for layout plus semantic tokens; no colors, radii, shadows,
-  custom CSS.
+- The redesign (user decision, a complete switch): shadcn `base-vega` (Base
+  UI) with the app's own theme in `src/index.css` — OLED black / white
+  grounds, neutral primary, red (`--accent-red`) as the ONE accent, blocks
+  coloured by kind (`--kind-*`), never by timetable. Geist and Geist Mono
+  via `@fontsource` (no CDN: the app runs offline); mono only for times,
+  rooms, dates, week numbers, group numbers, file endings. Radii 6px
+  (blocks, badges, tab fields), 8px (buttons, fields, menus), 10px (grid
+  frame, dialogs, drawers). Buttons are ghost unless they are the main
+  action.
 - **No uppercase text, no boxes** (divider lines instead), **no theme
-  toggle** — user decisions, do not bring back.
-- Desktop (`desktop:` variant = width ≥ 64rem AND height ≥ 600px): the whole
-  app in one viewport, no page scroll, sections scroll inside themselves.
-  Below it (phones, short laptops): a bottom tab bar "Timetable | Subjects |
-  Notes | Settings", with the grid's controls docked just above it.
-- One spacing unit around every divider: 24px.
-- Dark mode and language follow the browser; the only language controls are
-  the desktop footer switcher and its copy on the phone's Settings page.
-- Check every visible change at 360px and 400px, German and English, and at
-  1440px desktop; dark mode where colours are involved.
+  toggle**, no counters or legends except where a number tells things apart
+  ("14 of 40 picked") — user decisions, do not bring back.
+- Three steps, the same content in other containers (`compact:` / `wide:`
+  variants, `@/lib/media`): narrow (below 40rem: one day, panels as pages,
+  tabs + week + day bar at the bottom), compact (from 40rem or a short
+  landscape screen: the whole week, one header row, panels as a 380px sheet
+  from the right), wide (from 64rem AND 600px height: a closable 340px
+  sidebar beside the grid). Every step is one viewport tall, no page scroll;
+  grid, panels and pages scroll inside themselves.
+- One spacing unit around every divider: 24px (16px on phones), plus the
+  safe areas.
+- Dark mode and language follow the browser; the only language control is
+  the tabs in the settings.
+- Check every visible change at 360px and 400px, German and English, at
+  1440px desktop and on a landscape phone (844×390); dark and light where
+  colours are involved.
 
 ## Verifying UI changes
 
@@ -152,7 +164,8 @@ web-shot -c http://localhost:5173/    # console output only
 - German: `localStorage.setItem("PARAGLIDE_LOCALE","de")` before loading `/`;
   after `npm run messages` restart the dev server or it has no effect.
 - Dark mode: temporarily force `classList.toggle("dark", true)` in
-  `theme-provider.tsx` (headless ignores color-scheme flags).
+  `theme-provider.tsx` (headless ignores color-scheme flags), or drive
+  Playwright yourself with `colorScheme: "dark"`.
 - Delete throwaway `public/_*.html` files afterwards.
 - Stop the dev server by PID (`ps -eo pid,args | grep "[v]ite --port"`), in a
   separate Bash call from the one that started it, never with

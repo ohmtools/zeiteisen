@@ -85,7 +85,7 @@ export function dayName(day: Day): string {
 }
 
 export function timeRangeLabel(slot: { startTime: Time; endTime: Time }): string {
-  return `${formatTime(slot.startTime)}-${formatTime(slot.endTime)}`;
+  return `${formatTime(slot.startTime)}–${formatTime(slot.endTime)}`;
 }
 
 // "Mon, 5.10." / "Mo., 5.10.": one listed date (ISO YYYY-MM-DD).
@@ -108,6 +108,12 @@ export function shortDate(date: Date, withMonth = true): string {
 // The date of a weekday in the week starting on Monday `weekStart`.
 export function dateOf(weekStart: Date, day: Day): Date {
   return addDays(weekStart, DAYS.indexOf(day));
+}
+
+// "09:45": when a class starts, where the end goes without saying (the
+// category view's rows).
+export function slotShort(slot: { startTime: Time }): string {
+  return formatTime(slot.startTime);
 }
 
 // "Mon 08:00-09:30". A class can be listed more than once in the same group
@@ -169,4 +175,21 @@ export function repeatTypeName(type: RepeatType): string {
 export function repeatName(repeat: Repeat): string | null {
   if (repeat.type === "A" || repeat.type === "I") return null;
   return repeatTypeName(repeat.type);
+}
+
+// The rhythm a block names in the general view, where its week is not given:
+// "even weeks" / "odd weeks", the code of the four-week rhythms and the
+// halves. Weekly and listed dates say nothing.
+export function rhythmShort(repeat: Repeat): string | null {
+  switch (repeat.type) {
+    case "A":
+    case "I":
+      return null;
+    case "G":
+      return m.rhythm_even();
+    case "U":
+      return m.rhythm_odd();
+    default:
+      return repeat.type;
+  }
 }

@@ -139,7 +139,7 @@ export function readDegreeFile(file: File) {
   });
 }
 
-// A refused file of the Data menu: a toast with zod's details, the menu has no
+// A refused file of the settings: a toast with zod's details, they have no
 // panel to show them in.
 export function toastUploadError(error: UploadError) {
   toast.error(`${error.file}: ${error.message}`, { description: error.details?.join(" · ") });

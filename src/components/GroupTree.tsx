@@ -3,53 +3,49 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
-  CloudCheck,
-  CloudOff,
-  CloudSync,
+  ChevronUp,
   Download,
-  ListPlus,
+  Link,
+  Lock,
+  Pencil,
   Plus,
+  RefreshCw,
+  Search,
   Square,
   SquareCheck,
   SquareMinus,
-  Trash2,
+  Unlink,
+  WifiOff,
 } from "lucide-react";
-import { toast } from "@/lib/toast";
 import { cn } from "cn";
-import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { getLocale, m } from "@/i18n";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
-import {
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { Section } from "@/components/Section";
-import { ClassPicker } from "@/components/ClassPicker";
-import { GroupCell } from "@/components/GroupCell";
-import { SubjectDialog, type SubjectTarget } from "@/components/SubjectDialog";
+import { GroupRuler } from "@/components/GroupCell";
+import { LockButton } from "@/components/AppHeader";
+import { PanelHeader } from "@/components/PanelHeader";
+import { TimetableDialog } from "@/components/TimetableDialog";
+import type { EditRequest } from "@/components/SubjectEditor";
 import type { Catalog } from "@/lib/primitives/catalog";
-import { sameSubject, type Subject, type Subjects } from "@/lib/primitives/subject";
+import { groupName, type GroupCategory } from "@/lib/primitives/group";
+import type { Subjects } from "@/lib/primitives/subject";
 import {
   timetableHasUpdate,
   type Timetable,
   type TimetableName,
   type TimetableSubjectExtra,
 } from "@/lib/primitives/timetable";
-import { buildTree, stateOf, type CategoryNode, type TimetableNode } from "@/lib/primitives/tree";
-import { warningsFor } from "@/lib/primitives/warnings";
+import {
+  buildTree,
+  stateOf,
+  type CategoryNode,
+  type GroupNode,
+  type TimetableNode,
+} from "@/lib/primitives/tree";
+import { Warn, warningsFor } from "@/lib/primitives/warnings";
 import { downloadTimetable } from "@/lib/download";
 import {
   categoryState,
@@ -61,34 +57,39 @@ import {
   type Toggle,
 } from "@/lib/groupToggle";
 import type { Highlight, SubjectRef } from "@/lib/link";
-import { tintStyleOf, tintSteps } from "@/lib/tint";
+import type { Step } from "@/lib/media";
+import { dateLabel, dayName, slotShort } from "@/lib/subjects";
 import { warningLines } from "@/lib/warnings";
-import { nameProblemText } from "@/lib/names";
-import { normalizeName, sameName } from "@/lib/primitives/name";
+
+// The category view open in the panel: a timetable's category (`null`: the
+// subjects without a group).
+export type CategoryRef = { timetableName: TimetableName; category: GroupCategory | null };
 
 type Props = {
-  className?: string;
+  step: Step;
   timetables: Timetable[];
-  // Every timetable on the device: the subject editor learns its suggestions
-  // from them.
-  library: readonly Timetable[];
   locked: boolean;
   // What the headings show about the catalog: offline nothing can be checked.
   catalog: Catalog;
   online: boolean;
+  catalogIgnored: boolean;
+  category: CategoryRef | null;
+  onCategory: (category: CategoryRef | null) => void;
   onSetEnabled: (name: TimetableName, indexes: number[], enabled: boolean) => void;
   // Opens the update dialog for a timetable the catalog has a new version of.
   onUpdate: (name: TimetableName) => void;
   onRename: (from: TimetableName, to: string) => void;
   onRemove: (name: TimetableName) => void;
-  // A timetable's subjects after the user added, edited or deleted one.
-  onEditSubjects: (name: TimetableName, subjects: Subjects<TimetableSubjectExtra>) => void;
+  // Opens the subject editor (App asks first for a catalog timetable).
+  onEdit: (request: EditRequest) => void;
   // Opens the timetable picker for the active profile.
   onAddTimetables: () => void;
+  onToggleLock: () => void;
   // The group cell under the mouse or focus, whose blocks the grid keeps lit.
   onHighlight?: (highlight: Highlight | null) => void;
-  // A grid block's cell to show: its timetable opens, the cell scrolls into
-  // view and flashes. `nonce` tells two jumps to the same cell apart.
+  onClose: () => void;
+  // A grid block's cell to show: the overview, the cell scrolled into view
+  // and flashing. `nonce` tells two jumps to the same cell apart.
   flash?: (SubjectRef & { nonce: number }) | null;
 };
 
@@ -99,496 +100,392 @@ function saveTimetable(timetable: Timetable) {
   toast.success(m.toast_timetable_saved());
 }
 
-// What the heading of a timetable shows about the catalog: nothing for a local
-// one, nor while there is no index to compare with (the catalog is ignored or
-// was never read); offline before anything else, because then nothing can be
-// checked; otherwise whether an update is waiting. A refused update counts as
-// current — the user settled it.
-type CatalogStatus = "none" | "offline" | "update" | "current";
+// What a timetable's status line says about the catalog (user decision: one
+// line under its name, always): its own timetable gets no updates; one from
+// the catalog is current, outdated (an update waits, the red dot), the
+// catalog unreachable (offline or broken: nothing changes) or ignored. A
+// refused update counts as current — the user settled it.
+type CatalogStatus = "own" | "current" | "update" | "unreachable" | "ignored";
 
-function catalogStatus(timetable: Timetable, catalog: Catalog, online: boolean): CatalogStatus {
-  if (timetable.origin.kind !== "catalog" || !catalog.index) return "none";
-  if (!online) return "offline";
+function catalogStatus(
+  timetable: Timetable,
+  catalog: Catalog,
+  online: boolean,
+  ignored: boolean,
+): CatalogStatus {
+  if (timetable.origin.kind !== "catalog") return "own";
+  if (ignored) return "ignored";
+  if (!online || !catalog.index) return "unreachable";
   return timetableHasUpdate(timetable, catalog) ? "update" : "current";
 }
 
-// The group selection of the active profile, one tree per timetable. Profile,
-// import, lock and the exports sit in `ProfileSection` above.
+const STATUS_TEXT: Record<CatalogStatus, () => string> = {
+  own: m.tree_status_own,
+  current: m.tree_status_current,
+  update: m.tree_status_update,
+  unreachable: m.tree_status_unreachable,
+  ignored: m.tree_status_ignored,
+};
+
+const STATUS_ICON = {
+  own: Unlink,
+  current: Link,
+  update: Link,
+  unreachable: WifiOff,
+  ignored: Link,
+};
+
+// The group selection of the active profile: one section per timetable, or
+// one category of one timetable (`CategoryView`). A panel: sidebar, sheet or
+// page. Lives in the deferred chunk.
 export function GroupTree({
-  className,
+  step,
   timetables,
-  library,
   locked,
   catalog,
   online,
-  onSetEnabled,
-  onUpdate,
-  onRename,
-  onRemove,
-  onEditSubjects,
-  onAddTimetables,
-  onHighlight,
-  flash = null,
-}: Props) {
-  const tree = buildTree(timetables);
-  const tints = tintSteps(timetables.map((timetable) => timetable.name));
-  // The timetable the confirm dialog is asking about; removal is not undoable,
-  // so it never happens on the first click.
-  const [removing, setRemoving] = useState<TimetableName | null>(null);
-  // The subject the editor is open for, by timetable name and index (`null`
-  // adds one), plus the subject as it was when opened. Read against the
-  // current timetables: the editor closes when its timetable goes away, or
-  // when another tab changed what sits at that index (a removal shifts the
-  // indexes, and saving would overwrite another subject).
-  const [editing, setEditing] = useState<{
-    name: TimetableName;
-    index: number | null;
-    subject: Subject | null;
-  } | null>(null);
-  const editTimetable = editing ? timetables.find((one) => one.name === editing.name) : undefined;
-  const stillThere =
-    editing !== null &&
-    editTimetable !== undefined &&
-    (editing.index === null ||
-      (editing.subject !== null &&
-        editing.index < editTimetable.subjects.length &&
-        sameSubject(editTimetable.subjects.getSubject(editing.index), editing.subject)));
-  // An editor waiting to be confirmed: any subject change ends a catalog
-  // timetable's catalog updates, so the user is asked before the editor
-  // opens, not after filling it in.
-  const [asking, setAsking] = useState<typeof editing>(null);
-  const editTarget: SubjectTarget | null =
-    editing && editTimetable && stillThere && !locked
-      ? { timetable: editTimetable, index: editing.index }
-      : null;
-
-  return (
-    <Section className={cn("min-h-0 desktop:flex-1", className)}>
-      <CardHeader>
-        <CardTitle>{m.tree_title()}</CardTitle>
-        <CardDescription>{m.tree_description()}</CardDescription>
-      </CardHeader>
-      {/* One spacing unit (24px) between the timetables. On desktop only the
-          trees scroll: the add button below stays in view,
-          right under the trees while they are short. */}
-      <CardContent className="flex flex-col gap-6 desktop:min-h-0 desktop:overflow-y-auto">
-        {tree.length === 0 ? (
-          <CardDescription>{m.tree_empty()}</CardDescription>
-        ) : (
-          tree.map((node) => (
-            <TimetableTree
-              key={node.timetable.name}
-              node={node}
-              tint={tints.get(node.timetable.name) ?? 0}
-              locked={locked}
-              status={catalogStatus(node.timetable, catalog, online)}
-              taken={(name) =>
-                timetables.some(
-                  (other) => other.name !== node.timetable.name && sameName(other.name, name),
-                )
-              }
-              onSetEnabled={(indexes, enabled) =>
-                onSetEnabled(node.timetable.name, indexes, enabled)
-              }
-              onUpdate={() => onUpdate(node.timetable.name)}
-              onRename={(to) => onRename(node.timetable.name, to)}
-              onRemove={() => setRemoving(node.timetable.name)}
-              onEdit={(index) => {
-                const open = {
-                  name: node.timetable.name,
-                  index,
-                  subject: index === null ? null : node.timetable.subjects.getSubject(index),
-                };
-                if (node.timetable.origin.kind === "catalog") setAsking(open);
-                else setEditing(open);
-              }}
-              flash={flash?.timetableName === node.timetable.name ? flash : null}
-              onHighlight={(indexes) =>
-                onHighlight?.(indexes ? { timetableName: node.timetable.name, indexes } : null)
-              }
-            />
-          ))
-        )}
-      </CardContent>
-      <CardFooter>
-        <Button variant="outline" className="w-full" disabled={locked} onClick={onAddTimetables}>
-          <ListPlus data-icon="inline-start" />
-          {m.profile_add_timetables()}
-        </Button>
-      </CardFooter>
-
-      <SubjectDialog
-        target={editTarget}
-        library={library}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null);
-        }}
-        onSave={(subjects) => {
-          if (editing) onEditSubjects(editing.name, subjects);
-        }}
-      />
-
-      <AlertDialog
-        open={asking !== null && !locked}
-        onOpenChange={(open) => {
-          if (!open) setAsking(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {asking?.index === null
-                ? m.subject_catalog_add_title()
-                : m.subject_catalog_edit_title()}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {asking?.index === null
-                ? m.subject_catalog_add_text({ timetable: asking.name })
-                : m.subject_catalog_edit_text({ timetable: asking?.name ?? "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                // Opened as it was when asked: a subject another tab moved
-                // meanwhile closes the editor instead of opening another one.
-                setEditing(asking);
-                setAsking(null);
-              }}
-            >
-              {asking?.index === null
-                ? m.subject_catalog_add_confirm()
-                : m.subject_catalog_edit_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={removing !== null}
-        onOpenChange={(open) => {
-          if (!open) setRemoving(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.tree_remove_title()}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {m.tree_remove_text({ name: removing ?? "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (removing !== null) onRemove(removing);
-                setRemoving(null);
-              }}
-            >
-              {m.tree_remove_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Section>
-  );
-}
-
-type TimetableProps = {
-  node: TimetableNode;
-  // Step from `tintSteps`, the one this timetable's blocks carry in the grid.
-  tint: number;
-  locked: boolean;
-  status: CatalogStatus;
-  // Whether the profile already holds this name under another timetable.
-  taken: (name: string) => boolean;
-  onSetEnabled: (indexes: number[], enabled: boolean) => void;
-  onUpdate: () => void;
-  onRename: (to: string) => void;
-  onRemove: () => void;
-  // Opens the subject editor: a subject by index, or `null` for a new one.
-  onEdit: (index: number | null) => void;
-  // A jump to one of this timetable's subjects.
-  flash: Flash | null;
-  // The subjects of the group cell under the mouse or focus; `null` = none.
-  onHighlight: (indexes: readonly number[] | null) => void;
-};
-
-// Each timetable's warnings render right below its own tree, not in a separate
-// panel (user decision).
-function TimetableTree({
-  node,
-  tint,
-  locked,
-  status,
-  taken,
+  catalogIgnored,
+  category,
+  onCategory,
   onSetEnabled,
   onUpdate,
   onRename,
   onRemove,
   onEdit,
-  flash,
+  onAddTimetables,
+  onToggleLock,
   onHighlight,
-}: TimetableProps) {
-  const { timetable } = node;
-  const name = timetable.name;
-  const warnings = warningLines(warningsFor(timetable));
-  // Several timetables make the sidebar long, so each one folds away. Open by
-  // default: the tree is what the section is for.
-  const [open, setOpen] = useState(true);
-  // Labels the category rulers for screen readers.
-  const id = useId();
-  // A jump into a folded timetable unfolds it first.
-  const [seenFlash, setSeenFlash] = useState(flash?.nonce);
-  if (flash && flash.nonce !== seenFlash) {
-    setSeenFlash(flash.nonce);
-    setOpen(true);
-  }
-  // What each group (by `groupKey`) had picked when a switch turned it off,
-  // for this session only.
+  onClose,
+  flash = null,
+}: Props) {
+  const tree = buildTree(timetables);
+  const narrow = step === "narrow";
+  // What each group (by timetable and `groupKey`) had picked when a switch
+  // turned it off, for this session only: switching it on brings it back
+  // (user decision).
   const [kept, setKept] = useState<ReadonlyMap<string, Kept>>(new Map());
-  const apply = (toggle: Toggle) => {
-    if (toggle.indexes.length > 0) onSetEnabled(toggle.indexes, toggle.enabled);
+  const keptOf = (name: TimetableName) =>
+    new Map(
+      [...kept]
+        .filter(([key]) => key.startsWith(`${name}\n`))
+        .map(([key, value]) => [key.slice(name.length + 1), value]),
+    );
+  const apply = (name: TimetableName, toggle: Toggle) => {
+    if (toggle.indexes.length > 0) onSetEnabled(name, toggle.indexes, toggle.enabled);
     const next = new Map(kept);
     for (const [key, value] of toggle.kept) {
-      if (value) next.set(key, value);
-      else next.delete(key);
+      if (value) next.set(`${name}\n${key}`, value);
+      else next.delete(`${name}\n${key}`);
     }
     setKept(next);
   };
-  // The name being typed while renaming; `null` while not renaming.
-  const [draft, setDraft] = useState<string | null>(null);
-  const trimmed = draft === null ? "" : normalizeName(draft);
-  const problem =
-    draft === null
-      ? null
-      : !trimmed
-        ? m.tree_rename_empty()
-        : taken(trimmed)
-          ? m.tree_rename_taken()
-          : nameProblemText(trimmed);
+  const highlight = (name: TimetableName) => (indexes: readonly number[] | null) =>
+    onHighlight?.(indexes ? { timetableName: name, indexes } : null);
+  // The timetable whose name and removal the dialog is about.
+  const [managing, setManaging] = useState<TimetableName | null>(null);
 
-  // Enter and blur commit; an invalid name on blur simply reverts.
-  const commit = () => {
-    if (draft !== null && !problem && trimmed !== name) onRename(trimmed);
-    setDraft(null);
-  };
+  const openNode = category && tree.find((node) => node.timetable.name === category.timetableName);
+  const openCategory = openNode?.categories.find((one) => one.category === category?.category);
+
+  const toggleGroupOf = (node: TimetableNode) => (group: GroupNode) =>
+    apply(
+      node.timetable.name,
+      toggleGroup(node.timetable.subjects, group, keptOf(node.timetable.name).get(groupKey(group))),
+    );
+  const lock = narrow && <LockButton locked={locked} onToggle={onToggleLock} />;
+
+  if (openNode && openCategory) {
+    return (
+      <CategoryView
+        node={openNode}
+        category={openCategory}
+        locked={locked}
+        narrow={narrow}
+        lock={lock}
+        onBack={() => onCategory(null)}
+        onClose={onClose}
+        onToggle={toggleGroupOf(openNode)}
+        onSetEnabled={(indexes, enabled) => onSetEnabled(openNode.timetable.name, indexes, enabled)}
+        onEdit={(index) => onEdit({ name: openNode.timetable.name, index })}
+        onHighlight={highlight(openNode.timetable.name)}
+      />
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          {/* A plain button: the ghost `Button` shades `aria-expanded` (made
-              for popover triggers), which would mark every open tree. */}
-          <button
-            type="button"
-            className="flex size-6 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
-            aria-expanded={open}
-            title={open ? m.tree_collapse({ name }) : m.tree_expand({ name })}
-            aria-label={open ? m.tree_collapse({ name }) : m.tree_expand({ name })}
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-          </button>
-          {/* The same tint the timetable's blocks carry in the grid, so the
-              grid can be read back to the tree. */}
-          <span aria-hidden className="h-4 w-1 shrink-0 bg-(--tint)" style={tintStyleOf(tint)} />
-          {draft !== null ? (
-            <Input
-              className="h-7 flex-1"
-              value={draft}
-              autoFocus
-              aria-label={m.tree_rename()}
-              aria-invalid={problem !== null || undefined}
-              onChange={(event) => setDraft(event.target.value)}
-              onBlur={commit}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") commit();
-                if (event.key === "Escape") setDraft(null);
-              }}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PanelHeader
+        title={m.panel_groups()}
+        actions={
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={locked}
+              aria-label={m.profile_add_timetables()}
+              title={m.profile_add_timetables()}
+              onClick={onAddTimetables}
+            >
+              <Plus />
+            </Button>
+            {lock}
+          </>
+        }
+        onBack={narrow ? onClose : undefined}
+        onClose={narrow ? undefined : onClose}
+      />
+      <div className="flex min-h-0 flex-1 flex-col divide-y overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)] compact:px-6">
+        {locked && (
+          <div className="flex flex-col gap-3 pt-2 pb-6">
+            <p className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Lock className="mt-0.5 size-4 shrink-0" />
+              {m.tree_locked_text()}
+            </p>
+            <Button variant="secondary" className="self-start" onClick={onToggleLock}>
+              {m.groups_unlock()}
+            </Button>
+          </div>
+        )}
+        {tree.length === 0 ? (
+          <div className="flex flex-col gap-4 py-6">
+            <p className="text-sm text-muted-foreground">{m.tree_empty()}</p>
+            <Button className="self-start" disabled={locked} onClick={onAddTimetables}>
+              <Plus data-icon="inline-start" />
+              {m.profile_add_timetables()}
+            </Button>
+          </div>
+        ) : (
+          tree.map((node) => (
+            <TimetableSection
+              key={node.timetable.name}
+              node={node}
+              locked={locked}
+              status={catalogStatus(node.timetable, catalog, online, catalogIgnored)}
+              kept={keptOf(node.timetable.name)}
+              onApply={(toggle) => apply(node.timetable.name, toggle)}
+              onToggle={toggleGroupOf(node)}
+              onUpdate={() => onUpdate(node.timetable.name)}
+              onManage={() => setManaging(node.timetable.name)}
+              onAdd={() => onEdit({ name: node.timetable.name, index: null })}
+              onOpenCategory={(one) =>
+                onCategory({ timetableName: node.timetable.name, category: one })
+              }
+              flash={flash?.timetableName === node.timetable.name ? flash : null}
+              onHighlight={highlight(node.timetable.name)}
             />
-          ) : locked ? (
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
-          ) : (
-            // A click on the name renames it, in place.
-            <button
-              type="button"
-              className="min-w-0 flex-1 truncate text-left text-sm font-medium"
-              title={m.tree_rename()}
-              onClick={() => setDraft(name)}
+          ))
+        )}
+      </div>
+
+      <TimetableDialog
+        name={managing}
+        taken={(name) => timetables.some((one) => one.name !== managing && one.name === name)}
+        locked={locked}
+        onClose={() => setManaging(null)}
+        onRename={(to) => managing && onRename(managing, to)}
+        onRemove={() => managing && onRemove(managing)}
+      />
+    </div>
+  );
+}
+
+type SectionProps = {
+  node: TimetableNode;
+  locked: boolean;
+  status: CatalogStatus;
+  kept: ReadonlyMap<string, Kept>;
+  onApply: (toggle: Toggle) => void;
+  onToggle: (group: GroupNode) => void;
+  onUpdate: () => void;
+  // Name and removal (`TimetableDialog`).
+  onManage: () => void;
+  // "Add subject": the subject editor, asked first for a catalog timetable.
+  onAdd: () => void;
+  onOpenCategory: (category: GroupCategory | null) => void;
+  flash: Flash | null;
+  onHighlight: (indexes: readonly number[] | null) => void;
+};
+
+// One timetable: its name with update, rename and download, its catalog
+// status, "classes without a group" first, then a ruler per category
+// (ascending), the warnings (one line per kind, user decision) and "add
+// subject".
+function TimetableSection({
+  node,
+  locked,
+  status,
+  kept,
+  onApply,
+  onToggle,
+  onUpdate,
+  onManage,
+  onAdd,
+  onOpenCategory,
+  flash,
+  onHighlight,
+}: SectionProps) {
+  const { timetable } = node;
+  const name = timetable.name;
+  const warnings = warningsFor(timetable);
+  // "No group picked yet" sits right under its category; every other kind is
+  // one line at the end.
+  const lines = warningLines(warnings.filter((w) => w.code !== Warn.EmptyCategory));
+  const empty = new Set(
+    warnings.flatMap((w) => (w.code === Warn.EmptyCategory ? [w.category] : [])),
+  );
+  const StatusIcon = STATUS_ICON[status];
+  // Labels the category rulers for screen readers.
+  const id = useId();
+
+  return (
+    <section className="flex flex-col gap-4 py-6 first:pt-2">
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <h3 className="truncate text-sm font-semibold">{name}</h3>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <StatusIcon className="size-3 shrink-0" />
+            <span className="truncate">{STATUS_TEXT[status]()}</span>
+          </span>
+        </div>
+        <div className="-mr-2 flex shrink-0">
+          {status === "update" && !locked && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              title={m.tree_update({ name })}
+              aria-label={m.tree_update({ name })}
+              onClick={onUpdate}
             >
-              {name}
-            </button>
+              <RefreshCw />
+              <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-red" />
+            </Button>
           )}
-          {/* Folding a timetable away must not hide that it has warnings. */}
-          {!open && warnings.length > 0 && (
-            <span
-              role="img"
-              className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
-              title={m.tree_warning_count({ count: warnings.length })}
-              aria-label={m.tree_warning_count({ count: warnings.length })}
+          {!locked && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title={m.tree_manage({ name })}
+              aria-label={m.tree_manage({ name })}
+              onClick={onManage}
             >
-              <AlertTriangle className="size-3.5" />
-              {warnings.length}
-            </span>
+              <Pencil />
+            </Button>
           )}
-          <CatalogIcon name={name} status={status} onUpdate={onUpdate} />
           {/* Works while locked: it changes nothing. */}
           <Button
             variant="ghost"
             size="icon"
-            className="size-6"
             title={m.tree_download({ name })}
             aria-label={m.tree_download({ name })}
             onClick={() => saveTimetable(timetable)}
           >
             <Download />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6"
-            disabled={locked}
-            title={m.tree_add_subject({ name })}
-            aria-label={m.tree_add_subject({ name })}
-            onClick={() => onEdit(null)}
-          >
-            <Plus />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6"
-            disabled={locked}
-            title={m.tree_remove({ name })}
-            aria-label={m.tree_remove({ name })}
-            onClick={onRemove}
-          >
-            <Trash2 />
-          </Button>
         </div>
-        {problem && <p className="text-xs text-destructive">{problem}</p>}
       </div>
 
-      {open &&
-        node.categories.map((category) => (
-          <div key={category.category ?? "none"} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span id={`${id}-${category.category ?? "none"}`}>
+      {node.categories.map((category) => {
+        const labelId = `${id}-${category.category ?? "none"}`;
+        return (
+          <div key={category.category ?? "none"} className="flex flex-col gap-2">
+            <div className="-mr-2 flex items-center gap-1">
+              <span id={labelId} className="min-w-0 flex-1 truncate text-sm font-medium">
                 {category.category === null
-                  ? m.tree_no_group()
+                  ? m.tree_no_group_title()
                   : m.tree_category({ category: category.category })}
               </span>
-              <div className="flex items-center gap-1">
-                <CategoryToggle
-                  category={category}
-                  state={categoryState(timetable.subjects, category)}
-                  locked={locked}
-                  onToggle={() => apply(toggleCategory(timetable.subjects, category, kept))}
-                />
-                {/* Also for a single subject: its pen is the way to edit it. */}
-                {!locked && (
-                  <ClassPicker
-                    timetableName={name}
-                    category={category}
-                    subjects={timetable.subjects}
-                    onSetEnabled={onSetEnabled}
-                    onEdit={onEdit}
-                  />
-                )}
-              </div>
+              <CategoryToggle
+                category={category}
+                state={categoryState(timetable.subjects, category)}
+                locked={locked}
+                onToggle={() => onApply(toggleCategory(timetable.subjects, category, kept))}
+              />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={
+                  category.category === null
+                    ? m.tree_pick_ungrouped()
+                    : m.tree_pick({ category: category.category })
+                }
+                title={
+                  category.category === null
+                    ? m.tree_pick_ungrouped()
+                    : m.tree_pick({ category: category.category })
+                }
+                onClick={() => onOpenCategory(category.category)}
+              >
+                <ChevronRight />
+              </Button>
             </div>
-            {/* The row is a ruler, not a list of buttons: group
-              `category.index` owns the slice [(index-1)/n, index/n] of the full
-              row width, exactly the span `isOverlapping` (primitives/group.ts)
-              computes. Two groups are compatible iff their slices overlap, so
-              reading the category rows against each other IS how the user
-              tries out combinations — 2.1 over the left half, 3.2 over the
-              middle third, and so on.
-
-              That only holds while every row spans the same width and every
-              cell keeps exactly its share of it. So, in this row and in
-              `GroupCell`:
-                - n equal grid columns and nothing else: no `min-width`, no
-                  `width` on a cell, no `gap` between cells, no scroll
-                  container, no margin on the row — any of those shift a slice
-                  and make the tree lie. (A flex row with percentage bases plus
-                  the `-ml-px` border collapse did exactly that: every cell
-                  pulled the rest left and category 10 ended a visible 9px
-                  short of the right edge.);
-                - a wide category (12 is real, 20 works) stays one line and the
-                  cells simply get narrower;
-                - what gives way is the label: `--cell-font` below scales the
-                  digits with the slice, and the cell clips them rather than
-                  claiming width.
-              Check category 1, 2, 3, 6 and 12 stacked at 1440px and at 360px
-              after touching any of this: their edges must line up. */}
-            <div
-              className="grid"
-              role="group"
-              aria-labelledby={`${id}-${category.category ?? "none"}`}
-              // Hover is read off the ruler itself, by position: it works on
-              // disabled cells too (locked profile), which get no pointer
-              // events of their own. Mouse only — a tap is a click.
-              onPointerMove={(event) => {
-                if (event.pointerType !== "mouse") return;
-                const box = event.currentTarget.getBoundingClientRect();
-                const n = category.groups.length;
-                const slice = Math.floor(((event.clientX - box.left) / box.width) * n);
-                const group = category.groups[Math.max(0, Math.min(n - 1, slice))];
-                onHighlight(group.indexes.length > 0 ? group.indexes : null);
-              }}
-              onPointerLeave={() => onHighlight(null)}
-              style={
-                {
-                  containerType: "inline-size",
-                  // A grid, not a flex row: n equal columns divide the row width
-                  // exactly, and the cells' `-ml-px` border collapse bleeds into
-                  // the previous column instead of pulling every following slice
-                  // left (which left a growing gap at the right end).
-                  gridTemplateColumns: `repeat(${category.groups.length}, minmax(0, 1fr))`,
-                  // Two digits have to fit a cell: roughly 1.1em wide, so a third
-                  // of the cell width, clamped to a legible range. `cqw` is 1% of
-                  // the row, which is why the row is a container.
-                  "--cell-font": `clamp(0.5rem, ${(100 / category.groups.length) * 0.3}cqw, 0.75rem)`,
-                } as React.CSSProperties
-              }
-            >
-              {category.groups.map((group) => (
-                <GroupCell
-                  key={group.group?.index ?? "none"}
-                  group={group}
-                  state={stateOf(timetable.subjects, group.indexes)}
-                  locked={locked}
-                  flashing={flash !== null && group.indexes.includes(flash.index)}
-                  onHighlight={(on) => onHighlight(on ? group.indexes : null)}
-                  onToggle={() =>
-                    apply(toggleGroup(timetable.subjects, group, kept.get(groupKey(group))))
-                  }
-                />
-              ))}
-            </div>
+            <GroupRuler
+              category={category}
+              subjects={timetable.subjects}
+              labelledBy={labelId}
+              locked={locked}
+              flashIndex={flash?.index ?? null}
+              onHighlight={onHighlight}
+              onToggle={onToggle}
+            />
+            <PartialHint category={category} subjects={timetable.subjects} />
+            {empty.has(category.category) && <WarningLine>{m.tree_category_empty()}</WarningLine>}
           </div>
-        ))}
+        );
+      })}
 
-      {open && warnings.length > 0 && (
-        <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
-          {warnings.map((warning) => (
-            <li key={warning.key} className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-              <span>{warning.text}</span>
+      {lines.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {lines.map((line) => (
+            <li key={line.key}>
+              <WarningLine>{line.text}</WarningLine>
             </li>
           ))}
         </ul>
       )}
-    </div>
+
+      {!locked && (
+        <Button
+          variant="ghost"
+          className="-ml-2.5 self-start px-2.5 text-muted-foreground"
+          onClick={onAdd}
+        >
+          <Plus data-icon="inline-start" />
+          {m.tree_add_subject_short()}
+        </Button>
+      )}
+    </section>
+  );
+}
+
+// "2.1 and 2.2 partly picked": the groups whose cell is dashed.
+function PartialHint({
+  category,
+  subjects,
+}: {
+  category: CategoryNode;
+  subjects: Subjects<TimetableSubjectExtra>;
+}) {
+  const partial = category.groups
+    .filter((group) => group.group && stateOf(subjects, group.indexes) === "partial")
+    .map((group) => groupName(group.group!));
+  if (partial.length === 0) return null;
+  const list = new Intl.ListFormat(getLocale(), { type: "conjunction" }).format(partial);
+  return <p className="text-xs text-muted-foreground">{m.tree_partial({ groups: list })}</p>;
+}
+
+function WarningLine({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 text-xs text-warning">
+      <AlertTriangle className="size-4 shrink-0" />
+      <span>{children}</span>
+    </p>
   );
 }
 
 // Switches all groups of a category at once, drawn as a tri-state checkbox:
-// checked while every group has a pick. Only where there is more than one
-// group to switch; a single one is its own cell.
+// checked while every group has a pick. Only where there are two or more used
+// groups to switch; a single one is its own cell.
 function CategoryToggle({
   category,
   state,
@@ -609,8 +506,7 @@ function CategoryToggle({
   return (
     <Button
       variant="ghost"
-      size="icon"
-      className="-my-1 size-6"
+      size="icon-sm"
       disabled={locked}
       aria-pressed={state === "some" ? "mixed" : state === "all"}
       title={label}
@@ -622,43 +518,283 @@ function CategoryToggle({
   );
 }
 
-// What the catalog says about a timetable installed from it. Only a waiting
-// update is a button — it opens the diff; the other states are just shown.
-function CatalogIcon({
-  name,
-  status,
-  onUpdate,
-}: {
-  // The timetable's name: several headings each carry this button.
-  name: TimetableName;
-  status: CatalogStatus;
-  onUpdate: () => void;
-}) {
-  if (status === "none") return null;
-  if (status === "update") {
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6"
-        title={m.tree_update({ name })}
-        aria-label={m.tree_update({ name })}
-        onClick={onUpdate}
-      >
-        <CloudSync />
-      </Button>
-    );
+// One subject of a category (same name and kinds) and its classes, by group.
+type SubjectRow = {
+  key: string;
+  name: string;
+  kinds: string;
+  groups: { group: GroupNode; indexes: number[] }[];
+};
+
+function subjectRows(
+  category: CategoryNode,
+  subjects: Subjects<TimetableSubjectExtra>,
+): SubjectRow[] {
+  const rows = new Map<string, SubjectRow>();
+  for (const group of category.groups) {
+    for (const index of group.indexes) {
+      const subject = subjects.getSubject(index);
+      const kinds = subject.kind.join(", ");
+      const key = `${subject.name}\n${kinds}`;
+      const row = rows.get(key) ?? { key, name: subject.name, kinds, groups: [] };
+      const at = row.groups.find((one) => one.group === group);
+      if (at) at.indexes.push(index);
+      else row.groups.push({ group, indexes: [index] });
+      rows.set(key, row);
+    }
   }
-  const label = status === "offline" ? m.tree_catalog_offline() : m.tree_catalog_current();
-  const Icon = status === "offline" ? CloudOff : CloudCheck;
-  return (
-    <span
-      role="img"
-      className="flex size-6 shrink-0 items-center justify-center text-muted-foreground"
-      title={label}
-      aria-label={label}
-    >
-      <Icon className="size-4" />
-    </span>
+  return [...rows.values()].sort(
+    (a, b) => a.name.localeCompare(b.name, getLocale()) || a.kinds.localeCompare(b.kinds),
   );
+}
+
+// One category, closer up: the same ruler, a search, and every subject as a
+// fold: its used groups as badges (amber when it breaks a rule), open its
+// classes per group with a checkbox and a pen each, "only this one" per
+// group, the other groups on request. On wide screens the grid dims the
+// other categories meanwhile (App).
+function CategoryView({
+  node,
+  category,
+  locked,
+  narrow,
+  lock,
+  onBack,
+  onClose,
+  onToggle,
+  onSetEnabled,
+  onEdit,
+  onHighlight,
+}: {
+  node: TimetableNode;
+  category: CategoryNode;
+  locked: boolean;
+  narrow: boolean;
+  lock: React.ReactNode;
+  onBack: () => void;
+  onClose: () => void;
+  onToggle: (group: GroupNode) => void;
+  onSetEnabled: (indexes: number[], enabled: boolean) => void;
+  onEdit: (index: number) => void;
+  onHighlight: (indexes: readonly number[] | null) => void;
+}) {
+  const { timetable } = node;
+  const { subjects } = timetable;
+  const id = useId();
+  const [query, setQuery] = useState("");
+  const rows = subjectRows(category, subjects).filter((row) =>
+    `${row.name} ${row.kinds}`
+      .toLocaleLowerCase(getLocale())
+      .includes(query.trim().toLocaleLowerCase(getLocale())),
+  );
+  const grouped = category.category !== null;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <PanelHeader
+        title={
+          grouped ? m.tree_category({ category: category.category! }) : m.tree_no_group_title()
+        }
+        subtitle={timetable.name}
+        actions={lock}
+        onBack={onBack}
+        onClose={narrow ? undefined : onClose}
+      />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] compact:px-6">
+        <div className="flex flex-col gap-2">
+          <span id={id} className="text-sm font-medium">
+            {m.tree_groups()}
+          </span>
+          <GroupRuler
+            category={category}
+            subjects={subjects}
+            labelledBy={id}
+            locked={locked}
+            flashIndex={null}
+            onHighlight={onHighlight}
+            onToggle={onToggle}
+          />
+          <PartialHint category={category} subjects={subjects} />
+        </div>
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            className="pl-9"
+            value={query}
+            placeholder={m.tree_search({ example: rows[0]?.name ?? "SDS" })}
+            aria-label={m.tree_search_label()}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        <div className="-mx-2 flex flex-col">
+          {rows.map((row) => (
+            <SubjectFold
+              key={row.key}
+              row={row}
+              subjects={subjects}
+              grouped={grouped}
+              locked={locked}
+              onSetEnabled={onSetEnabled}
+              onEdit={onEdit}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubjectFold({
+  row,
+  subjects,
+  grouped,
+  locked,
+  onSetEnabled,
+  onEdit,
+}: {
+  row: SubjectRow;
+  subjects: Subjects<TimetableSubjectExtra>;
+  grouped: boolean;
+  locked: boolean;
+  onSetEnabled: (indexes: number[], enabled: boolean) => void;
+  onEdit: (index: number) => void;
+}) {
+  const [others, setOthers] = useState(false);
+  const enabled = (index: number) => subjects.getExtra(index).enabled;
+  const used = row.groups.filter((one) => one.indexes.some(enabled));
+  const rest = row.groups.filter((one) => !one.indexes.some(enabled));
+  // One group per subject, at least one class (the domain's rules): broken,
+  // its badges turn amber and the fold says why.
+  const problem = !grouped
+    ? null
+    : used.length > 1
+      ? m.tree_subject_multi()
+      : used.length === 0
+        ? m.tree_subject_none()
+        : null;
+  // "Only this one": the subject's classes in the other groups go off; this
+  // group keeps its pick, or picks all when it had none.
+  const only = (group: { indexes: number[] }) => {
+    const off = row.groups.filter((one) => one !== group).flatMap((one) => one.indexes);
+    if (off.length > 0) onSetEnabled(off, false);
+    if (!group.indexes.some(enabled)) onSetEnabled(group.indexes, true);
+  };
+  const shown = others ? [...used, ...rest] : used.length > 0 ? used : rest;
+  return (
+    <Collapsible>
+      <CollapsibleTrigger className="group flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
+        <span className="font-semibold">{row.name}</span>
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{row.kinds}</span>
+        {grouped &&
+          used.map(({ group }) => (
+            <span
+              key={groupKey(group)}
+              className={cn(
+                "rounded-sm px-1.5 font-mono text-xs leading-5",
+                problem ? "border border-warning text-warning" : "bg-secondary",
+              )}
+            >
+              {groupKey(group)}
+            </span>
+          ))}
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mb-2 ml-4 flex flex-col gap-1 border-l pl-4">
+          {problem && <WarningLine>{problem}</WarningLine>}
+          {shown.map((one, i) => (
+            <div
+              key={groupKey(one.group)}
+              className={cn(
+                "flex flex-col",
+                others && i === used.length && i > 0 && "mt-2 border-t pt-2",
+              )}
+            >
+              {grouped && (
+                <div className="flex h-9 items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {m.subject_group({ group: groupKey(one.group) })}
+                  </span>
+                  {!locked && row.groups.length > 1 && (
+                    <Button variant="secondary" size="sm" onClick={() => only(one)}>
+                      {m.tree_only_this()}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {one.indexes.map((index) => {
+                const subject = subjects.getSubject(index);
+                return (
+                  <div key={index} className="flex h-9 items-center gap-3">
+                    <label className="flex min-w-0 flex-1 items-center gap-3">
+                      <Checkbox
+                        checked={enabled(index)}
+                        disabled={locked}
+                        onCheckedChange={(checked) => onSetEnabled([index], checked === true)}
+                      />
+                      <span
+                        className={cn(
+                          "truncate font-mono text-xs",
+                          !enabled(index) && "text-muted-foreground",
+                        )}
+                      >
+                        {classLine(subject)}
+                      </span>
+                    </label>
+                    {!locked && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="-mr-2"
+                        title={m.tree_edit_subject({
+                          subject: `${row.name} ${classLine(subject)}`,
+                        })}
+                        aria-label={m.tree_edit_subject({
+                          subject: `${row.name} ${classLine(subject)}`,
+                        })}
+                        onClick={() => onEdit(index)}
+                      >
+                        <Pencil />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {grouped && used.length > 0 && rest.length > 0 && (
+            <Button
+              variant="ghost"
+              className="-ml-2.5 self-start px-2.5 text-muted-foreground"
+              onClick={() => setOthers(!others)}
+            >
+              {others ? (
+                <ChevronUp data-icon="inline-start" />
+              ) : (
+                <ChevronDown data-icon="inline-start" />
+              )}
+              {others ? m.tree_others_hide() : m.tree_others_show({ count: rest.length })}
+            </Button>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// "Fr 09:45 · WE.012": one class of a subject, as the category view lists it.
+function classLine(subject: ReturnType<Subjects<TimetableSubjectExtra>["getSubject"]>): string {
+  const { repeat } = subject;
+  if (repeat.type === "I") {
+    const [first] = repeat.dates;
+    const when =
+      repeat.dates.length === 1
+        ? dateLabel(first.date)
+        : m.slot_dates({ count: repeat.dates.length });
+    return [when, first?.location].filter(Boolean).join(" · ");
+  }
+  return [`${dayName(repeat.day)} ${slotShort(repeat)}`, repeat.location]
+    .filter(Boolean)
+    .join(" · ");
 }

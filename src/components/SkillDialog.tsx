@@ -16,7 +16,7 @@ import {
 const SKILL_ZIP = import.meta.env.BASE_URL + "zeiteisen-generator.zip";
 
 // The AI skill that turns the university's PDFs and pages into the app's own
-// files, and how to get it into an AI app. Opened from the Data menu and from
+// files, and how to get it into an AI app. Opened from the settings and from
 // the timetable picker's hint.
 export function SkillDialog({
   open,
@@ -39,7 +39,7 @@ export function SkillDialog({
         </ol>
         <p className="text-sm text-muted-foreground">{m.skill_check()}</p>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.close()}
           </Button>
           <Button nativeButton={false} render={<a href={SKILL_ZIP} download />}>
