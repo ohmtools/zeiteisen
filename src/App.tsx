@@ -169,9 +169,15 @@ export default function App() {
   );
   // The groups panel's category view, if one is open (`GroupTree`).
   const [category, setCategory] = useState<CategoryRef | null>(null);
+  // The group cell lighting its blocks in the grid (tree ↔ grid, below).
+  const [highlight, setHighlight] = useState<Highlight | null>(null);
   const openPanel = (next: Panel | null) => {
     setPanel(next);
-    if (next !== "groups") setCategory(null);
+    if (next !== "groups") {
+      setCategory(null);
+      // The tree goes without a blur or pointer leave: its highlight with it.
+      setHighlight(null);
+    }
   };
 
   // N, anywhere but in a field, a dialog or a menu: to the notes, caret at
@@ -183,7 +189,10 @@ export default function App() {
       if (!isNotesShortcut(event)) return;
       event.preventDefault();
       // The notes have to be on screen before the text area takes the focus.
-      flushSync(() => setPanel("notes"));
+      flushSync(() => {
+        setPanel("notes");
+        setHighlight(null);
+      });
       notesRef.current?.edit();
     };
     window.addEventListener("keydown", onKeyDown);
@@ -194,7 +203,6 @@ export default function App() {
   // the mouse or focus keeps its blocks lit and dims the rest, so does an open
   // category view (phones never show both at once). Every screen: a block's
   // details jump to its group cell, which flashes for a moment.
-  const [highlight, setHighlight] = useState<Highlight | null>(null);
   const [flash, setFlash] = useState<(SubjectRef & { nonce: number }) | null>(null);
   const highlightGroup = (next: Highlight | null) => {
     const wanted = next && isWide() ? next : null;
@@ -450,7 +458,7 @@ export default function App() {
                     step={step}
                     short={short}
                     overlay={overlay}
-                    highlight={highlight ?? categoryHighlight}
+                    highlight={(step === "wide" ? highlight : null) ?? categoryHighlight}
                     actions={actions}
                     selectedDay={day}
                     onSelectDay={pickDay}
