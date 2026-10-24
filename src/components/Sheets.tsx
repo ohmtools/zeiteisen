@@ -40,16 +40,19 @@ export function PanelSheet({
   );
 }
 
-// A block's details: a drawer from the bottom on phones, a sheet from the
-// right on a phone turned sideways.
+// A block's details (or an all-day chip's events): a drawer from the bottom
+// on phones, a sheet from the right on a phone turned sideways.
 export function DetailsSheet({
   open,
   side,
+  title = m.details_title(),
   onClose,
   children,
 }: {
   open: boolean;
   side: "bottom" | "right";
+  // For screen readers; the content shows its own heading.
+  title?: string;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -64,7 +67,7 @@ export function DetailsSheet({
           showCloseButton={false}
           className="w-[380px] max-w-[calc(100%-2rem)] overflow-y-auto p-4 pr-[max(1rem,env(safe-area-inset-right))] data-[side=right]:sm:max-w-[380px]"
         >
-          <SheetTitle className="sr-only">{m.details_title()}</SheetTitle>
+          <SheetTitle className="sr-only">{title}</SheetTitle>
           {children}
         </SheetContent>
       </Sheet>
@@ -73,7 +76,7 @@ export function DetailsSheet({
   return (
     <Drawer open={open} onOpenChange={change} showSwipeHandle>
       <DrawerContent>
-        <DrawerTitle className="sr-only">{m.details_title()}</DrawerTitle>
+        <DrawerTitle className="sr-only">{title}</DrawerTitle>
         <div className="overflow-y-auto px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {children}
         </div>

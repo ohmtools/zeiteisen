@@ -197,6 +197,12 @@ export function TimetableGrid({
   // A class toggle per block, nothing moves.
   const dimmed = (entry: Entry) => highlight !== null && !isHighlighted(entry, highlight);
   const related = (entry: Entry) => hovered !== null && entry.subject.name === hovered;
+  // Phones and short screens: an all-day chip opens its list in the details'
+  // drawer or sheet, not a popover. `open` turns false first, as above.
+  const sheet = narrow || short;
+  const [allDay, setAllDay] = useState<{ segment: AllDaySegment; open: boolean } | null>(null);
+  const closeAllDay = () => setAllDay((shown) => shown && { ...shown, open: false });
+
   const unclear = (entry: Entry) => week !== null && isUnclearRepeat(entry.subject.repeat);
   const labels = Array.from({ length: HOURS + 1 }, (_, i) => FIRST_HOUR + i).filter(
     (hour) => !short || hour % 2 === 0,
@@ -241,11 +247,15 @@ export function TimetableGrid({
         if (!narrow) {
           if (!onSwipeWeek) return;
           closePopup();
+          closeAllDay();
           onSwipeWeek(direction);
           return;
         }
         const next = swipeTarget(selectedDay, direction);
-        if (next !== selectedDay) closePopup();
+        if (next !== selectedDay) {
+          closePopup();
+          closeAllDay();
+        }
         onSelectDay(next);
       }}
       onPointerCancel={() => {
@@ -271,7 +281,12 @@ export function TimetableGrid({
             </div>
           </>
         )}
-        <AllDayRow week={week} narrow={narrow} columns={narrow ? [selectedDay] : DAYS} />
+        <AllDayRow
+          week={week}
+          narrow={narrow}
+          columns={narrow ? [selectedDay] : DAYS}
+          onOpen={sheet ? (segment) => setAllDay({ segment, open: true }) : undefined}
+        />
       </div>
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pt-3 pb-2 [scrollbar-gutter:stable]">
@@ -389,7 +404,7 @@ export function TimetableGrid({
         )}
       </div>
 
-      {step === "narrow" || short ? (
+      {sheet ? (
         <Suspense fallback={null}>
           <DetailsSheet
             open={popup?.open === true && content !== null}
@@ -397,6 +412,14 @@ export function TimetableGrid({
             onClose={closePopup}
           >
             {details}
+          </DetailsSheet>
+          <DetailsSheet
+            open={allDay?.open === true}
+            side={short ? "right" : "bottom"}
+            title={allDay ? allDayTitle(allDay.segment) : undefined}
+            onClose={closeAllDay}
+          >
+            {allDay && <AllDayList segment={allDay.segment} />}
           </DetailsSheet>
         </Suspense>
       ) : (
@@ -458,10 +481,13 @@ function AllDayRow({
   week,
   narrow,
   columns,
+  onOpen,
 }: {
   week: WeekView | null;
   narrow: boolean;
   columns: readonly Day[];
+  // Set: a chip opens its list here (drawer or sheet) instead of a popover.
+  onOpen?: (segment: AllDaySegment) => void;
 }) {
   const segments = week ? allDaySegments(week.events, columns) : [];
   const height = narrow ? "h-8" : "h-9";
@@ -490,6 +516,7 @@ function AllDayRow({
               segment={segment}
               prefix={m.grid_allday_short()}
               slide={0}
+              onOpen={onOpen}
             />
           ))
         )}
@@ -526,7 +553,7 @@ function AllDayRow({
               className="flex min-w-0 items-center px-0.5"
               style={{ gridColumn: `${segment.from + 1} / ${segment.to + 2}`, gridRow: 1 }}
             >
-              <AllDayChip segment={segment} />
+              <AllDayChip segment={segment} onOpen={onOpen} />
             </div>
           ))
         )}
@@ -535,59 +562,84 @@ function AllDayRow({
   );
 }
 
+function allDayTitle(segment: AllDaySegment): string {
+  const days = DAYS.slice(segment.from, segment.to + 1)
+    .map(dayLabel)
+    .join(", ");
+  return m.grid_allday_title({ days });
+}
+
 function AllDayChip({
   segment,
   prefix,
   slide,
+  onOpen,
 }: {
   segment: AllDaySegment;
   prefix?: string;
   // Narrow: the chip itself slides with the day (`data-slide`).
   slide?: number;
+  onOpen?: (segment: AllDaySegment) => void;
 }) {
   const [first, ...rest] = segment.events;
-  const days = DAYS.slice(segment.from, segment.to + 1)
-    .map(dayLabel)
-    .join(", ");
+  const className = cn(
+    "flex h-7 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-sm px-2 text-left text-xs whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    first.noLectures ? "bg-input" : "bg-secondary",
+  );
+  const label = (
+    <>
+      {prefix && <span className="text-muted-foreground">{prefix}</span>}
+      <b className="truncate font-semibold">{localized(first.title)}</b>
+      <span className="truncate text-muted-foreground">{eventNote(first)}</span>
+      {rest.length > 0 && (
+        <span
+          className="ml-auto shrink-0 rounded-sm bg-background/40 px-1.5 leading-5"
+          aria-label={m.grid_allday_more({ count: rest.length })}
+        >
+          +{rest.length}
+        </span>
+      )}
+    </>
+  );
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        data-slide={slide}
+        className={className}
+        onClick={() => onOpen(segment)}
+      >
+        {label}
+      </button>
+    );
+  }
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            data-slide={slide}
-            className={cn(
-              "flex h-7 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-sm px-2 text-left text-xs whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              first.noLectures ? "bg-input" : "bg-secondary",
-            )}
-          />
-        }
-      >
-        {prefix && <span className="text-muted-foreground">{prefix}</span>}
-        <b className="truncate font-semibold">{localized(first.title)}</b>
-        <span className="truncate text-muted-foreground">{eventNote(first)}</span>
-        {rest.length > 0 && (
-          <span
-            className="ml-auto shrink-0 rounded-sm bg-background/40 px-1.5 leading-5"
-            aria-label={m.grid_allday_more({ count: rest.length })}
-          >
-            +{rest.length}
-          </span>
-        )}
+      <PopoverTrigger render={<button type="button" data-slide={slide} className={className} />}>
+        {label}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 gap-3">
-        <h2 className="text-sm font-semibold">{m.grid_allday_title({ days })}</h2>
-        {segment.events.map((event) => (
-          <div key={localized(event.title) + event.startDate} className="text-sm">
-            <b className="font-semibold">{localized(event.title)}</b>
-            <small className="block text-xs text-muted-foreground">
-              {[event.noLectures ? m.grid_no_lectures_note() : null, eventNote(event)]
-                .filter((part) => part !== null)
-                .join(" · ")}
-            </small>
-          </div>
-        ))}
+        <AllDayList segment={segment} />
       </PopoverContent>
     </Popover>
+  );
+}
+
+// A chip's events under its days, in the popover or the drawer.
+function AllDayList({ segment }: { segment: AllDaySegment }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-sm font-semibold">{allDayTitle(segment)}</h2>
+      {segment.events.map((event) => (
+        <div key={localized(event.title) + event.startDate} className="text-sm">
+          <b className="font-semibold">{localized(event.title)}</b>
+          <small className="block text-xs text-muted-foreground">
+            {[event.noLectures ? m.grid_no_lectures_note() : null, eventNote(event)]
+              .filter((part) => part !== null)
+              .join(" · ")}
+          </small>
+        </div>
+      ))}
+    </div>
   );
 }
