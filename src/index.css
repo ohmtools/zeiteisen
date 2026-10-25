@@ -4,3 +4,11 @@
    `short:` steps, `popup-glass`, the view transitions and the reduced-motion
    rule. Zeiteisen's own CSS goes below. */
 @import "./styles/ohmtools.css";
+
+/* Every step is one viewport tall (`AppShell`): the page has nothing to
+   scroll, yet iOS pulled it up and down in its rubber band, and took a
+   horizontal swipe on the grid for that pull. */
+html,
+body {
+  overscroll-behavior: none;
+}

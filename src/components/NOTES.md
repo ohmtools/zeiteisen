@@ -262,8 +262,17 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   decision).
 - A horizontal touch swipe changes the day on phones, the week on compact
   screens (Current week only); never on wide ones (the design: no swipe
-  gestures there), the buttons do it everywhere. The overlay is `pointer-events-none` so swipes work; a
-  pointer that moved > 10px is a swipe, not a click.
+  gestures there), the buttons do it everywhere. On phones in Current week a
+  swipe past "Other" goes on to next week's Monday, one before Monday back
+  to last week's "Other" (user request); General stops at either end. The
+  overlay is `pointer-events-none` so swipes work; a pointer that moved >
+  10px is a swipe, not a click. Read from touch events, not pointer events:
+  iOS cancels the pointer once it takes the move for a vertical scroll (it
+  often did, user report), but still ends the touch. The hour box is
+  `overflow-x-hidden`: with `overflow-y-auto` alone the days sliding in
+  made it scroll sideways for a moment, which ate the swipe. The page
+  itself has `overscroll-behavior: none` (`src/index.css`): one viewport
+  tall, yet iOS pulled it in its rubber band.
 - Details (user decision: names NO timetable): kind badges in their colours
   and the group, the full name with the code under it, time with rhythm and
   "on now", lecturer, room with building, "Map" and "Campus", "Module
