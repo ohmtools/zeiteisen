@@ -53,6 +53,9 @@ app's own, in `src/index.css`.
     `offsetWidth`, re-measured on `data-active` changes and resizes); the
     active tab itself has no fill, border or shadow any more. Not Base UI's
     `Tabs.Indicator`: it put 3 KB gzip into the first load.
+  - `SheetContent` and `DrawerContent` round their free corners 10px
+    (`rounded-*-lg`, design: "dialogs, drawers and sheets"), not square or
+    shadcn's 14px.
   - Motion at half speed (design decision, 2026-10-25): shadcn's 100 ms
     popups (`Popover`, `Select`, `AlertDialog`, the centred `Dialog`,
     `SuggestInput`'s popup) take 200 ms; the phones' dialog sheet and its
