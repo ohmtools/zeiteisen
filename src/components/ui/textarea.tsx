@@ -1,5 +1,6 @@
+// ohmtools/design: shadcn/src/components/ui/textarea.tsx (copied by `ohmtools-design add`, do not edit)
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (

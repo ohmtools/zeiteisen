@@ -1,3 +1,4 @@
+// ohmtools/design: shadcn/src/components/ui/collapsible.tsx (copied by `ohmtools-design add`, do not edit)
 import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible";
 
 function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {

@@ -1,18 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { FilePlus, RefreshCw, Search, Sparkles, Upload, WifiOff } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SkillDialog } from "@/components/SkillDialog";
@@ -23,6 +16,7 @@ import { Subjects } from "@/lib/primitives/subject";
 import type { TimetableSource } from "@/lib/primitives/timetable";
 import { blockedRows, finalNames, libraryRows, loadRow, type LibraryRow } from "@/lib/library";
 import { readTimetableFiles, type UploadError } from "@/lib/upload";
+import { DURATION_OUT } from "@/lib/ohmtools/motion";
 import { nameProblemText } from "@/lib/names";
 
 type Props = {
@@ -95,6 +89,13 @@ export function TimetablePickerDialog({
   // render on) builds none; an opening one builds them fresh from the props.
   const [shown, setShown] = useState(open);
   if (open && !shown) setShown(true);
+  // Closed: the rows go once the popup has left (reopened before that, they
+  // stay).
+  useEffect(() => {
+    if (open || !shown) return;
+    const done = setTimeout(() => setShown(false), DURATION_OUT);
+    return () => clearTimeout(done);
+  }, [open, shown]);
   const rows = shown ? libraryRows({ profiles, catalog, uploaded, empties, target }) : [];
   const blocked = blockedRows(rows, picked);
   const chosen = new Set([...picked].filter((key) => !blocked.has(key)));
@@ -187,165 +188,20 @@ export function TimetablePickerDialog({
   };
 
   return (
-    <Dialog
+    <Popup
+      kind="dialog"
       open={open}
       onOpenChange={(next) => {
         if (!next) reset();
         onOpenChange(next);
       }}
-      onOpenChangeComplete={(next) => {
-        // Reopened before the closing animation ended: keep the rows.
-        if (!next && !open) setShown(false);
-      }}
-    >
-      <DialogContent className="compact:max-w-[min(36rem,calc(100%-2rem))]">
-        <DialogHeader>
-          <DialogTitle>{mode === "add" ? m.picker_add_title() : m.picker_new_title()}</DialogTitle>
-          <DialogDescription>
-            {mode === "add" ? m.picker_add_text() : m.picker_new_text()}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {mode === "new-profile" && (
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="picker-name">{m.profile_name()}</Label>
-              <Input
-                id="picker-name"
-                value={nameValue}
-                autoFocus
-                aria-invalid={nameClash || nameProblem !== null || undefined}
-                onChange={(event) => setName(event.target.value)}
-              />
-              {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
-              {nameProblem && <p className="text-sm text-destructive">{nameProblem}</p>}
-            </div>
-          )}
-
-          {offline && (
-            <div className="flex flex-col items-start gap-2 rounded-lg bg-muted p-3">
-              <p className="flex items-center gap-2 text-sm font-medium">
-                <WifiOff className="size-4" />
-                {m.picker_unreachable_title()}
-              </p>
-              <p className="text-xs text-muted-foreground">{m.picker_unreachable_text()}</p>
-              {onRetry && (
-                <Button variant="secondary" size="sm" onClick={onRetry}>
-                  <RefreshCw data-icon="inline-start" />
-                  {m.picker_retry()}
-                </Button>
-              )}
-            </div>
-          )}
-
-          {rows.length > 0 && (
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                className="pl-9"
-                value={query}
-                placeholder={m.picker_search()}
-                aria-label={m.picker_search_label()}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
-          )}
-
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{m.picker_none()}</p>
-          ) : (
-            // The list scrolls inside itself: the dialog keeps its height
-            // however many versions exist. Grouped: new rows first, then the
-            // catalog by folder, then the other profiles' copies. Rows the
-            // profile holds itself only block, they are not listed.
-            <div className="relative -mx-2 flex max-h-[20rem] flex-col gap-3 overflow-y-auto px-2">
-              {sectionsOf(rows, query).map((section) => (
-                <section key={section.key} className="flex flex-col">
-                  {section.title && (
-                    <h3 className="pb-1 text-xs text-muted-foreground">{section.title}</h3>
-                  )}
-                  <ul className="flex flex-col">
-                    {section.rows.map((row) => (
-                      <PickerRow
-                        key={row.key}
-                        row={row}
-                        checked={chosen.has(row.key)}
-                        blocked={blocked.has(row.key)}
-                        inProfile={heldHashes.has(row.hash)}
-                        addedAs={names.get(row.key)}
-                        onToggle={(checked) =>
-                          setPicked((previous) => {
-                            const next = new Set(previous);
-                            if (checked) next.add(row.key);
-                            else next.delete(row.key);
-                            return next;
-                          })
-                        }
-                      />
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            <input
-              ref={input}
-              type="file"
-              accept=".timetable"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                const selected = [...(event.target.files ?? [])];
-                // Reset so picking the same file again fires `change`.
-                event.target.value = "";
-                if (selected.length > 0) void upload(selected);
-              }}
-            />
-            <div className="-mx-2.5 flex flex-col">
-              <Button variant="ghost" className="justify-start px-2.5" onClick={addEmpty}>
-                <FilePlus data-icon="inline-start" />
-                {m.picker_empty()}
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start px-2.5"
-                onClick={() => input.current?.click()}
-              >
-                <Upload data-icon="inline-start" />
-                {m.picker_upload()}
-              </Button>
-              <Button
-                variant="ghost"
-                className="justify-start px-2.5"
-                onClick={() => setSkillOpen(true)}
-              >
-                <Sparkles data-icon="inline-start" />
-                {m.picker_skill()}
-              </Button>
-            </div>
-            {errors.length > 0 && (
-              <ul className="flex flex-col gap-1 text-sm text-destructive">
-                {errors.map((error) => (
-                  <li key={error.file + error.message}>
-                    {error.file ? `${error.file}: ${error.message}` : error.message}
-                    {error.details && (
-                      <ul className="list-disc pl-4 break-words">
-                        {error.details.map((detail, i) => (
-                          <li key={i}>{detail}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        <DialogFooter>
+      onCancel={close}
+      title={mode === "add" ? m.picker_add_title() : m.picker_new_title()}
+      description={mode === "add" ? m.picker_add_text() : m.picker_new_text()}
+      closeLabel={m.panel_close()}
+      className="compact:max-w-[min(36rem,calc(100%-2rem))]"
+      footer={
+        <>
           <Button variant="ghost" onClick={close}>
             {m.cancel()}
           </Button>
@@ -357,10 +213,150 @@ export function TimetablePickerDialog({
           >
             {mode === "add" ? m.picker_confirm() : m.profile_create()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {mode === "new-profile" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="picker-name">{m.profile_name()}</Label>
+            <Input
+              id="picker-name"
+              value={nameValue}
+              autoFocus
+              aria-invalid={nameClash || nameProblem !== null || undefined}
+              onChange={(event) => setName(event.target.value)}
+            />
+            {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+            {nameProblem && <p className="text-sm text-destructive">{nameProblem}</p>}
+          </div>
+        )}
+
+        {offline && (
+          <div className="flex flex-col items-start gap-2 rounded-lg bg-muted p-3">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <WifiOff className="size-4" />
+              {m.picker_unreachable_title()}
+            </p>
+            <p className="text-xs text-muted-foreground">{m.picker_unreachable_text()}</p>
+            {onRetry && (
+              <Button variant="secondary" size="sm" onClick={onRetry}>
+                <RefreshCw data-icon="inline-start" />
+                {m.picker_retry()}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {rows.length > 0 && (
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              className="pl-9"
+              value={query}
+              placeholder={m.picker_search()}
+              aria-label={m.picker_search_label()}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        )}
+
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{m.picker_none()}</p>
+        ) : (
+          // The list scrolls inside itself: the dialog keeps its height
+          // however many versions exist. Grouped: new rows first, then the
+          // catalog by folder, then the other profiles' copies. Rows the
+          // profile holds itself only block, they are not listed.
+          <div className="relative -mx-2 flex max-h-[20rem] flex-col gap-3 overflow-y-auto px-2">
+            {sectionsOf(rows, query).map((section) => (
+              <section key={section.key} className="flex flex-col">
+                {section.title && (
+                  <h3 className="pb-1 text-xs text-muted-foreground">{section.title}</h3>
+                )}
+                <ul className="flex flex-col">
+                  {section.rows.map((row) => (
+                    <PickerRow
+                      key={row.key}
+                      row={row}
+                      checked={chosen.has(row.key)}
+                      blocked={blocked.has(row.key)}
+                      inProfile={heldHashes.has(row.hash)}
+                      addedAs={names.get(row.key)}
+                      onToggle={(checked) =>
+                        setPicked((previous) => {
+                          const next = new Set(previous);
+                          if (checked) next.add(row.key);
+                          else next.delete(row.key);
+                          return next;
+                        })
+                      }
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <input
+            ref={input}
+            type="file"
+            accept=".timetable"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              const selected = [...(event.target.files ?? [])];
+              // Reset so picking the same file again fires `change`.
+              event.target.value = "";
+              if (selected.length > 0) void upload(selected);
+            }}
+          />
+          <div className="-mx-2.5 flex flex-col">
+            <Button variant="ghost" className="justify-start px-2.5" onClick={addEmpty}>
+              <FilePlus data-icon="inline-start" />
+              {m.picker_empty()}
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start px-2.5"
+              onClick={() => input.current?.click()}
+            >
+              <Upload data-icon="inline-start" />
+              {m.picker_upload()}
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start px-2.5"
+              onClick={() => setSkillOpen(true)}
+            >
+              <Sparkles data-icon="inline-start" />
+              {m.picker_skill()}
+            </Button>
+          </div>
+          {errors.length > 0 && (
+            <ul className="flex flex-col gap-1 text-sm text-destructive">
+              {errors.map((error) => (
+                <li key={error.file + error.message}>
+                  {error.file ? `${error.file}: ${error.message}` : error.message}
+                  {error.details && (
+                    <ul className="list-disc pl-4 break-words">
+                      {error.details.map((detail, i) => (
+                        <li key={i}>{detail}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
       <SkillDialog open={skillOpen} onOpenChange={setSkillOpen} />
-    </Dialog>
+    </Popup>
   );
 }
 

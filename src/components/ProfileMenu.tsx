@@ -1,29 +1,16 @@
 import { useState, type ReactNode } from "react";
 import { Check, Copy, Lock, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ProfileNameDialog } from "@/components/ProfileNameDialog";
 import { PROFILE_TRIGGER, ProfileTriggerContent } from "@/components/ProfileTrigger";
 import type { Catalog } from "@/lib/primitives/catalog";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import { duplicateName, nameTaken, profileByName, type Profile } from "@/lib/primitives/profile";
-import type { Step } from "@/lib/media";
 
 type Props = {
-  step: Step;
   profiles: Profile[];
   activeName: string;
   // The lecture period the calendar export runs over.
@@ -41,13 +28,12 @@ type Props = {
 };
 
 // Everything about profiles, behind the header's profile button: a popover,
-// a drawer on phones. The profiles with the active one ticked and a lock on
+// a drawer on phones (`Popup`). The profiles with the active one ticked and a lock on
 // locked ones, each with rename, duplicate and delete; then a new profile,
 // the import, and the active profile's exports (.ics, link, .profile), which
 // work while it is locked. Lock itself is the button next to it. Lives in
 // the deferred chunk; App shows a disabled look-alike trigger until then.
 export function ProfileMenu({
-  step,
   profiles,
   activeName,
   dates,
@@ -74,6 +60,7 @@ export function ProfileMenu({
 
   const body = (
     <div className="flex flex-col gap-3 text-sm">
+      <h2 className="text-base font-semibold">{m.groups_profile()}</h2>
       <div className="-mx-2 flex flex-col">
         {profiles.map((profile) => (
           <div key={profile.name} className="flex items-center">
@@ -137,32 +124,24 @@ export function ProfileMenu({
     </div>
   );
 
-  const trigger = (
-    <Button variant="ghost" className={PROFILE_TRIGGER} aria-label={m.profile_menu()} />
-  );
-  const content = <ProfileTriggerContent name={activeName} />;
-
   return (
     <>
-      {step === "narrow" ? (
-        <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
-          <DrawerTrigger render={trigger}>{content}</DrawerTrigger>
-          <DrawerContent>
-            <div className="relative flex flex-col gap-3 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <DrawerTitle className="text-base font-semibold">{m.groups_profile()}</DrawerTitle>
-              {body}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger render={trigger}>{content}</PopoverTrigger>
-          <PopoverContent align="start" className="w-80 gap-3">
-            <PopoverTitle className="text-base font-semibold">{m.groups_profile()}</PopoverTitle>
-            {body}
-          </PopoverContent>
-        </Popover>
-      )}
+      <Popup
+        kind="popover"
+        trigger={
+          <Button variant="ghost" className={PROFILE_TRIGGER} aria-label={m.profile_menu()}>
+            <ProfileTriggerContent name={activeName} />
+          </Button>
+        }
+        open={open}
+        onOpenChange={setOpen}
+        title={m.groups_profile()}
+        titleHidden
+        align="start"
+        className="gap-3 compact:w-80"
+      >
+        {body}
+      </Popup>
 
       <ProfileNameDialog
         open={renaming !== null}
@@ -190,31 +169,22 @@ export function ProfileMenu({
         }}
       />
 
-      <AlertDialog
+      <Popup
+        kind="question"
         open={removing !== null}
         onOpenChange={(next) => {
           if (!next) setRemoving(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.profile_delete_title({ name: removing ?? "" })}</AlertDialogTitle>
-            <AlertDialogDescription>{m.profile_delete_text()}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (removing !== null) onRemove(removing);
-                setRemoving(null);
-              }}
-            >
-              {m.profile_delete_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={m.profile_delete_title({ name: removing ?? "" })}
+        description={m.profile_delete_text()}
+        action={m.profile_delete_confirm()}
+        destructive
+        onAction={() => {
+          if (removing !== null) onRemove(removing);
+          setRemoving(null);
+        }}
+        cancel={m.cancel()}
+      />
     </>
   );
 }

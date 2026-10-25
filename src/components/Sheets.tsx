@@ -1,47 +1,15 @@
 import type { ReactNode } from "react";
 import { m } from "@/i18n";
-import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { PhoneDrawer } from "@/components/ohmtools/phone-drawer";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
-// The containers that are dialogs underneath, kept out of the first load
-// (deferred chunk): the compact screens' panel sheet, the phones' drawers.
-
-// Compact screens: groups, notes or settings as a sheet from the right, 380px
-// (user decision), over the grid. The panel brings its own header and close
-// button.
-export function PanelSheet({
-  open,
-  initialFocus = true,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  // `false`: the panel focuses on its own (the notes after N).
-  initialFocus?: boolean;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <SheetContent
-        side="right"
-        showCloseButton={false}
-        initialFocus={initialFocus}
-        className="w-[380px] max-w-[calc(100%-2rem)] gap-0 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] data-[side=right]:sm:max-w-[380px]"
-      >
-        {children}
-      </SheetContent>
-    </Sheet>
-  );
-}
+// The grid's details, kept out of the first load (deferred chunk). Panels,
+// popups and their drawers are the design's (`@/components/ohmtools`).
 
 // A block's details (or an all-day chip's events): a drawer from the bottom
-// on phones, a sheet from the right on a phone turned sideways.
+// on phones (the design's `PhoneDrawer`), a sheet from the right on a phone
+// turned sideways (no drawers from compact on). Not `Popup`: the grid opens
+// one popover for all blocks at the pointer (`TimetableGrid`).
 export function DetailsSheet({
   open,
   side,
@@ -74,33 +42,8 @@ export function DetailsSheet({
     );
   }
   return (
-    <Drawer open={open} onOpenChange={change} showSwipeHandle>
-      <DrawerContent>
-        <DrawerTitle className="sr-only">{title}</DrawerTitle>
-        <div className="relative overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {children}
-        </div>
-      </DrawerContent>
-    </Drawer>
-  );
-}
-
-// The phones' week picker.
-export function WeekDrawer({
-  open,
-  onOpenChange,
-  children,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  children: ReactNode;
-}) {
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-      <DrawerContent>
-        <DrawerTitle className="sr-only">{m.week_pick()}</DrawerTitle>
-        <div className="pb-[env(safe-area-inset-bottom)]">{children}</div>
-      </DrawerContent>
-    </Drawer>
+    <PhoneDrawer open={open} onOpenChange={change} dismiss="close" title={title} titleHidden>
+      {children}
+    </PhoneDrawer>
   );
 }

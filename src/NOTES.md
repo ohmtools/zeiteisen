@@ -4,22 +4,31 @@
   permission). Everything else is glue: hooks own state, components render,
   `src/lib/*` words and wires. No second model — import types from
   primitives.
-- **First paint = the grid.** `App.tsx` statically imports only the shell
-  (header, view tabs, week nav, week filter, day bar, bottom bar, grid), the
-  state hooks and what they need. The panels (groups, notes), the settings, the
-  profile menu, the sheets and drawers (panel sheet, details, week picker),
-  dialogs and toaster come from ONE deferred chunk: `components/deferred.ts`
-  re-exports them and App takes each through `lazyDeferred` (same `import()`).
-  Never plain `lazy()` for it: that suspends on a component's first render
-  even when the chunk came long ago, and React then holds the content back
-  ~300 ms after the fallback; every panel, sheet and drawer opened for the
-  first time hung that long. `lazyDeferred` answers synchronously once the
-  chunk is in. Anything
-  new that is not the grid goes behind that import. Fallbacks never shift the
-  layout (panels: `null`, the sidebar keeps its width; the profile menu: a
-  disabled look-alike trigger). `vite.config.ts` names only a
-  `react` chunk group, no catch-all `vendor`, so `ics`, `react-day-picker` and
-  base-ui dialogs stay next to their only user.
+- **First paint = the shell and the grid.** `App.tsx` statically imports
+  the design's shell (`AppShell`, `Views`, `ViewControls`, `Panel` with its
+  compact sheet, the toaster; the drawer behind the week picker's `Popup`)
+  plus header, week nav, week filter, day bar, grid, the state hooks and
+  what they need. User decision (2026-10-25): the design's groups load
+  their drawer and dialog code with them, that is fine — the first load
+  should not become unpleasantly long, but no contortions to keep a
+  container out of it (2026-10-25: 208 -> 238 KB gzip). One cheap rule
+  stays: code in the first load takes a popup's own component
+  (`ResponsivePopover` in `WeekNav`), not `Popup`, which brings every kind
+  (menu, select, dialogs: 25 KB gzip). What the containers show stays
+  deferred: the
+  panels' bodies (groups, notes and their header buttons), the settings,
+  the profile menu, the details' sheet, the dialogs come from ONE deferred
+  chunk: `components/deferred.ts` re-exports them and App takes each through
+  `lazyDeferred` (same `import()`). Never plain `lazy()` for it: that
+  suspends on a component's first render even when the chunk came long ago,
+  and React then holds the content back ~300 ms after the fallback; every
+  panel, sheet and drawer opened for the first time hung that long.
+  `lazyDeferred` answers synchronously once the chunk is in. Anything new
+  that is not the shell or the grid goes behind that import. Fallbacks never
+  shift the layout (panel bodies: `null` under the panel's header, the
+  sidebar keeps its width; the profile menu: a disabled look-alike trigger).
+  `vite.config.ts` names only a `react` chunk group, no catch-all `vendor`,
+  so `ics` and `react-day-picker` stay next to their only user.
 - A tab left open across a deploy asks for chunk names that no longer exist
   (`autoUpdate`: the new service worker takes over and drops the old
   precache). `main.tsx` reloads on `vite:preloadError` (at most once a
@@ -52,12 +61,15 @@
   directly is read on the first render; `useStripSharedUrl` strips the URL when the
   import dialog closes (import or cancel), so a reload keeps the link; a link
   some profile already shares exactly opens no dialog.
-- Toasts only through `@/lib/toast`, never `sonner` directly.
-- `src/index.css` is shadcn's generated CSS with the app's theme (colours,
-  kind colours, red accent, warning, grid lines, Geist) and the `compact`,
-  `wide` and `short` variants, nothing else. The view transitions and the
-  reduced-motion switch-off live in `src/motion.css`, imported from it
-  (`src/lib/NOTES.md`, `motion.ts`).
+- Toasts only through the design's `@/lib/ohmtools/toast` (sonner's
+  `toast`), never `sonner` directly. A toast fired before `AppShell`'s
+  toaster subscribed is replayed by sonner, so the state hooks may toast
+  from the first render on.
+- `src/index.css` imports the design's stylesheet
+  (`src/styles/ohmtools.css`: shadcn's CSS with the theme, kind colours, red
+  accent, warning, grid lines, Geist, the `compact`, `wide` and `short`
+  variants, `popup-glass`, the view transitions and the reduced-motion
+  rule) and adds zeiteisen's own CSS below it (none yet).
 - Tests sit beside their module, pure logic only (no component tests), and
   reuse `primitives/fixtures.test-util.ts`. `src/test-setup.ts` stubs
   `localStorage` because paraglide reads the locale from it.

@@ -1,17 +1,19 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { addWeeks, startOfISOWeek } from "date-fns";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
-import { AppHeader, type Panel } from "@/components/AppHeader";
-import { BottomBar } from "@/components/BottomBar";
+import { HeaderActions, HeaderBrand, LockButton, type Panel } from "@/components/AppHeader";
 import { lazyDeferred } from "@/components/lazyDeferred";
 import { DayToggle } from "@/components/DayToggle";
 import { ProfileTriggerFallback } from "@/components/ProfileTrigger";
 import { TimetableGrid, type WeekView } from "@/components/TimetableGrid";
-import { ViewSwitch, WeekFilterSwitch, type View } from "@/components/ViewSwitch";
+import { WeekFilterSwitch, type View } from "@/components/ViewSwitch";
 import { WeekNav } from "@/components/WeekNav";
+import { AppShell } from "@/components/ohmtools/app-shell";
+import { Panel as PanelGroup } from "@/components/ohmtools/panel";
+import { ViewControls, Views } from "@/components/ohmtools/views";
 import { OverridesContext } from "@/components/OverridesContext";
 import type { DataProps } from "@/components/DataControls";
 import type { NotesHandle } from "@/components/NotesSection";
@@ -28,7 +30,6 @@ import { useOnline } from "@/hooks/useOnline";
 import { useOwnData } from "@/hooks/useOwnData";
 import { useSemesterDates } from "@/hooks/useSemesterDates";
 import { useProfiles } from "@/hooks/useProfiles";
-import { useShort, useStep } from "@/hooks/useStep";
 import { useStripSharedUrl } from "@/hooks/useShareLink";
 import { Catalog, CatalogKind, degreeProgramOf } from "@/lib/primitives/catalog";
 import type { SubjectInformation } from "@/lib/primitives/meta";
@@ -48,23 +49,21 @@ import {
 import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
-import { currentStep, isWide } from "@/lib/media";
-import { transition } from "@/lib/motion";
+import { transition } from "@/lib/ohmtools/motion";
+import { currentStep, SHORT_QUERY, useMedia, useStep } from "@/lib/ohmtools/steps";
 import { dateLabel, shortDate } from "@/lib/subjects";
 import { dayPickedIn, defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
 
-// Everything but the grid comes from one deferred chunk (see
+// Everything but the shell and the grid comes from one deferred chunk (see
 // `components/deferred`): rendering any of these on the first render starts
 // the download, and the grid paints without waiting for it.
 const ProfileMenu = lazyDeferred((d) => d.ProfileMenu);
-const PanelSheet = lazyDeferred((d) => d.PanelSheet);
 const GroupTree = lazyDeferred((d) => d.GroupTree);
 const AppDialogs = lazyDeferred((d) => d.AppDialogs);
 const SubjectInfoDialog = lazyDeferred((d) => d.SubjectInfoDialog);
-const AppToaster = lazyDeferred((d) => d.AppToaster);
-const SettingsPage = lazyDeferred((d) => d.SettingsPage);
-const SettingsDialog = lazyDeferred((d) => d.SettingsDialog);
+const Settings = lazyDeferred((d) => d.Settings);
 const NotesSection = lazyDeferred((d) => d.NotesSection);
+const NotesActions = lazyDeferred((d) => d.NotesActions);
 
 export default function App() {
   // "Now" ticks every minute, so a page left open moves on with the clock.
@@ -72,7 +71,7 @@ export default function App() {
   // Narrow (phones), compact (whole week, panels as a sheet) or wide (a
   // sidebar beside the grid), live.
   const step = useStep();
-  const short = useShort();
+  const short = useMedia(SHORT_QUERY);
   // The week the week view shows and the one day of the phone grid: what the
   // user picked while that week (day) lasts, else the current one.
   const [pickedWeek, setPickedWeek] = useState<Picked<number> | null>(null);
@@ -170,6 +169,9 @@ export default function App() {
   const [panel, setPanel] = useState<Panel | null>(() =>
     currentStep() === "wide" ? "groups" : null,
   );
+  // The panel the container shows: the open one, or while a sheet slides
+  // out the one that was open.
+  const [shownPanel, setShownPanel] = useState<Panel>(panel ?? "groups");
   // The groups panel's category view, if one is open (`GroupTree`).
   const [category, setCategory] = useState<CategoryRef | null>(null);
   // The group cell lighting its blocks in the grid (tree ↔ grid, below).
@@ -179,6 +181,7 @@ export default function App() {
   const openPanel = (next: Panel | null) => {
     const update = () => {
       setPanel(next);
+      if (next) setShownPanel(next);
       setNotesByKey(false);
       if (next !== "groups") {
         setCategory(null);
@@ -186,27 +189,23 @@ export default function App() {
         setHighlight(null);
       }
     };
-    // The sidebar slides in or out beside the grid; a phone's page comes in
-    // from the right and goes back the way it came (`src/motion.css`). The
-    // compact sheet brings its own animation.
-    // A panel not shown before waits for the deferred chunk's render.
-    const ready = () =>
-      next === null || (document.querySelector("[data-panel-host]")?.childElementCount ?? 0) > 0;
+    // The design's motion for panels (as `usePanel()`, which holds one
+    // panel, not two): the sidebar slides in or out beside the grid, a
+    // phone's page comes in from the right and goes back the way it came;
+    // the compact sheet brings its own animation.
     if (next === panel || step === "compact") update();
-    else if (step === "wide") transition("panel", update, ready);
-    else transition(next === null ? "back" : "forward", update, ready);
+    else if (step === "wide") transition("panel", update);
+    else transition(next === null ? "back" : "forward", update);
   };
 
-  // The settings: a dialog from compact on, beside whatever panel is open;
-  // on phones a page like a panel's, coming in the same way.
+  // The settings, an area (`Settings`): a dialog on wide screens, beside
+  // whatever panel is open; elsewhere a page coming in from the right (as
+  // `useArea()`).
   const [settings, setSettings] = useState(false);
   const openSettings = (open: boolean) => {
     const update = () => setSettings(open);
-    const ready = () =>
-      !open || (document.querySelector("[data-panel-host]")?.childElementCount ?? 0) > 0;
-    if (step === "narrow" && open !== settings) {
-      transition(open ? "forward" : "back", update, ready);
-    } else update();
+    if (step !== "wide" && open !== settings) transition(open ? "forward" : "back", update);
+    else update();
   };
 
   // N, anywhere but in a field, a dialog or a menu: to the notes, caret at
@@ -224,12 +223,14 @@ export default function App() {
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!isNotesShortcut(event)) return;
+      // No keyboard shortcuts on phones (DESIGN.md, "Elements by step").
+      if (!isNotesShortcut(event) || currentStep() === "narrow") return;
       event.preventDefault();
       editPending.current = true;
       // The notes have to be on screen before the text area takes the focus.
       flushSync(() => {
         setPanel("notes");
+        setShownPanel("notes");
         setSettings(false);
         setNotesByKey(true);
         setHighlight(null);
@@ -250,7 +251,7 @@ export default function App() {
   // details jump to its group cell, which flashes for a moment.
   const [flash, setFlash] = useState<(SubjectRef & { nonce: number }) | null>(null);
   const highlightGroup = (next: Highlight | null) => {
-    const wanted = next && isWide() ? next : null;
+    const wanted = next && currentStep() === "wide" ? next : null;
     setHighlight((previous) => (sameHighlight(previous, wanted) ? previous : wanted));
   };
   const jumpToGroup = (subject: SubjectRef) => {
@@ -381,7 +382,6 @@ export default function App() {
     );
   }
 
-  const viewSwitch = <ViewSwitch value={view} onChange={setView} />;
   const weekControl =
     view === "week" ? (
       <WeekNav
@@ -399,7 +399,6 @@ export default function App() {
   const profileMenu = (
     <Suspense fallback={<ProfileTriggerFallback name={profiles.activeName} />}>
       <ProfileMenu
-        step={step}
         profiles={profiles.profiles}
         activeName={profiles.activeName}
         dates={dates.dates}
@@ -414,11 +413,54 @@ export default function App() {
     </Suspense>
   );
 
-  // One element per panel, whichever container holds it.
-  const panelContent =
-    panel === "groups" ? (
+  // The panel's header (title, buttons, a category's back arrow) and body,
+  // whichever container holds it. The lock stands in the panel's header on
+  // phones, where the app's header is out of sight.
+  const lock = step === "narrow" && (
+    <LockButton locked={profiles.locked} onToggle={profiles.toggleLock} />
+  );
+  const openCategory = shownPanel === "groups" ? categoryOf(category, timetables) : null;
+  const header =
+    shownPanel === "notes"
+      ? {
+          title: m.notes_title(),
+          actions: (
+            <Suspense fallback={null}>
+              <NotesActions notes={notes} onChange={setNotes} />
+            </Suspense>
+          ),
+        }
+      : openCategory
+        ? {
+            title:
+              openCategory.category === null
+                ? m.tree_no_group_title()
+                : m.tree_category({ category: openCategory.category }),
+            subtitle: openCategory.timetableName,
+            actions: lock,
+            onBack: () => setCategory(null),
+          }
+        : {
+            title: m.panel_groups(),
+            actions: (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={profiles.locked}
+                  aria-label={m.profile_add_timetables()}
+                  title={m.profile_add_timetables()}
+                  onClick={() => setPicking("add")}
+                >
+                  <Plus />
+                </Button>
+                {lock}
+              </>
+            ),
+          };
+  const panelBody =
+    shownPanel === "groups" ? (
       <GroupTree
-        step={step}
         timetables={timetables}
         locked={profiles.locked}
         catalog={catalog}
@@ -434,145 +476,130 @@ export default function App() {
         onAddTimetables={() => setPicking("add")}
         onToggleLock={profiles.toggleLock}
         onHighlight={highlightGroup}
-        onClose={() => openPanel(null)}
         flash={flash}
       />
-    ) : panel === "notes" ? (
+    ) : (
       <NotesSection
         ref={notesHandle}
-        step={step}
         notes={notes}
         onChange={setNotes}
-        onClose={() => openPanel(null)}
         onLeave={() => gridRef.current?.focus()}
       />
-    ) : null;
-
-  // Phones: a panel (or the settings) is a page of its own, in place of grid
-  // and bars.
-  const page = step === "narrow" && (panel !== null || settings);
+    );
 
   return (
     // Names and building links for every block and the subject editor.
     <OverridesContext value={overrides}>
-      {/* Every step is exactly one viewport tall, the page never scrolls:
-          the grid, the sidebar and the pages scroll inside themselves. */}
-      <div className="flex h-dvh flex-col overflow-hidden text-sm">
-        <h1 className="sr-only">{m.app_title()}</h1>
-
-        {page ? (
-          <div
-            data-panel-host
-            className="flex min-h-0 flex-1 flex-col pt-[env(safe-area-inset-top)]"
-          >
-            <Suspense fallback={null}>
-              {settings ? (
-                <SettingsPage onClose={() => openSettings(false)} {...dataProps} />
-              ) : (
-                panelContent
-              )}
-            </Suspense>
-          </div>
-        ) : (
+      {/* The design's shell (`AppShell`): one viewport tall, the page never
+          scrolls; the header, the bar at the bottom on phones, the wide
+          sidebar, pages over everything and the toaster. The groups below
+          place themselves into it. Toasts are transient feedback only
+          (upload, import, copy, download): anything the user has to act on
+          stays on the page itself. */}
+      <AppShell
+        title={m.app_title()}
+        brand={
+          <HeaderBrand
+            step={step}
+            profile={profileMenu}
+            locked={profiles.locked}
+            onToggleLock={profiles.toggleLock}
+            welcome={welcome}
+          />
+        }
+        actions={
+          <HeaderActions
+            step={step}
+            locked={profiles.locked}
+            onToggleLock={profiles.toggleLock}
+            panel={panel}
+            onPanel={openPanel}
+            settings={settings}
+            onSettings={() => openSettings(!settings)}
+            welcome={welcome}
+          />
+        }
+      >
+        {/* "Week | General" with the week (or the week filter): in the header
+            from compact on, in the bar at the bottom on phones, the day bar
+            under them. */}
+        {!welcome && (
           <>
-            <AppHeader
-              step={step}
-              profile={profileMenu}
-              locked={profiles.locked}
-              onToggleLock={profiles.toggleLock}
-              views={
-                <>
-                  {viewSwitch}
-                  {weekControl}
-                </>
-              }
-              panel={panel}
-              onPanel={openPanel}
-              settings={settings}
-              onSettings={() => openSettings(!settings)}
-              welcome={welcome}
+            <Views
+              value={view}
+              onValueChange={setView}
+              items={[
+                { value: "week", label: m.view_week() },
+                { value: "general", label: m.view_general() },
+              ]}
+              label={m.view_label()}
             />
-            <div className="flex min-h-0 flex-1">
-              <main
-                ref={gridRef}
-                tabIndex={-1}
-                className="flex min-h-0 min-w-0 flex-1 flex-col p-4 pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] outline-none compact:p-6 compact:pr-[max(1.5rem,env(safe-area-inset-right))] compact:pl-[max(1.5rem,env(safe-area-inset-left))] short:py-3"
-              >
-                {welcome ? (
-                  <Welcome
-                    onCatalog={() => setPicking("add")}
-                    onImport={() => setImporting(true)}
-                    onEmpty={() => {
-                      const name = addEmptyTimetable();
-                      if (name) openPanel("groups");
-                    }}
-                  />
-                ) : (
-                  <TimetableGrid
-                    entries={entries}
-                    week={week}
-                    step={step}
-                    short={short}
-                    overlay={overlay}
-                    highlight={(step === "wide" ? highlight : null) ?? categoryHighlight}
-                    actions={actions}
-                    selectedDay={day}
-                    onSelectDay={pickDay}
-                    onSwipeWeek={
-                      view === "week"
-                        ? (direction) => pickWeek(addWeeks(weekStart, direction))
-                        : undefined
-                    }
-                  />
-                )}
-              </main>
-              {/* Wide: the panel beside the grid, closable (user decision). */}
-              {step === "wide" && panel !== null && (
-                <aside
-                  data-vt="panel"
-                  data-panel-host
-                  className="flex min-h-0 w-[340px] shrink-0 flex-col border-l pr-[env(safe-area-inset-right)]"
-                >
-                  <Suspense fallback={null}>{panelContent}</Suspense>
-                </aside>
-              )}
-            </div>
-            {step === "narrow" && !welcome && (
-              <BottomBar>
-                {viewSwitch}
-                {weekControl}
+            <ViewControls
+              narrow={
                 <DayToggle
                   value={day}
                   onChange={pickDay}
                   weekStart={view === "week" ? weekStart : null}
                 />
-              </BottomBar>
-            )}
-            {/* Compact: a sheet from the right, over the grid. */}
-            {step === "compact" && (
-              <Suspense fallback={null}>
-                <PanelSheet
-                  open={panel !== null}
-                  initialFocus={!(panel === "notes" && notesByKey)}
-                  onClose={() => openPanel(null)}
-                >
-                  {panelContent}
-                </PanelSheet>
-              </Suspense>
-            )}
-            {step !== "narrow" && (
-              <Suspense fallback={null}>
-                <SettingsDialog
-                  open={settings}
-                  onClose={() => openSettings(false)}
-                  {...dataProps}
-                />
-              </Suspense>
-            )}
+              }
+            >
+              {weekControl}
+            </ViewControls>
           </>
         )}
+        <div
+          ref={gridRef}
+          tabIndex={-1}
+          className="flex min-h-0 min-w-0 flex-1 flex-col p-4 pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] outline-none compact:p-6 compact:pr-[max(1.5rem,env(safe-area-inset-right))] compact:pl-[max(1.5rem,env(safe-area-inset-left))] short:py-3"
+        >
+          {welcome ? (
+            <Welcome
+              onCatalog={() => setPicking("add")}
+              onImport={() => setImporting(true)}
+              onEmpty={() => {
+                const name = addEmptyTimetable();
+                if (name) openPanel("groups");
+              }}
+            />
+          ) : (
+            <TimetableGrid
+              entries={entries}
+              week={week}
+              step={step}
+              short={short}
+              overlay={overlay}
+              highlight={(step === "wide" ? highlight : null) ?? categoryHighlight}
+              actions={actions}
+              selectedDay={day}
+              onSelectDay={pickDay}
+              // Swipes change the week where a finger may be the pointer:
+              // phones and compact screens, never wide ones (DESIGN.md,
+              // "Elements by step"); the buttons stay.
+              onSwipeWeek={
+                view === "week" && step !== "wide"
+                  ? (direction) => pickWeek(addWeeks(weekStart, direction))
+                  : undefined
+              }
+            />
+          )}
+        </div>
+
+        {/* Groups or notes: a sidebar on wide screens (closable, user
+            decision), a sheet from the right on compact ones, a page of its
+            own on phones. */}
+        <PanelGroup
+          open={panel !== null}
+          onClose={() => openPanel(null)}
+          {...header}
+          initialFocus={!(panel === "notes" && notesByKey)}
+          closeLabel={m.panel_close()}
+          backLabel={m.panel_back()}
+        >
+          <Suspense fallback={null}>{panelBody}</Suspense>
+        </PanelGroup>
 
         <Suspense fallback={null}>
+          <Settings open={settings} onClose={() => openSettings(false)} {...dataProps} />
           <AppDialogs
             profiles={profiles}
             catalog={offerCatalog}
@@ -591,14 +618,23 @@ export default function App() {
             onRefreshCatalog={() => refreshCatalog()}
           />
           <SubjectInfoDialog info={subjectInfo} onClose={() => setSubjectInfo(null)} />
-          {/* Transient feedback only (upload, import, copy, download); anything
-            the user has to act on stays on the page itself. `@/lib/toast`
-            holds every toast until this is mounted. */}
-          <AppToaster />
         </Suspense>
-      </div>
+      </AppShell>
     </OverridesContext>
   );
+}
+
+// The category view open in the groups panel, if it still exists (a
+// timetable removed or changed takes it away: the overview shows).
+function categoryOf(
+  category: CategoryRef | null,
+  timetables: ReturnType<typeof useProfiles>["timetables"],
+): CategoryRef | null {
+  if (!category) return null;
+  const timetable = timetables.find((one) => one.name === category.timetableName);
+  const found =
+    timetable && categoriesOf(timetable.subjects).some((one) => one.category === category.category);
+  return found ? category : null;
 }
 
 // The open category view lights its own blocks on wide screens, where grid

@@ -68,9 +68,6 @@ goes through primitives `storage.ts`.
   auto-updated**: the catalog only offers, on the user's click.
 - `useNotes` — `tt.notes.v1`, written on every change (no debounce: a few
   KB of text). A refused write toasts once until a write succeeds again.
-- `useStep` — the layout step (`@/lib/media`) and `useShort`, live through
-  `useSyncExternalStore` on their media queries: turning a phone moves a
-  panel between page, sheet and sidebar. Owns nothing.
 - `useSlideOnChange` — owns nothing: calls back with the direction a number
   moved (week, day, category) in a layout effect, so the animation started
   there covers the new state from its first frame; never on mount.

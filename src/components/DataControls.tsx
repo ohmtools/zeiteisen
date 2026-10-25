@@ -12,16 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import {
   CatalogUrlDialog,
   DegreeNamesDialog,
@@ -33,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { DEGREE_EXTENSION, type CatalogMode } from "@/lib/primitives/catalog";
 import type { Backup, OwnDegreeFile } from "@/lib/primitives/storage";
 import { downloadBackup, readBackupFile, restoreBackup } from "@/lib/backup";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 
 // What App hands the settings panel.
 export type DataProps = {
@@ -280,40 +271,31 @@ export function useDataControls({
         onSave={onCatalogUrl}
       />
 
-      <AlertDialog
+      <Popup
+        kind="question"
         open={restoring !== null}
         onOpenChange={(open) => {
           if (!open) setRestoring(null);
         }}
+        title={m.backup_restore_title()}
+        description={m.backup_restore_text({
+          current: profileCount,
+          count: restoring?.profiles.length ?? 0,
+        })}
+        action={m.backup_restore_confirm()}
+        destructive
+        onAction={() => {
+          if (restoring && !restoreBackup(restoring)) toast.error(m.upload_error_storage());
+          setRestoring(null);
+        }}
+        cancel={m.cancel()}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.backup_restore_title()}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {m.backup_restore_text({
-                current: profileCount,
-                count: restoring?.profiles.length ?? 0,
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {/* The way back, should the backup turn out to be the wrong one. */}
-          <Button variant="secondary" onClick={() => downloadBackup()}>
-            <Download data-icon="inline-start" />
-            {m.backup_save_first()}
-          </Button>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (restoring && !restoreBackup(restoring)) toast.error(m.upload_error_storage());
-              }}
-            >
-              {m.backup_restore_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* The way back, should the backup turn out to be the wrong one. */}
+        <Button variant="secondary" onClick={() => downloadBackup()}>
+          <Download data-icon="inline-start" />
+          {m.backup_save_first()}
+        </Button>
+      </Popup>
 
       <DeleteDataDialog open={deleting} onOpenChange={setDeleting} />
     </>

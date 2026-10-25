@@ -64,8 +64,19 @@ semesters.
 - All UI strings via paraglide (`messages/en.json` + `messages/de.json`,
   then `npm run messages`), imported from `@/i18n`. Catalog / dates texts are
   `{ de, en }` rendered with `localized()`.
-- Keep the entry chunk free of panel, sheet, dialog and menu code
-  (`src/components/deferred.ts`; toasts via `@/lib/toast`).
+- The first load is the shell and the grid. The design's containers
+  (`AppShell`, `Panel`, `Popup` with their sheet, drawer and dialog code,
+  the toaster) may be in it (user decision: no contortions, but keep the
+  load from getting unpleasantly long); what they show — panel bodies,
+  settings, profile menu, dialogs — comes from the deferred chunk
+  (`src/components/deferred.ts`). Toasts via `@/lib/ohmtools/toast`.
+- **The design** ([ohmtools/design](https://github.com/ohmtools/design),
+  rules in its `DESIGN.md`) wins over this app where they disagree.
+  `src/components/ui/`, `src/components/ohmtools/`, `src/lib/ohmtools/` and
+  `src/styles/ohmtools.css` are its copies: never edit them here; change the
+  design, then `npx --yes github:ohmtools/design add <name>` (CI checks
+  them). Build the UI from its element groups (`AppShell`, `Views`, `Panel`,
+  `Area`, `Popup`, `toast()`), not from single elements.
 
 ## Where the details live
 
@@ -78,7 +89,7 @@ directory-specific knowledge there, not here.
 - `src/lib/NOTES.md` — app glue: picker rows, share link, ICS, kind colours, backup.
 - `src/hooks/NOTES.md` — persisted state.
 - `src/components/NOTES.md` — shell, panels, bottom bar, grid, tree ↔ grid, group tree.
-- `src/components/ui/NOTES.md` — shadcn rules and hand-edits.
+- `src/components/ui/NOTES.md` — the design's copies, shadcn rules and hand-edits.
 - `scripts/NOTES.md` — schema, catalog index and AI skill zip generators.
 - `skill/zeiteisen-generator/` — the downloadable AI skill (settings), also
   the plugin `zeiteisen` of the `ohmtools/claude-plugins` marketplace, which
@@ -113,7 +124,7 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
 ## Global UI decisions
 
 - The redesign (user decision, a complete switch): shadcn `base-vega` (Base
-  UI) with the app's own theme in `src/index.css` — OLED black / white
+  UI) with the design's theme (`src/styles/ohmtools.css`) — OLED black / white
   grounds, neutral primary, red (`--accent-red`) as the ONE accent, blocks
   coloured by kind (`--kind-*`), never by timetable. Geist and Geist Mono
   via `@fontsource` (no CDN: the app runs offline); mono only for times,
@@ -126,22 +137,24 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
   toggle**, no counters or legends except where a number tells things apart
   ("14 of 40 picked") — user decisions, do not bring back.
 - Three steps, the same content in other containers (`compact:` / `wide:`
-  variants, `@/lib/media`): narrow (below 40rem: one day, panels as pages,
-  tabs + week + day bar at the bottom), compact (from 40rem or a short
-  landscape screen: the whole week, one header row, panels as a 380px sheet
-  from the right), wide (from 64rem AND 600px height: a closable 340px
-  sidebar beside the grid). Every step is one viewport tall, no page scroll;
-  grid, panels and pages scroll inside themselves.
+  variants, `@/lib/ohmtools/steps`): narrow (below 40rem: one day, panels
+  and settings as pages, every popup a drawer, tabs + week + day bar at the
+  bottom), compact (from 40rem or a short landscape screen: the whole week,
+  one header row, panels as a 380px sheet from the right, popups, settings
+  a page), wide (from 64rem AND 700px height: a closable 340px sidebar
+  beside the grid, settings a dialog). Every step is one viewport tall, no
+  page scroll; grid, panels and pages scroll inside themselves.
 - Groups and notes are panels (sidebar, sheet, page). The settings are not:
-  a dialog with sections on the left, on phones a page of sections, each a
-  page of its own (user decision; room for more settings).
+  an area, a dialog with sections on the left on wide screens, elsewhere a
+  page of sections, each a page of its own (user decision; room for more
+  settings).
 - One spacing unit around every divider: 24px (16px on phones), plus the
   safe areas.
 - Dark mode and language follow the browser; the only language control is
   the tabs in the settings.
 - Check every visible change at 360px and 400px, German and English, at
-  1440px desktop and on a landscape phone (844×390); dark and light where
-  colours are involved.
+  1440px desktop, on a landscape phone (844×390) and an iPad upright
+  (834×1194); dark and light where colours are involved.
 
 ## Verifying UI changes
 

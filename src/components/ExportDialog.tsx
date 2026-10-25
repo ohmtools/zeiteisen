@@ -2,18 +2,10 @@ import { useState } from "react";
 import { addMonths, isBefore, startOfDay } from "date-fns";
 import { CalendarDays } from "lucide-react";
 import { getLocale, m } from "@/i18n";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { LazyCalendar } from "@/components/LazyCalendar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DateRange } from "@/lib/primitives/occurrence";
 
 function dateLabel(date: Date): string {
@@ -32,23 +24,33 @@ function DatePicker({ label, value, onChange }: PickerProps) {
   return (
     <Field>
       <FieldLabel>{label}</FieldLabel>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger render={<Button variant="secondary" className="justify-start" />}>
-          <CalendarDays data-icon="inline-start" />
-          {dateLabel(value)}
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <LazyCalendar
-            mode="single"
-            defaultMonth={value}
-            selected={value}
-            onDayClick={(day) => {
-              onChange(startOfDay(day));
-              setOpen(false);
-            }}
-          />
-        </PopoverContent>
-      </Popover>
+      {/* A popover, on phones a second drawer over the dialog's. */}
+      <Popup
+        kind="popover"
+        trigger={
+          <Button variant="secondary" className="justify-start">
+            <CalendarDays data-icon="inline-start" />
+            {dateLabel(value)}
+          </Button>
+        }
+        open={open}
+        onOpenChange={setOpen}
+        title={label}
+        titleHidden
+        align="start"
+        className="w-auto gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
+      >
+        <LazyCalendar
+          mode="single"
+          defaultMonth={value}
+          selected={value}
+          className="mx-auto"
+          onDayClick={(day) => {
+            onChange(startOfDay(day));
+            setOpen(false);
+          }}
+        />
+      </Popup>
     </Field>
   );
 }
@@ -68,18 +70,16 @@ export function ExportDialog({ open, onOpenChange, onExport }: Props) {
   const invalid = isBefore(end, start);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.export_title()}</DialogTitle>
-          <DialogDescription>{m.export_text()}</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <DatePicker label={m.export_start()} value={start} onChange={setStart} />
-          <DatePicker label={m.export_end()} value={end} onChange={setEnd} />
-          {invalid && <p className="text-sm text-destructive">{m.export_invalid()}</p>}
-        </div>
-        <DialogFooter>
+    <Popup
+      kind="dialog"
+      open={open}
+      onOpenChange={onOpenChange}
+      onCancel={() => onOpenChange(false)}
+      title={m.export_title()}
+      description={m.export_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.cancel()}
           </Button>
@@ -92,8 +92,14 @@ export function ExportDialog({ open, onOpenChange, onExport }: Props) {
           >
             {m.export_confirm()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <DatePicker label={m.export_start()} value={start} onChange={setStart} />
+        <DatePicker label={m.export_end()} value={end} onChange={setEnd} />
+        {invalid && <p className="text-sm text-destructive">{m.export_invalid()}</p>}
+      </div>
+    </Popup>
   );
 }

@@ -1,16 +1,7 @@
 import { Download } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import type { Catalog } from "@/lib/primitives/catalog";
 import { timetablesOutsideCatalog, type Profile } from "@/lib/primitives/profile";
@@ -30,28 +21,21 @@ type Props = {
 // with each file to send along; copying anyway stays possible.
 export function ShareWarningDialog({ open, profile, catalog, onOpenChange, onCopy }: Props) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{m.share_warning_title()}</AlertDialogTitle>
-          <AlertDialogDescription>{m.share_warning_description()}</AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <OutsideList profile={profile} catalog={catalog} />
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              onCopy();
-              onOpenChange(false);
-            }}
-          >
-            {m.share_warning_copy()}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Popup
+      kind="question"
+      open={open}
+      onOpenChange={onOpenChange}
+      title={m.share_warning_title()}
+      description={m.share_warning_description()}
+      action={m.share_warning_copy()}
+      onAction={() => {
+        onCopy();
+        onOpenChange(false);
+      }}
+      cancel={m.cancel()}
+    >
+      <OutsideList profile={profile} catalog={catalog} />
+    </Popup>
   );
 }
 

@@ -1,19 +1,25 @@
-import { cn } from "cn";
-import { m } from "@/i18n";
+// ohmtools/design: shadcn/src/components/ohmtools/github-link.tsx (copied by `ohmtools-design add`, do not edit)
+import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-const REPO_URL = "https://github.com/ohmtools/zeiteisen";
-
-// The GitHub mark as a link to the source, under About in the settings (as
-// in faltung).
-export function GitHubLink({ className }: { className?: string }) {
+// The GitHub mark as a link to the source, under "About" in the settings.
+export function GitHubLink({
+  href,
+  label,
+  className,
+}: {
+  href: string;
+  // The accessible name, in the app's language ("Source code").
+  label: string;
+  className?: string;
+}) {
   return (
     <a
-      href={REPO_URL}
+      href={href}
       target="_blank"
       rel="noreferrer"
-      aria-label={m.source_code()}
-      title={m.source_code()}
+      aria-label={label}
+      title={label}
       className={cn(buttonVariants({ variant: "ghost", size: "icon-xs" }), className)}
     >
       {/* lucide-react no longer ships brand marks. */}

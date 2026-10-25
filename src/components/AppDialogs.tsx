@@ -7,7 +7,7 @@ import type { useProfiles } from "@/hooks/useProfiles";
 import type { Catalog } from "@/lib/primitives/catalog";
 import { timetableByName } from "@/lib/primitives/profile";
 import type { SharedTimetable, TimetableName } from "@/lib/primitives/timetable";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 
 // App's dialogs, lazy with the panels (`components/deferred`). Which one is
 // open stays in App: a share link opened directly sets `importing` on the

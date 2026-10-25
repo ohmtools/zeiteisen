@@ -6,7 +6,7 @@ import "./index.css";
 import App from "./App.tsx";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LaunchMarks } from "@/components/LaunchMarks";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/ohmtools/theme-provider";
 import { followLocaleOfOtherTabs, getLocale } from "@/i18n";
 
 // For the debug info: timings, returns from the background, errors.

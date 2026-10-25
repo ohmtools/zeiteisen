@@ -1,6 +1,7 @@
+// ohmtools/design: shadcn/src/components/ui/alert-dialog.tsx (copied by `ohmtools-design add`, do not edit)
 import * as React from "react";
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 

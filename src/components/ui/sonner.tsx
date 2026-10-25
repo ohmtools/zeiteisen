@@ -1,3 +1,4 @@
+// ohmtools/design: shadcn/src/components/ui/sonner.tsx (copied by `ohmtools-design add`, do not edit)
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,

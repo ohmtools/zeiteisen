@@ -1,5 +1,6 @@
+// ohmtools/design: shadcn/src/components/ui/separator.tsx (copied by `ohmtools-design add`, do not edit)
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 function Separator({ className, orientation = "horizontal", ...props }: SeparatorPrimitive.Props) {
   return (

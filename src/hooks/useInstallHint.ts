@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { m } from "@/i18n";
 import { loadIosHintShown, saveIosHintShown } from "@/lib/primitives/storage";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 
 // Safari on iOS deletes a website's storage after 7 days without a visit,
 // unless the app was added to the home screen. Said once per device, in a

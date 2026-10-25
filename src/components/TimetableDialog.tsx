@@ -1,24 +1,8 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nameProblemText } from "@/lib/names";
@@ -66,77 +50,67 @@ export function TimetableDialog({
 
   return (
     <>
-      <Dialog
+      <Popup
+        kind="dialog"
         open={name !== null && !locked && !removing}
         onOpenChange={(open) => {
           if (!open) onClose();
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{m.timetable_manage_title()}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="timetable-name">{m.profile_name()}</Label>
-            <Input
-              id="timetable-name"
-              value={draft}
-              autoFocus
-              aria-invalid={problem !== null || undefined}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") save();
-              }}
-            />
-            {problem && <p className="text-sm text-destructive">{problem}</p>}
-          </div>
-          <Button
-            variant="ghost"
-            className="-ml-2.5 justify-self-start px-2.5 text-destructive"
-            onClick={() => setRemoving(true)}
-          >
-            <Trash2 data-icon="inline-start" />
-            {m.timetable_remove()}
-          </Button>
-          <DialogFooter>
+        onCancel={onClose}
+        title={m.timetable_manage_title()}
+        closeLabel={m.panel_close()}
+        footer={
+          <>
             <Button variant="ghost" onClick={onClose}>
               {m.cancel()}
             </Button>
             <Button disabled={problem !== null} onClick={save}>
               {m.profile_save()}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="timetable-name">{m.profile_name()}</Label>
+          <Input
+            id="timetable-name"
+            value={draft}
+            autoFocus
+            aria-invalid={problem !== null || undefined}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") save();
+            }}
+          />
+          {problem && <p className="text-sm text-destructive">{problem}</p>}
+        </div>
+        <Button
+          variant="ghost"
+          className="-ml-2.5 justify-start self-start px-2.5 text-destructive"
+          onClick={() => setRemoving(true)}
+        >
+          <Trash2 data-icon="inline-start" />
+          {m.timetable_remove()}
+        </Button>
+      </Popup>
 
-      <AlertDialog
+      <Popup
+        kind="question"
         open={removing && name !== null}
         onOpenChange={(open) => {
           if (!open) setRemoving(false);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.tree_remove_title({ name: name ?? "" })}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {m.tree_remove_text({ name: name ?? "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                onRemove();
-                setRemoving(false);
-                onClose();
-              }}
-            >
-              {m.tree_remove_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={m.tree_remove_title({ name: name ?? "" })}
+        description={m.tree_remove_text({ name: name ?? "" })}
+        action={m.tree_remove_confirm()}
+        destructive
+        onAction={() => {
+          onRemove();
+          setRemoving(false);
+          onClose();
+        }}
+        cancel={m.cancel()}
+      />
     </>
   );
 }

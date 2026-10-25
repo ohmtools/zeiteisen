@@ -19,16 +19,14 @@ import {
 } from "lucide-react";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
-import { toast } from "@/lib/toast";
-import { slideIn } from "@/lib/motion";
+import { toast } from "@/lib/ohmtools/toast";
+import { slideIn } from "@/lib/ohmtools/motion";
 import { useSlideOnChange } from "@/hooks/useSlideOnChange";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { GroupRuler } from "@/components/GroupCell";
-import { LockButton } from "@/components/AppHeader";
-import { PanelHeader } from "@/components/PanelHeader";
 import { TimetableDialog } from "@/components/TimetableDialog";
 import type { EditRequest } from "@/components/SubjectEditor";
 import type { Catalog } from "@/lib/primitives/catalog";
@@ -59,7 +57,6 @@ import {
   type Toggle,
 } from "@/lib/groupToggle";
 import type { Highlight, SubjectRef } from "@/lib/link";
-import type { Step } from "@/lib/media";
 import { dateLabel, dayName, slotShort } from "@/lib/subjects";
 import { warningLines } from "@/lib/warnings";
 
@@ -68,7 +65,6 @@ import { warningLines } from "@/lib/warnings";
 export type CategoryRef = { timetableName: TimetableName; category: GroupCategory | null };
 
 type Props = {
-  step: Step;
   timetables: Timetable[];
   locked: boolean;
   // What the headings show about the catalog: offline nothing can be checked.
@@ -89,7 +85,6 @@ type Props = {
   onToggleLock: () => void;
   // The group cell under the mouse or focus, whose blocks the grid keeps lit.
   onHighlight?: (highlight: Highlight | null) => void;
-  onClose: () => void;
   // A grid block's cell to show: the overview, the cell scrolled into view
   // and flashing. `nonce` tells two jumps to the same cell apart.
   flash?: (SubjectRef & { nonce: number }) | null;
@@ -138,10 +133,10 @@ const STATUS_ICON = {
 };
 
 // The group selection of the active profile: one section per timetable, or
-// one category of one timetable (`CategoryView`). A panel: sidebar, sheet or
-// page. Lives in the deferred chunk.
+// one category of one timetable (`CategoryView`). The body of a panel
+// (`Panel`: sidebar, sheet or page); App gives it its header, the category's
+// title and back arrow too (`groupsHeader`). Lives in the deferred chunk.
 export function GroupTree({
-  step,
   timetables,
   locked,
   catalog,
@@ -157,11 +152,9 @@ export function GroupTree({
   onAddTimetables,
   onToggleLock,
   onHighlight,
-  onClose,
   flash = null,
 }: Props) {
   const tree = buildTree(timetables);
-  const narrow = step === "narrow";
   // What each group (by timetable and `groupKey`) had picked when a switch
   // turned it off, for this session only: switching it on brings it back
   // (user decision).
@@ -194,7 +187,6 @@ export function GroupTree({
       node.timetable.name,
       toggleGroup(node.timetable.subjects, group, keptOf(node.timetable.name).get(groupKey(group))),
     );
-  const lock = narrow && <LockButton locked={locked} onToggle={onToggleLock} />;
   // Into a category and back: the new view slides in from that side.
   const viewRef = useRef<HTMLDivElement>(null);
   useSlideOnChange(openNode && openCategory ? 1 : 0, (direction) => {
@@ -203,15 +195,11 @@ export function GroupTree({
 
   if (openNode && openCategory) {
     return (
-      <div ref={viewRef} className="flex min-h-0 flex-1 flex-col">
+      <div ref={viewRef} className="flex flex-col">
         <CategoryView
           node={openNode}
           category={openCategory}
           locked={locked}
-          narrow={narrow}
-          lock={lock}
-          onBack={() => onCategory(null)}
-          onClose={onClose}
           onToggle={toggleGroupOf(openNode)}
           onSetEnabled={(indexes, enabled) =>
             onSetEnabled(openNode.timetable.name, indexes, enabled)
@@ -224,28 +212,8 @@ export function GroupTree({
   }
 
   return (
-    <div ref={viewRef} className="flex min-h-0 flex-1 flex-col">
-      <PanelHeader
-        title={m.panel_groups()}
-        actions={
-          <>
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled={locked}
-              aria-label={m.profile_add_timetables()}
-              title={m.profile_add_timetables()}
-              onClick={onAddTimetables}
-            >
-              <Plus />
-            </Button>
-            {lock}
-          </>
-        }
-        onBack={narrow ? onClose : undefined}
-        onClose={narrow ? undefined : onClose}
-      />
-      <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)] compact:px-6">
+    <div ref={viewRef} className="flex flex-col">
+      <div className="flex flex-col divide-y">
         {locked && (
           <div className="flex flex-col gap-3 pt-2 pb-6">
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -571,10 +539,6 @@ function CategoryView({
   node,
   category,
   locked,
-  narrow,
-  lock,
-  onBack,
-  onClose,
   onToggle,
   onSetEnabled,
   onEdit,
@@ -583,10 +547,6 @@ function CategoryView({
   node: TimetableNode;
   category: CategoryNode;
   locked: boolean;
-  narrow: boolean;
-  lock: React.ReactNode;
-  onBack: () => void;
-  onClose: () => void;
   onToggle: (group: GroupNode) => void;
   onSetEnabled: (indexes: number[], enabled: boolean) => void;
   onEdit: (index: number) => void;
@@ -604,56 +564,45 @@ function CategoryView({
   const grouped = category.category !== null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <PanelHeader
-        title={
-          grouped ? m.tree_category({ category: category.category! }) : m.tree_no_group_title()
-        }
-        subtitle={timetable.name}
-        actions={lock}
-        onBack={onBack}
-        onClose={narrow ? undefined : onClose}
-      />
-      <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] compact:px-6">
-        <div className="flex flex-col gap-2">
-          <span id={id} className="text-sm font-medium">
-            {m.tree_groups()}
-          </span>
-          <GroupRuler
-            category={category}
+    <div className="flex flex-col gap-4 pb-2">
+      <div className="flex flex-col gap-2">
+        <span id={id} className="text-sm font-medium">
+          {m.tree_groups()}
+        </span>
+        <GroupRuler
+          category={category}
+          subjects={subjects}
+          labelledBy={id}
+          locked={locked}
+          flashIndex={null}
+          onHighlight={onHighlight}
+          onToggle={onToggle}
+        />
+        <PartialHint category={category} subjects={subjects} />
+      </div>
+      <div className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          className="pl-9"
+          value={query}
+          placeholder={m.tree_search({ example: rows[0]?.name ?? "SDS" })}
+          aria-label={m.tree_search_label()}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+      <div className="-mx-2 flex flex-col">
+        {rows.map((row) => (
+          <SubjectFold
+            key={row.key}
+            row={row}
             subjects={subjects}
-            labelledBy={id}
+            grouped={grouped}
             locked={locked}
-            flashIndex={null}
-            onHighlight={onHighlight}
-            onToggle={onToggle}
+            onSetEnabled={onSetEnabled}
+            onEdit={onEdit}
           />
-          <PartialHint category={category} subjects={subjects} />
-        </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            className="pl-9"
-            value={query}
-            placeholder={m.tree_search({ example: rows[0]?.name ?? "SDS" })}
-            aria-label={m.tree_search_label()}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        <div className="-mx-2 flex flex-col">
-          {rows.map((row) => (
-            <SubjectFold
-              key={row.key}
-              row={row}
-              subjects={subjects}
-              grouped={grouped}
-              locked={locked}
-              onSetEnabled={onSetEnabled}
-              onEdit={onEdit}
-            />
-          ))}
-        </div>
+        ))}
       </div>
     </div>
   );

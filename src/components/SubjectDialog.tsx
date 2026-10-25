@@ -3,36 +3,11 @@ import { parseISO } from "date-fns";
 import { AlertTriangle, CalendarPlus, CalendarRange, Trash2 } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LazyCalendar } from "@/components/LazyCalendar";
 import { OverridesContext } from "@/components/OverridesContext";
@@ -78,35 +53,39 @@ type Props = {
 
 const KINDS = Object.values(Kind);
 
-// One dialog to add, edit and delete a subject. It never saves a subject the
-// timetable already holds in exactly that form. That any change ends a
-// catalog timetable's catalog updates was asked about before it opened, in
-// `GroupTree`.
+// One dialog to add, edit and delete a subject (`Popup`: a dialog, a drawer
+// on phones). It never saves a subject the timetable already holds in exactly
+// that form. That any change ends a catalog timetable's catalog updates was
+// asked about before it opened, in `SubjectEditor`.
 export function SubjectDialog({ target, library, onOpenChange, onSave }: Props) {
+  // The last target stays while the dialog closes, so it leaves with its
+  // content.
+  const [shown, setShown] = useState(target);
+  if (target !== null && target !== shown) setShown(target);
+  if (!shown) return null;
   return (
-    <Dialog open={target !== null} onOpenChange={onOpenChange}>
-      {/* Taller than a phone: header and footer stay, the form scrolls. */}
-      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
-        {target && (
-          <SubjectEditor
-            key={`${target.timetable.name}/${target.index ?? "new"}`}
-            target={target}
-            library={library}
-            onClose={() => onOpenChange(false)}
-            onSave={onSave}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+    <SubjectEditor
+      key={`${shown.timetable.name}/${shown.index ?? "new"}`}
+      open={target !== null}
+      onOpenChange={onOpenChange}
+      target={shown}
+      library={library}
+      onClose={() => onOpenChange(false)}
+      onSave={onSave}
+    />
   );
 }
 
 function SubjectEditor({
+  open,
+  onOpenChange,
   target,
   library,
   onClose,
   onSave,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   target: SubjectTarget;
   library: readonly Timetable[];
   onClose: () => void;
@@ -135,8 +114,9 @@ function SubjectEditor({
   const programs = [
     ...new Set([...Object.keys(degrees), draft.degreeProgram].filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b));
+  // "" is none.
   const programItems = [
-    { value: null, label: m.subject_degree_program_none() },
+    { value: "", label: m.subject_degree_program_none() },
     ...programs.map((program) => ({ value: program, label: program })),
   ];
 
@@ -157,14 +137,37 @@ function SubjectEditor({
   };
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{index === null ? m.subject_add_title() : m.subject_edit_title()}</DialogTitle>
-        <DialogDescription>
-          {m.subject_dialog_text({ timetable: timetable.name })}
-        </DialogDescription>
-      </DialogHeader>
-
+    <Popup
+      kind="dialog"
+      open={open}
+      onOpenChange={onOpenChange}
+      onCancel={onClose}
+      title={index === null ? m.subject_add_title() : m.subject_edit_title()}
+      description={m.subject_dialog_text({ timetable: timetable.name })}
+      closeLabel={m.panel_close()}
+      // Taller than the screen: header and footer stay, the form scrolls.
+      className="compact:grid-rows-[auto_minmax(0,1fr)_auto]"
+      footer={
+        <>
+          {original !== null && (
+            <Button
+              variant="ghost"
+              className="text-destructive compact:mr-auto"
+              onClick={() => setDeleting(true)}
+            >
+              <Trash2 data-icon="inline-start" />
+              {m.subject_delete()}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onClose}>
+            {m.cancel()}
+          </Button>
+          <Button disabled={duplicate || unchanged} onClick={save}>
+            {index === null ? m.subject_add_confirm() : m.profile_save()}
+          </Button>
+        </>
+      }
+    >
       <form
         className="relative -mr-4 flex min-h-0 flex-col gap-4 overflow-y-auto pr-4"
         onSubmit={(event) => {
@@ -187,22 +190,14 @@ function SubjectEditor({
         </Field>
 
         <Field label={m.subject_degree_program()} htmlFor={id + "program"}>
-          <Select
-            value={draft.degreeProgram || null}
-            onValueChange={(program) => change({ degreeProgram: program ?? "" })}
+          <Popup
+            kind="select"
+            id={id + "program"}
+            value={draft.degreeProgram}
+            onValueChange={(program) => change({ degreeProgram: program })}
             items={programItems}
-          >
-            <SelectTrigger id={id + "program"} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {programItems.map((item) => (
-                <SelectItem key={item.value ?? ""} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            title={m.subject_degree_program()}
+          />
         </Field>
 
         <Field label={m.subject_kinds()} problem={problemOf(problems, "kinds")}>
@@ -249,41 +244,25 @@ function SubjectEditor({
 
         <div className="grid grid-cols-2 gap-4">
           <Field label={m.subject_repeat()} htmlFor={id + "repeat"}>
-            <Select
+            <Popup<RepeatType>
+              kind="select"
+              id={id + "repeat"}
               value={draft.type}
-              onValueChange={(type) => type && change({ type: type as RepeatType })}
+              onValueChange={(type) => change({ type })}
               items={REPEAT_TYPES.map((type) => ({ value: type, label: repeatTypeName(type) }))}
-            >
-              <SelectTrigger id={id + "repeat"} className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {REPEAT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {repeatTypeName(type)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              title={m.subject_repeat()}
+            />
           </Field>
           {draft.type !== "I" && (
             <Field label={m.subject_day()} htmlFor={id + "day"}>
-              <Select
+              <Popup<Day>
+                kind="select"
+                id={id + "day"}
                 value={draft.day}
-                onValueChange={(day) => day && change({ day: day as Day })}
+                onValueChange={(day) => change({ day })}
                 items={DAYS.map((day) => ({ value: day, label: dayName(day) }))}
-              >
-                <SelectTrigger id={id + "day"} className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS.map((day) => (
-                    <SelectItem key={day} value={day}>
-                      {dayName(day)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                title={m.subject_day()}
+              />
             </Field>
           )}
         </div>
@@ -331,57 +310,34 @@ function SubjectEditor({
         <button type="submit" hidden />
       </form>
 
-      <div className="flex flex-col gap-4">
-        {timetable.origin.kind === "catalog" && index !== null && (
-          <Notice>{m.subject_catalog_warning({ timetable: timetable.name })}</Notice>
-        )}
-        {duplicate && <Notice destructive>{m.subject_error_duplicate()}</Notice>}
-        <DialogFooter>
-          {original !== null && (
-            <Button
-              variant="ghost"
-              className="text-destructive compact:mr-auto"
-              onClick={() => setDeleting(true)}
-            >
-              <Trash2 data-icon="inline-start" />
-              {m.subject_delete()}
-            </Button>
+      {(duplicate || (timetable.origin.kind === "catalog" && index !== null)) && (
+        <div className="flex flex-col gap-4">
+          {timetable.origin.kind === "catalog" && index !== null && (
+            <Notice>{m.subject_catalog_warning({ timetable: timetable.name })}</Notice>
           )}
-          <Button variant="ghost" onClick={onClose}>
-            {m.cancel()}
-          </Button>
-          <Button disabled={duplicate || unchanged} onClick={save}>
-            {index === null ? m.subject_add_confirm() : m.profile_save()}
-          </Button>
-        </DialogFooter>
-      </div>
+          {duplicate && <Notice destructive>{m.subject_error_duplicate()}</Notice>}
+        </div>
+      )}
 
-      <AlertDialog open={deleting} onOpenChange={setDeleting}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.subject_delete_title()}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {m.subject_delete_text({
-                subject: original ? subjectLabel(original) : "",
-                timetable: timetable.name,
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (index !== null) onSave(timetable.subjects.withRemoved(index));
-                setDeleting(false);
-                onClose();
-              }}
-            >
-              {m.subject_delete_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+      {/* Inside the dialog, so it stands over it as its nested popup. */}
+      <Popup
+        kind="question"
+        open={deleting}
+        onOpenChange={setDeleting}
+        title={m.subject_delete_title()}
+        description={m.subject_delete_text({
+          subject: original ? subjectLabel(original) : "",
+          timetable: timetable.name,
+        })}
+        action={m.subject_delete_confirm()}
+        onAction={() => {
+          if (index !== null) onSave(timetable.subjects.withRemoved(index));
+          setDeleting(false);
+          onClose();
+        }}
+        cancel={m.cancel()}
+      />
+    </Popup>
   );
 }
 
@@ -673,20 +629,26 @@ function DatesEditor({
           <CalendarPlus data-icon="inline-start" />
           {dates.length === 0 ? m.subject_add_date() : m.subject_next_date()}
         </Button>
-        <Popover>
-          <PopoverTrigger render={<Button type="button" variant="secondary" size="sm" />}>
-            <CalendarRange data-icon="inline-start" />
-            {m.subject_pick_dates()}
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <LazyCalendar
-              mode="multiple"
-              selected={valid}
-              defaultMonth={valid[valid.length - 1]}
-              onSelect={(picked) => onChange(withDates(draft, picked ?? []))}
-            />
-          </PopoverContent>
-        </Popover>
+        <Popup
+          kind="popover"
+          trigger={
+            <Button type="button" variant="secondary" size="sm">
+              <CalendarRange data-icon="inline-start" />
+              {m.subject_pick_dates()}
+            </Button>
+          }
+          title={m.subject_pick_dates()}
+          titleHidden
+          align="start"
+          className="w-auto gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
+        >
+          <LazyCalendar
+            mode="multiple"
+            selected={valid}
+            defaultMonth={valid[valid.length - 1]}
+            onSelect={(picked) => onChange(withDates(draft, picked ?? []))}
+          />
+        </Popup>
       </div>
     </div>
   );

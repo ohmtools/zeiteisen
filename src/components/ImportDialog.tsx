@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { CircleAlert, CloudDownload, FileUp, Upload, User } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { m } from "@/i18n";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Catalog } from "@/lib/primitives/catalog";
@@ -206,149 +199,20 @@ export function ImportDialog({
   };
 
   return (
-    <Dialog
+    <Popup
+      kind="dialog"
       open={open}
       onOpenChange={(next) => {
         if (!next) reset();
         onOpenChange(next);
       }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.import_title()}</DialogTitle>
-          <DialogDescription>{shared ? m.import_review_text() : m.import_text()}</DialogDescription>
-        </DialogHeader>
-
-        {shared === null ? (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="import-link">{m.import_link()}</Label>
-            <Input
-              id="import-link"
-              value={text}
-              aria-invalid={failed || undefined}
-              autoFocus
-              placeholder={m.import_link_placeholder()}
-              onChange={(event) => {
-                setText(event.target.value);
-                setFailed(false);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") acceptLink();
-              }}
-            />
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".profile"
-              className="hidden"
-              onChange={(event) => {
-                const [file] = event.target.files ?? [];
-                // Reset so picking the same file again fires `change`.
-                event.target.value = "";
-                if (file) void acceptFile(file);
-              }}
-            />
-            <Button
-              variant="secondary"
-              className="self-start"
-              onClick={() => fileInput.current?.click()}
-            >
-              <FileUp data-icon="inline-start" />
-              {m.import_file()}
-            </Button>
-            {/* What the typed link holds, before "Next". */}
-            {!failed && detected !== null && (
-              <p className="text-xs text-muted-foreground">
-                {m.import_detected({ count: detected.length })}
-              </p>
-            )}
-            {failed && <p className="text-sm text-destructive">{m.import_error()}</p>}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="import-name">{m.profile_name()}</Label>
-              <Input
-                id="import-name"
-                value={nameValue}
-                autoFocus
-                aria-invalid={nameClash || nameProblem !== null || undefined}
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void confirm();
-                }}
-              />
-              {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
-              {nameProblem && <p className="text-sm text-destructive">{nameProblem}</p>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">{m.import_timetables()}</p>
-              {shared.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{m.import_none()}</p>
-              ) : (
-                <ul className="flex flex-col divide-y">
-                  {found.map((row, i) => (
-                    <SharedRow
-                      key={i}
-                      id={`import-${i}`}
-                      found={row}
-                      checked={included(i)}
-                      onToggle={(checked) =>
-                        setExcluded((previous) => {
-                          const next = new Set(previous);
-                          if (checked) next.delete(i);
-                          else next.add(i);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
-                </ul>
-              )}
-              <input
-                ref={uploadInput}
-                type="file"
-                accept=".timetable"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  const selected = [...(event.target.files ?? [])];
-                  event.target.value = "";
-                  if (selected.length > 0) void upload(selected);
-                }}
-              />
-              {/* A missing timetable is what an upload is for, so then it is
-                  a labelled button; otherwise the quiet icon fallback. */}
-              {missing ? (
-                <>
-                  <p className="text-sm text-muted-foreground">{m.import_missing_hint()}</p>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="self-start"
-                    onClick={() => uploadInput.current?.click()}
-                  >
-                    <Upload data-icon="inline-start" />
-                    {m.import_upload()}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="self-start"
-                  title={m.import_upload()}
-                  aria-label={m.import_upload()}
-                  onClick={() => uploadInput.current?.click()}
-                >
-                  <Upload />
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
+      // Leaving cancels the whole import, also from the second step.
+      onCancel={close}
+      title={m.import_title()}
+      description={shared ? m.import_review_text() : m.import_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button
             variant="ghost"
             onClick={() => {
@@ -373,9 +237,138 @@ export function ImportDialog({
               {m.import_confirm()}
             </Button>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      {shared === null ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="import-link">{m.import_link()}</Label>
+          <Input
+            id="import-link"
+            value={text}
+            aria-invalid={failed || undefined}
+            autoFocus
+            placeholder={m.import_link_placeholder()}
+            onChange={(event) => {
+              setText(event.target.value);
+              setFailed(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") acceptLink();
+            }}
+          />
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".profile"
+            className="hidden"
+            onChange={(event) => {
+              const [file] = event.target.files ?? [];
+              // Reset so picking the same file again fires `change`.
+              event.target.value = "";
+              if (file) void acceptFile(file);
+            }}
+          />
+          <Button
+            variant="secondary"
+            className="self-start"
+            onClick={() => fileInput.current?.click()}
+          >
+            <FileUp data-icon="inline-start" />
+            {m.import_file()}
+          </Button>
+          {/* What the typed link holds, before "Next". */}
+          {!failed && detected !== null && (
+            <p className="text-xs text-muted-foreground">
+              {m.import_detected({ count: detected.length })}
+            </p>
+          )}
+          {failed && <p className="text-sm text-destructive">{m.import_error()}</p>}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="import-name">{m.profile_name()}</Label>
+            <Input
+              id="import-name"
+              value={nameValue}
+              autoFocus
+              aria-invalid={nameClash || nameProblem !== null || undefined}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void confirm();
+              }}
+            />
+            {nameClash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+            {nameProblem && <p className="text-sm text-destructive">{nameProblem}</p>}
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">{m.import_timetables()}</p>
+            {shared.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{m.import_none()}</p>
+            ) : (
+              <ul className="flex flex-col divide-y">
+                {found.map((row, i) => (
+                  <SharedRow
+                    key={i}
+                    id={`import-${i}`}
+                    found={row}
+                    checked={included(i)}
+                    onToggle={(checked) =>
+                      setExcluded((previous) => {
+                        const next = new Set(previous);
+                        if (checked) next.delete(i);
+                        else next.add(i);
+                        return next;
+                      })
+                    }
+                  />
+                ))}
+              </ul>
+            )}
+            <input
+              ref={uploadInput}
+              type="file"
+              accept=".timetable"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                const selected = [...(event.target.files ?? [])];
+                event.target.value = "";
+                if (selected.length > 0) void upload(selected);
+              }}
+            />
+            {/* A missing timetable is what an upload is for, so then it is
+                  a labelled button; otherwise the quiet icon fallback. */}
+            {missing ? (
+              <>
+                <p className="text-sm text-muted-foreground">{m.import_missing_hint()}</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="self-start"
+                  onClick={() => uploadInput.current?.click()}
+                >
+                  <Upload data-icon="inline-start" />
+                  {m.import_upload()}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="self-start"
+                title={m.import_upload()}
+                aria-label={m.import_upload()}
+                onClick={() => uploadInput.current?.click()}
+              >
+                <Upload />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </Popup>
   );
 }
 

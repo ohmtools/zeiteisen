@@ -7,13 +7,14 @@
          `scripts/app-icons.mjs` renders it from `public/logo.svg`. -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- `viewport-fit=cover`: without it iOS reports every safe-area inset as
-         0, so the bottom bar would sit under the home indicator of an installed PWA.
-         The app pads by `env(safe-area-inset-*)` itself (App's header,
-         grid and pages, BottomBar, the sheets). `interactive-widget=resizes-content`: Android's keyboard
-         shrinks the page instead of covering it, so the full-height notes
-         keep their caret in view (iOS ignores it and scrolls the caret into
-         view by itself). -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+         0, so the bottom bar would sit under the home indicator of an
+         installed PWA. The app pads by `env(safe-area-inset-*)` itself
+         (header, grid and pages, the bar at the bottom, the sheets).
+         `interactive-widget=resizes-visual` (the design's rule): the
+         on-screen keyboard covers the page instead of shrinking it, so it
+         never changes the step; the browser scrolls the caret into view, as
+         iOS always does. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />

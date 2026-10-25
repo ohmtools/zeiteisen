@@ -33,7 +33,9 @@ export function ProfileTriggerContent({ name }: { name: string }) {
   );
 }
 
-export const PROFILE_TRIGGER = "-ml-2 h-9 min-w-0 gap-2 px-2 text-sm";
+// `shrink`: a long name truncates on phones instead of running under the
+// header's buttons (buttons do not shrink by default).
+export const PROFILE_TRIGGER = "-ml-2 h-9 min-w-0 shrink gap-2 px-2 text-sm";
 
 export function ProfileTriggerFallback({ name }: { name: string }) {
   return (

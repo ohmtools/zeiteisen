@@ -2,7 +2,7 @@ import * as z from "zod/mini";
 import { de, en } from "zod/locales";
 import { getLocale, m } from "@/i18n";
 import { cleanTimetableName } from "@/lib/names";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { degreeSchema, locationsSchema, semesterDatesSchema } from "@/lib/primitives/meta";
 import { parseTimetableFile, type TimetableSource } from "@/lib/primitives/timetable";
 

@@ -1,23 +1,27 @@
+// ohmtools/design: shadcn/src/components/ohmtools/panel-header.tsx (copied by `ohmtools-design add`, do not edit)
 import type { ReactNode } from "react";
 import { ChevronLeft, X } from "lucide-react";
-import { m } from "@/i18n";
 import { Button } from "@/components/ui/button";
 
-// The title row of a panel: on phones a back arrow before the title (the
-// panel is a page), elsewhere a close button after the actions. A sub view
-// (a category) has its back arrow everywhere. 56px, like the app header.
+// The title row of a panel or a page: on phones a back arrow before the
+// title (the panel is a page there), elsewhere a close button after the
+// actions. A sub view has its back arrow everywhere. 56px, like the header.
 export function PanelHeader({
   title,
   subtitle,
   actions,
   onBack,
+  backLabel = "Back",
   onClose,
+  closeLabel = "Close",
 }: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   onBack?: () => void;
+  backLabel?: string;
   onClose?: () => void;
+  closeLabel?: string;
 }) {
   return (
     <div className="flex h-14 shrink-0 items-center gap-2 px-4 compact:px-6">
@@ -26,7 +30,7 @@ export function PanelHeader({
           variant="ghost"
           size="icon"
           className="-ml-2"
-          aria-label={m.panel_back()}
+          aria-label={backLabel}
           onClick={onBack}
         >
           <ChevronLeft />
@@ -39,7 +43,7 @@ export function PanelHeader({
       <div className="-mr-2 flex shrink-0 items-center gap-2">
         {actions}
         {onClose && (
-          <Button variant="ghost" size="icon" aria-label={m.panel_close()} onClick={onClose}>
+          <Button variant="ghost" size="icon" aria-label={closeLabel} onClick={onClose}>
             <X />
           </Button>
         )}

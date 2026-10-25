@@ -1,6 +1,7 @@
+// ohmtools/design: shadcn/src/components/ui/dialog.tsx (copied by `ohmtools-design add`, do not edit)
 import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
@@ -38,9 +39,12 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeLabel = "Close",
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
+  // Hand-edit: the close button's name in the app's language.
+  closeLabel?: string;
 }) {
   return (
     <DialogPortal>
@@ -64,7 +68,7 @@ function DialogContent({
             render={<Button variant="ghost" className="absolute top-4 right-4" size="icon-sm" />}
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

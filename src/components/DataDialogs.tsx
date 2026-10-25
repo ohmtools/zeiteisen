@@ -1,36 +1,20 @@
 import { useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { OwnDegreeFile } from "@/lib/primitives/storage";
 import { downloadBackup } from "@/lib/backup";
 import { resetAndReload, type DataPart } from "@/lib/reset";
 import { DataPartsList } from "@/components/DataParts";
 import { appRoot } from "@/lib/catalog";
 import { degreeNames, type DegreeName } from "@/lib/degrees";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 
-// The dialogs behind the settings (`useDataControls`).
+// The dialogs behind the settings (`useDataControls`), each a `Popup`: a
+// dialog, a drawer on phones.
 
 // The own degree files in upload order, each removable on its own; the dialog closes once none is left. Removing is
 // at once, no confirmation: the user still has the file.
@@ -46,45 +30,50 @@ export function OwnDegreesDialog({
   onRemove: (names: string[]) => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.degrees_manage_title()}</DialogTitle>
-          <DialogDescription>{m.degrees_manage_text()}</DialogDescription>
-        </DialogHeader>
-        <ul className="relative flex max-h-72 flex-col divide-y overflow-y-auto">
-          {files.map((file) => (
-            <li key={file.name} className="flex items-center gap-2 py-2">
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm">{file.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {m.degree_subject_count({ count: file.data.subjects.length })}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                title={m.degrees_remove_file({ file: file.name })}
-                aria-label={m.degrees_remove_file({ file: file.name })}
-                onClick={() => onRemove([file.name])}
-              >
-                <Trash2 />
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <DialogFooter>
+    // Removing is at once: leaving loses nothing, it closes like "Close".
+    <Popup
+      kind="dialog"
+      open={open}
+      onOpenChange={onOpenChange}
+      onCancel={() => onOpenChange(false)}
+      title={m.degrees_manage_title()}
+      description={m.degrees_manage_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button
             variant="secondary"
-            className="sm:mr-auto"
+            className="compact:mr-auto"
             onClick={() => onRemove(files.map((file) => file.name))}
           >
             {m.degrees_remove_all()}
           </Button>
           <Button onClick={() => onOpenChange(false)}>{m.close()}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <ul className="relative flex max-h-72 flex-col divide-y overflow-y-auto">
+        {files.map((file) => (
+          <li key={file.name} className="flex items-center gap-2 py-2">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm">{file.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {m.degree_subject_count({ count: file.data.subjects.length })}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              title={m.degrees_remove_file({ file: file.name })}
+              aria-label={m.degrees_remove_file({ file: file.name })}
+              onClick={() => onRemove([file.name])}
+            >
+              <Trash2 />
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Popup>
   );
 }
 
@@ -130,47 +119,48 @@ export function DegreeNamesDialog({
   };
 
   return (
-    <Dialog
+    <Popup
+      kind="dialog"
       open={files.length > 0}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.degree_names_title()}</DialogTitle>
-          <DialogDescription>{m.degree_names_text()}</DialogDescription>
-        </DialogHeader>
-        <div className="relative flex max-h-80 flex-col gap-4 overflow-y-auto">
-          {files.map((file, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              <Label htmlFor={`degree-name-${i}`}>{m.degree_name_label({ file: file.name })}</Label>
-              <Input
-                id={`degree-name-${i}`}
-                value={names[i] ?? ""}
-                autoFocus={i === 0}
-                placeholder={m.degree_name_placeholder()}
-                aria-invalid={checked[i].problem !== null || undefined}
-                aria-describedby={`degree-name-${i}-note`}
-                onChange={(event) => setNames(names.with(i, event.target.value))}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") add();
-                }}
-              />
-              <DegreeNameNote id={`degree-name-${i}-note`} checked={checked[i]} />
-            </div>
-          ))}
-        </div>
-        <DialogFooter>
+      onCancel={onClose}
+      title={m.degree_names_title()}
+      description={m.degree_names_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button variant="ghost" onClick={onClose}>
             {m.cancel()}
           </Button>
           <Button disabled={invalid} onClick={add}>
             {m.degree_names_confirm()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className="relative flex max-h-80 flex-col gap-4 overflow-y-auto">
+        {files.map((file, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <Label htmlFor={`degree-name-${i}`}>{m.degree_name_label({ file: file.name })}</Label>
+            <Input
+              id={`degree-name-${i}`}
+              value={names[i] ?? ""}
+              autoFocus={i === 0}
+              placeholder={m.degree_name_placeholder()}
+              aria-invalid={checked[i].problem !== null || undefined}
+              aria-describedby={`degree-name-${i}-note`}
+              onChange={(event) => setNames(names.with(i, event.target.value))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") add();
+              }}
+            />
+            <DegreeNameNote id={`degree-name-${i}-note`} checked={checked[i]} />
+          </div>
+        ))}
+      </div>
+    </Popup>
   );
 }
 
@@ -213,25 +203,23 @@ export function DeleteDataDialog({
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      {/* Five parts outgrow a short phone: the list scrolls, the buttons stay. */}
-      <AlertDialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)]">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{m.data_delete_title()}</AlertDialogTitle>
-          <AlertDialogDescription>{m.data_delete_text()}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <DataPartsList id="delete" chosen={chosen} onChange={setChosen} />
-        <Button
-          variant="secondary"
-          className="sm:justify-self-start"
-          onClick={() => downloadBackup()}
-        >
-          <Download data-icon="inline-start" />
-          {m.backup_save_first()}
-        </Button>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-          <AlertDialogAction
+    // A dialog, not a question: its action waits until a part is chosen.
+    <Popup
+      kind="dialog"
+      open={open}
+      onOpenChange={onOpenChange}
+      onCancel={() => onOpenChange(false)}
+      title={m.data_delete_title()}
+      description={m.data_delete_text()}
+      closeLabel={m.panel_close()}
+      // Five parts outgrow a short screen: the list scrolls, the buttons stay.
+      className="compact:grid-rows-[auto_minmax(0,1fr)]"
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {m.cancel()}
+          </Button>
+          <Button
             variant="destructive"
             disabled={chosen.length === 0}
             onClick={async () => {
@@ -239,10 +227,20 @@ export function DeleteDataDialog({
             }}
           >
             {m.data_delete_confirm()}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </>
+      }
+    >
+      <DataPartsList id="delete" chosen={chosen} onChange={setChosen} />
+      <Button
+        variant="secondary"
+        className="compact:justify-self-start"
+        onClick={() => downloadBackup()}
+      >
+        <Download data-icon="inline-start" />
+        {m.backup_save_first()}
+      </Button>
+    </Popup>
   );
 }
 
@@ -290,32 +288,19 @@ export function CatalogUrlDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.catalog_url_title()}</DialogTitle>
-          <DialogDescription>{m.catalog_url_text()}</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="catalog-url">{m.catalog_url_label()}</Label>
-          <Input
-            id="catalog-url"
-            type="url"
-            value={value}
-            autoFocus
-            placeholder={new URL(defaultUrl, appRoot()).href}
-            aria-invalid={invalid || undefined}
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !invalid) save(trimmed || null);
-            }}
-          />
-          {invalid && <p className="text-sm text-destructive">{m.catalog_url_invalid()}</p>}
-        </div>
-        <DialogFooter>
+    <Popup
+      kind="dialog"
+      open={open}
+      onOpenChange={onOpenChange}
+      onCancel={() => onOpenChange(false)}
+      title={m.catalog_url_title()}
+      description={m.catalog_url_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button
             variant="secondary"
-            className="sm:mr-auto"
+            className="compact:mr-auto"
             disabled={url === null}
             onClick={() => save(null)}
           >
@@ -327,8 +312,25 @@ export function CatalogUrlDialog({
           <Button disabled={invalid} onClick={() => save(trimmed || null)}>
             {m.catalog_url_save()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="catalog-url">{m.catalog_url_label()}</Label>
+        <Input
+          id="catalog-url"
+          type="url"
+          value={value}
+          autoFocus
+          placeholder={new URL(defaultUrl, appRoot()).href}
+          aria-invalid={invalid || undefined}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !invalid) save(trimmed || null);
+          }}
+        />
+        {invalid && <p className="text-sm text-destructive">{m.catalog_url_invalid()}</p>}
+      </div>
+    </Popup>
   );
 }

@@ -1,6 +1,7 @@
+// ohmtools/design: shadcn/src/components/ui/field.tsx (copied by `ohmtools-design add`, do not edit)
 import { useMemo } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";

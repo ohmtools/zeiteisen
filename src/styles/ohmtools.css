@@ -1,0 +1,345 @@
+/* ohmtools/design: shadcn/src/styles/ohmtools.css (copied by `ohmtools-design add`, do not edit) */
+/* ohmtools design: shadcn base-vega, zeiteisen's theme, the app shell's
+   steps, frosted glass and motion.
+   github.com/ohmtools/design, generated from tokens/ by `npm run build`.
+   The app's src/index.css imports it (shadcn/index.css). */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Three steps, the same content in other containers (DESIGN.md, "App
+   shell"): narrow (the base: phones upright, one column, the view's controls
+   in a bar at the bottom, every popup a drawer), `compact:` (phones turned
+   sideways, iPads upright, small laptops: one header row, popups, panels as
+   a sheet from the right) from 40rem or on a short landscape screen,
+   `wide:` (large iPads, iPads in landscape, desktops: a closable sidebar
+   beside the content) from 64rem AND 700px height. 700px (user decision,
+   2026-10-25): a laptop with about 650px under the browser's bars is a small
+   laptop and gets the compact step. `compact:` holds on `wide:` screens
+   too, like Tailwind's breakpoints. `lg:` / `md:` stay for what only
+   cares about width. `compact` in the block form: Tailwind 4.3 drops
+   everything after the comma of a media query list in the one-line form. */
+@custom-variant compact {
+  @media (width >= 40rem), (height < 600px) and (orientation: landscape) {
+    @slot;
+  }
+}
+@custom-variant wide (@media (width >= 64rem) and (height >= 700px));
+/* A phone turned sideways (or any short landscape window): a lower header,
+   less in each line. */
+@custom-variant short (@media (height < 600px) and (orientation: landscape));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Geist Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --color-grid: var(--grid);
+  --color-hour: var(--hour);
+  --color-red: var(--accent-red);
+  --color-red-foreground: var(--accent-red-foreground);
+  --color-warning: var(--warning);
+  --color-surface: var(--surface);
+  --color-kind-su: var(--kind-su);
+  --color-kind-su-border: var(--kind-su-border);
+  --color-kind-ue: var(--kind-ue);
+  --color-kind-ue-border: var(--kind-ue-border);
+  --color-kind-pr: var(--kind-pr);
+  --color-kind-pr-border: var(--kind-pr-border);
+  --color-kind-tu: var(--kind-tu);
+  --color-kind-tu-border: var(--kind-tu-border);
+  --color-kind-s: var(--kind-s);
+  --color-kind-s-border: var(--kind-s-border);
+  --color-kind-wf: var(--kind-wf);
+  --color-kind-wf-border: var(--kind-wf-border);
+  --color-block-kind: var(--block-kind);
+  --color-block-room: var(--block-room);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #fafafa;
+  --card-foreground: #0a0a0a;
+  --popover: #fafafa;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #fafafa;
+  --secondary: #e5e5e5;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
+  --destructive: #dc2626;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #a3a3a3;
+  --chart-1: oklch(0.808 0.114 19.571);
+  --chart-2: oklch(0.637 0.237 25.331);
+  --chart-3: oklch(0.577 0.245 27.325);
+  --chart-4: oklch(0.505 0.213 27.518);
+  --chart-5: oklch(0.444 0.177 26.899);
+  --radius: 0.625rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #0a0a0a;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #a3a3a3;
+  --grid: #f0f0f0;
+  --hour: #737373;
+  --accent-red: #dc2626;
+  --accent-red-foreground: #ffffff;
+  --warning: #b45309;
+  --surface: #fafafa;
+  --kind-su: #f5f5f5;
+  --kind-su-border: #d4d4d4;
+  --kind-ue: #eff6ff;
+  --kind-ue-border: #3b82f6;
+  --kind-pr: #ffedd5;
+  --kind-pr-border: #ea580c;
+  --kind-tu: #f0fdfa;
+  --kind-tu-border: #14b8a6;
+  --kind-s: #f5f3ff;
+  --kind-s-border: #8b5cf6;
+  --kind-wf: #f7fee7;
+  --kind-wf-border: #65a30d;
+  --block-kind: #404040;
+  --block-room: #525252;
+}
+
+/* OLED dark: a black ground, surfaces a step above it. */
+.dark {
+  --background: #000000;
+  --foreground: #fafafa;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --popover: #262626;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #fafafa;
+  --muted: #111111;
+  --muted-foreground: #a3a3a3;
+  --accent: #1f1f1f;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --border: #1f1f1f;
+  --input: #262626;
+  --ring: #525252;
+  --chart-1: oklch(0.808 0.114 19.571);
+  --chart-2: oklch(0.637 0.237 25.331);
+  --chart-3: oklch(0.577 0.245 27.325);
+  --chart-4: oklch(0.505 0.213 27.518);
+  --chart-5: oklch(0.444 0.177 26.899);
+  --sidebar: #000000;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1f1f1f;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #1f1f1f;
+  --sidebar-ring: #525252;
+  --grid: #141414;
+  --hour: #8a8a8a;
+  --accent-red: #dc2626;
+  --accent-red-foreground: #ffffff;
+  --warning: #fbbf24;
+  --surface: #0a0a0a;
+  --kind-su: #111111;
+  --kind-su-border: #2e2e2e;
+  --kind-ue: #0d1f3c;
+  --kind-ue-border: #2563eb;
+  --kind-pr: #4a1a04;
+  --kind-pr-border: #f97316;
+  --kind-tu: #062b2a;
+  --kind-tu-border: #0d9488;
+  --kind-s: #25104d;
+  --kind-s-border: #7c3aed;
+  --kind-wf: #1a2e05;
+  --kind-wf-border: #84cc16;
+  --block-kind: #d4d4d4;
+  --block-room: #a3a3a3;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Floating surfaces (popovers, menus, dialogs, sheets, drawers, toasts):
+   frosted glass, `popover` at 72 % over a blurred backdrop. Lines, fields
+   and hovers inside are tints of the foreground, so they show on the glass
+   in both modes. The edge is the component's: a ring of `foreground` at
+   30 %, or a border of it on sheets and drawers. */
+@utility popup-glass {
+  background-color: color-mix(in oklab, var(--popover) 72%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 15%, transparent);
+  --muted: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --accent: color-mix(in oklab, var(--foreground) 8%, transparent);
+  @apply shadow-xl shadow-black/15 dark:shadow-black/60;
+}
+
+/* View transitions (`transition()` in lib/ohmtools/motion.ts): the browser
+   shoots the page before and after a change and animates between the shots.
+   `html[data-transition]` names the kind for as long as one runs; outside it
+   nothing carries a `view-transition-name`. */
+@keyframes ohm-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+@keyframes ohm-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+}
+@keyframes ohm-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+}
+@keyframes ohm-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* `panel` (wide): the sidebar slides in from the right and out the same
+   way; the rest of the page stands at its new width at once (a crossfade of
+   two widths shows every line twice). */
+html[data-transition="panel"] [data-vt="panel"] {
+  view-transition-name: panel;
+}
+html[data-transition="panel"]::view-transition-old(root) {
+  display: none;
+}
+html[data-transition="panel"]::view-transition-new(root) {
+  animation: none;
+}
+html[data-transition="panel"]::view-transition-new(panel):only-child {
+  animation-name: ohm-in-right;
+}
+html[data-transition="panel"]::view-transition-old(panel):only-child {
+  animation-name: ohm-out-right;
+  animation-duration: 400ms;
+}
+
+/* `forward` / `back` (phones, compact settings): a page of its own comes
+   in from the right, what it covers steps aside to the left; back is the
+   mirror. */
+html[data-transition="forward"]::view-transition-old(root) {
+  animation-name: ohm-out-left;
+  animation-duration: 400ms;
+}
+html[data-transition="forward"]::view-transition-new(root) {
+  animation-name: ohm-in-right;
+}
+html[data-transition="back"]::view-transition-old(root) {
+  animation-name: ohm-out-right;
+  animation-duration: 400ms;
+}
+html[data-transition="back"]::view-transition-new(root) {
+  animation-name: ohm-in-left;
+}
+
+/* `view-next` / `view-previous`: the view behind another tab comes in
+   from that tab's side; only the incoming view moves, the rest stands. */
+html[data-transition^="view-"] [data-vt="view"] {
+  view-transition-name: view;
+}
+html[data-transition^="view-"]::view-transition-old(root),
+html[data-transition^="view-"]::view-transition-new(root),
+html[data-transition^="view-"]::view-transition-group(view) {
+  animation: none;
+}
+html[data-transition^="view-"]::view-transition-old(view) {
+  animation: none;
+  opacity: 0;
+}
+html[data-transition="view-next"]::view-transition-new(view) {
+  animation-name: ohm-in-right;
+}
+html[data-transition="view-previous"]::view-transition-new(view) {
+  animation-name: ohm-in-left;
+}
+
+/* Reduced motion: no movement anywhere, the app's own or shadcn's; state
+   changes still show, at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}

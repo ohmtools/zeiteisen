@@ -1,8 +1,9 @@
+// ohmtools/design: shadcn/src/components/ui/toggle-group.tsx (copied by `ohmtools-design add`, do not edit)
 import * as React from "react";
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
 import { type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 import { toggleVariants } from "@/components/ui/toggle";
 

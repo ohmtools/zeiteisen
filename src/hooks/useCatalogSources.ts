@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
 import { m } from "@/i18n";
 import { catalogDatesNews } from "@/lib/catalog";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import type { CatalogEntry, CatalogMode, CatalogSources } from "@/lib/primitives/catalog";
 import {
   CATALOG_MODE_KEY,

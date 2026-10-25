@@ -1,17 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Minus, Plus } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import type { Catalog } from "@/lib/primitives/catalog";
 import { diffSubjects, type SubjectChange } from "@/lib/primitives/diff";
@@ -96,45 +87,28 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
       ? diffSubjects(timetable.subjects.toSubjects(), next.subjects.toSubjects())
       : null;
 
+  // Leaving it is "Later": nothing changes, the update stays offered.
+  const later = () => onOpenChange(false);
+
   return (
-    <AlertDialog
+    <Popup
+      kind="dialog"
       open={timetable !== null}
       onOpenChange={(open) => {
         if (!open) onOpenChange(false);
       }}
-    >
-      {/* Wider than an alert dialog's 28rem: its three buttons, which never
-          shrink, did not fit in a row in German and pushed past the border. */}
-      <AlertDialogContent className="data-[size=default]:sm:max-w-lg">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{m.update_title({ name: timetable?.name ?? "" })}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {entry ? m.update_from_catalog({ file: entry.path }) : ""}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        {diff === null ? (
-          <p className="text-sm text-muted-foreground">{m.update_loading()}</p>
-        ) : (
-          <div className="flex flex-col gap-3 text-sm">
-            <p className="text-muted-foreground">{m.update_summary({ count: diff.sameCount })}</p>
-            <DiffList
-              title={m.update_added()}
-              sign="added"
-              lines={limit(diff.added.map(classLabel))}
-            />
-            <ChangeList changes={diff.changed} />
-            <DiffList
-              title={m.update_removed()}
-              sign="removed"
-              lines={limit(diff.removed.map(classLabel))}
-            />
-          </div>
-        )}
-
-        <AlertDialogFooter>
-          {/* Later: nothing changes, the update stays offered. */}
-          <AlertDialogCancel>{m.update_later()}</AlertDialogCancel>
+      onCancel={later}
+      title={m.update_title({ name: timetable?.name ?? "" })}
+      description={entry ? m.update_from_catalog({ file: entry.path }) : ""}
+      closeLabel={m.panel_close()}
+      // Wider than a dialog's 28rem: its three buttons, which never shrink,
+      // did not fit in a row in German and pushed past the border.
+      className="compact:max-w-[min(32rem,calc(100%-2rem))]"
+      footer={
+        <>
+          <Button variant="ghost" onClick={later}>
+            {m.update_later()}
+          </Button>
           <Button
             variant="secondary"
             disabled={locked || diff === null || entry === null}
@@ -145,7 +119,7 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
           >
             {m.update_reject()}
           </Button>
-          <AlertDialogAction
+          <Button
             disabled={locked || next === null}
             onClick={() => {
               if (!timetable || !next) return;
@@ -155,10 +129,29 @@ export function UpdateDialog({ timetable, catalog, locked, onOpenChange, onRepla
             }}
           >
             {m.update_confirm()}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </>
+      }
+    >
+      {diff === null ? (
+        <p className="text-sm text-muted-foreground">{m.update_loading()}</p>
+      ) : (
+        <div className="flex flex-col gap-3 text-sm">
+          <p className="text-muted-foreground">{m.update_summary({ count: diff.sameCount })}</p>
+          <DiffList
+            title={m.update_added()}
+            sign="added"
+            lines={limit(diff.added.map(classLabel))}
+          />
+          <ChangeList changes={diff.changed} />
+          <DiffList
+            title={m.update_removed()}
+            sign="removed"
+            lines={limit(diff.removed.map(classLabel))}
+          />
+        </div>
+      )}
+    </Popup>
   );
 }
 

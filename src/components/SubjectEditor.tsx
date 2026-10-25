@@ -1,15 +1,6 @@
 import { useState } from "react";
 import { m } from "@/i18n";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { SubjectDialog, type SubjectTarget } from "@/components/SubjectDialog";
 import { sameSubject, type Subject, type Subjects } from "@/lib/primitives/subject";
@@ -100,61 +91,60 @@ export function SubjectEditor({
         }}
       />
 
-      <AlertDialog
-        open={asking}
+      {/* Editing: a question, its action opens the editor. Opened as it was
+          when asked: a subject another tab moved meanwhile closes the editor
+          instead of opening another one. */}
+      <Popup
+        kind="question"
+        open={asking && !adding}
         onOpenChange={(open) => {
           if (!open) onClose();
         }}
+        title={m.subject_catalog_edit_title({ timetable: name })}
+        description={m.subject_catalog_edit_text({ timetable: name, profile: profileName })}
+        action={m.subject_catalog_edit_confirm()}
+        onAction={() => setTaken(taken && { ...taken, asking: false })}
+        cancel={m.cancel()}
+      />
+
+      {/* Adding: two ways on and Cancel, stacked (the suggestion first, the
+          timetable itself second), so a dialog rather than a question. */}
+      <Popup
+        kind="dialog"
+        open={asking && adding}
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
+        onCancel={onClose}
+        title={m.subject_catalog_add_title({ timetable: name })}
+        description={m.subject_catalog_add_text({ timetable: name })}
+        closeLabel={m.panel_close()}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {adding
-                ? m.subject_catalog_add_title({ timetable: name })
-                : m.subject_catalog_edit_title({ timetable: name })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {adding
-                ? m.subject_catalog_add_text({ timetable: name })
-                : m.subject_catalog_edit_text({ timetable: name, profile: profileName })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {adding ? (
-            // Stacked: the suggestion first, the timetable itself second.
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => {
-                  const fresh = onAddEmpty();
-                  if (fresh)
-                    setTaken({
-                      request: { name: fresh, index: null },
-                      subject: null,
-                      asking: false,
-                    });
-                }}
-              >
-                {m.subject_catalog_add_empty()}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setTaken(taken && { ...taken, asking: false })}
-              >
-                {m.subject_catalog_add_confirm({ timetable: name })}
-              </Button>
-              <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            </div>
-          ) : (
-            <AlertDialogFooter>
-              <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-              {/* Opened as it was when asked: a subject another tab moved
-                  meanwhile closes the editor instead of opening another one. */}
-              <AlertDialogAction onClick={() => setTaken(taken && { ...taken, asking: false })}>
-                {m.subject_catalog_edit_confirm()}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
+        <div className="flex flex-col gap-2 *:data-[slot=button]:h-11 compact:*:data-[slot=button]:h-9">
+          <Button
+            onClick={() => {
+              const fresh = onAddEmpty();
+              if (fresh)
+                setTaken({
+                  request: { name: fresh, index: null },
+                  subject: null,
+                  asking: false,
+                });
+            }}
+          >
+            {m.subject_catalog_add_empty()}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setTaken(taken && { ...taken, asking: false })}
+          >
+            {m.subject_catalog_add_confirm({ timetable: name })}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            {m.cancel()}
+          </Button>
+        </div>
+      </Popup>
     </>
   );
 }

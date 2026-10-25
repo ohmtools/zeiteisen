@@ -2,25 +2,14 @@ import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
-import { PanelHeader } from "@/components/PanelHeader";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { dayStamp, downloadText } from "@/lib/download";
 import { notesFromFile, notesLines, toggleTask, type NotesPiece } from "@/lib/notes";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { MAX_NOTES_LENGTH } from "@/lib/primitives/storage";
-import type { Step } from "@/lib/media";
 
 // From 90% of the limit on, the count shows.
 const SHOW_COUNT_FROM = MAX_NOTES_LENGTH * 0.9;
@@ -40,21 +29,18 @@ export type NotesHandle = {
 // `- [ ]` lines are checkboxes; a click on the text (or Tab to it, or N) turns
 // it into the text area with the caret there, leaving it turns it back.
 // Every keystroke is saved (`useNotes`): there is no edit or save button. Empty
-// notes are the text area alone. A panel: sidebar, sheet or page (user
-// decision, was a strip under the grid). Lives in the deferred chunk.
+// notes are the text area alone. The body of a panel (`Panel`: sidebar,
+// sheet or page; user decision, was a strip under the grid), its header
+// buttons are `NotesActions`. Lives in the deferred chunk.
 export function NotesSection({
   ref,
-  step,
   notes,
   onChange,
-  onClose,
   onLeave,
 }: {
   ref?: React.Ref<NotesHandle>;
-  step: Step;
   notes: string;
   onChange: (notes: string) => void;
-  onClose: () => void;
   // Escape in the text area: back to the grid.
   onLeave: () => void;
 }) {
@@ -63,9 +49,6 @@ export function NotesSection({
   // Where the caret goes once the text area is on screen, and how far it is
   // scrolled (`null` = to the end).
   const pending = useRef<{ at: number; scrollTop: number | null } | null>(null);
-  const uploadInput = useRef<HTMLInputElement>(null);
-  // An uploaded file waiting for "Replace", while there are notes to lose.
-  const [replacing, setReplacing] = useState<{ file: string; text: string } | null>(null);
   const showTextarea = editing || notes === "";
 
   useEffect(() => {
@@ -124,14 +107,96 @@ export function NotesSection({
     </span>
   );
 
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-4 compact:pb-2">
+      <p className="text-xs text-muted-foreground">{m.notes_text()}</p>
+      {limit}
+      {showTextarea ? (
+        <Textarea
+          ref={textareaRef}
+          aria-label={m.notes_title()}
+          aria-keyshortcuts="n"
+          placeholder={m.notes_placeholder()}
+          maxLength={MAX_NOTES_LENGTH}
+          value={notes}
+          onChange={(event) => onChange(event.target.value)}
+          onFocus={() => setEditing(true)}
+          onBlur={() => setEditing(false)}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.currentTarget.blur();
+            onLeave();
+          }}
+          className="min-h-0 flex-1 field-sizing-fixed"
+        />
+      ) : (
+        <div
+          role="textbox"
+          aria-multiline="true"
+          aria-label={m.notes_title()}
+          aria-keyshortcuts="n"
+          tabIndex={0}
+          className={VIEW}
+          onFocus={onViewFocus}
+          onClick={onViewClick}
+        >
+          {notesLines(notes).map(({ start, task, indent, pieces }) => (
+            <div key={start} data-start={start} className={cn(task && "flex items-start gap-2")}>
+              {task ? (
+                <>
+                  {indent && <span data-start={start}>{indent}</span>}
+                  {/* Out of the Tab order, like the links: Tab lands on the
+                      view, which turns into the text area. */}
+                  <Checkbox
+                    tabIndex={-1}
+                    className="my-px md:my-0.5"
+                    checked={task.done}
+                    aria-label={m.notes_task({
+                      text: pieces.map((piece) => piece.text).join(""),
+                    })}
+                    onCheckedChange={() => onChange(toggleTask(notes, task.at))}
+                  />
+                  <span
+                    className={cn("min-w-0", task.done && "text-muted-foreground line-through")}
+                  >
+                    <Pieces pieces={pieces} />
+                  </span>
+                </>
+              ) : pieces.length > 0 ? (
+                <Pieces pieces={pieces} />
+              ) : (
+                <br />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The notes panel's header buttons: upload (a `.txt` that replaces the
+// notes, asked first when notes would be lost) and download. Kept from taking
+// the focus: they leave the text area as it is.
+export function NotesActions({
+  notes,
+  onChange,
+}: {
+  notes: string;
+  onChange: (notes: string) => void;
+}) {
+  const uploadInput = useRef<HTMLInputElement>(null);
+  // An uploaded file waiting for "Replace", while there are notes to lose.
+  const [replacing, setReplacing] = useState<{ file: string; text: string } | null>(null);
+  const count = new Intl.NumberFormat(getLocale());
+
   const downloadNotes = () =>
     downloadText(
       m.notes_file_name({ date: dayStamp(new Date()) }),
       notes,
       "text/plain;charset=utf-8",
     );
-
-  const replaceNotes = (text: string) => onChange(text);
 
   const onUpload = async (file: File) => {
     const read = notesFromFile(await file.arrayBuffer(), MAX_NOTES_LENGTH);
@@ -144,14 +209,13 @@ export function NotesSection({
         }`,
       );
     } else if (notes === "" || notes === read.text) {
-      replaceNotes(read.text);
+      onChange(read.text);
     } else {
       setReplacing({ file: file.name, text: read.text });
     }
   };
 
-  // Kept from taking the focus: downloading leaves the text area as it is.
-  const actions = (
+  return (
     <>
       <Button
         variant="ghost"
@@ -174,84 +238,6 @@ export function NotesSection({
       >
         <Download />
       </Button>
-    </>
-  );
-
-  const narrow = step === "narrow";
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <PanelHeader
-        title={m.notes_title()}
-        actions={actions}
-        onBack={narrow ? onClose : undefined}
-        onClose={narrow ? undefined : onClose}
-      />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] compact:px-6 compact:pb-6">
-        <p className="text-xs text-muted-foreground">{m.notes_text()}</p>
-        {limit}
-        {showTextarea ? (
-          <Textarea
-            ref={textareaRef}
-            aria-label={m.notes_title()}
-            aria-keyshortcuts="n"
-            placeholder={m.notes_placeholder()}
-            maxLength={MAX_NOTES_LENGTH}
-            value={notes}
-            onChange={(event) => onChange(event.target.value)}
-            onFocus={() => setEditing(true)}
-            onBlur={() => setEditing(false)}
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") return;
-              event.preventDefault();
-              event.currentTarget.blur();
-              onLeave();
-            }}
-            className="min-h-0 flex-1 field-sizing-fixed"
-          />
-        ) : (
-          <div
-            role="textbox"
-            aria-multiline="true"
-            aria-label={m.notes_title()}
-            aria-keyshortcuts="n"
-            tabIndex={0}
-            className={VIEW}
-            onFocus={onViewFocus}
-            onClick={onViewClick}
-          >
-            {notesLines(notes).map(({ start, task, indent, pieces }) => (
-              <div key={start} data-start={start} className={cn(task && "flex items-start gap-2")}>
-                {task ? (
-                  <>
-                    {indent && <span data-start={start}>{indent}</span>}
-                    {/* Out of the Tab order, like the links: Tab lands on the
-                      view, which turns into the text area. */}
-                    <Checkbox
-                      tabIndex={-1}
-                      className="my-px md:my-0.5"
-                      checked={task.done}
-                      aria-label={m.notes_task({
-                        text: pieces.map((piece) => piece.text).join(""),
-                      })}
-                      onCheckedChange={() => onChange(toggleTask(notes, task.at))}
-                    />
-                    <span
-                      className={cn("min-w-0", task.done && "text-muted-foreground line-through")}
-                    >
-                      <Pieces pieces={pieces} />
-                    </span>
-                  </>
-                ) : pieces.length > 0 ? (
-                  <Pieces pieces={pieces} />
-                ) : (
-                  <br />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       <input
         ref={uploadInput}
         type="file"
@@ -263,39 +249,29 @@ export function NotesSection({
           if (file) void onUpload(file);
         }}
       />
-
-      <AlertDialog
+      <Popup
+        kind="question"
         open={replacing !== null}
         onOpenChange={(open) => {
           if (!open) setReplacing(null);
         }}
+        title={m.notes_upload_title()}
+        description={m.notes_upload_text({ file: replacing?.file ?? "" })}
+        action={m.notes_upload_confirm()}
+        destructive
+        onAction={() => {
+          if (replacing) onChange(replacing.text);
+          setReplacing(null);
+        }}
+        cancel={m.cancel()}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{m.notes_upload_title()}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {m.notes_upload_text({ file: replacing?.file ?? "" })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {/* The way back, should the file turn out to be the wrong one. */}
-          <Button variant="secondary" onClick={downloadNotes}>
-            <Download data-icon="inline-start" />
-            {m.notes_download_first()}
-          </Button>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{m.cancel()}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (replacing) replaceNotes(replacing.text);
-              }}
-            >
-              {m.notes_upload_confirm()}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* The way back, should the file turn out to be the wrong one. */}
+        <Button variant="secondary" onClick={downloadNotes}>
+          <Download data-icon="inline-start" />
+          {m.notes_download_first()}
+        </Button>
+      </Popup>
+    </>
   );
 }
 

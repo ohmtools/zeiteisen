@@ -5,6 +5,10 @@
     "typescript",
     "oxc"
   ],
+  "ignorePatterns": [
+    "src/components/ohmtools/**",
+    "src/lib/ohmtools/**"
+  ],
   "options": {
     "typeAware": true
   },

@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import { Layers, Lock, LockOpen, Settings, StickyNote } from "lucide-react";
-import { cn } from "cn";
 import { m } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { AppTile } from "@/components/ProfileTrigger";
-import type { Step } from "@/lib/media";
+import type { Step } from "@/lib/ohmtools/steps";
 
-// Groups and notes: a sidebar beside the grid on wide screens, a sheet from
-// the right on compact ones, a page of their own on phones. The settings are
-// no panel: a dialog, a page on phones (`SettingsPage`).
+// Groups and notes, the panels (`Panel`): a sidebar beside the grid on wide
+// screens, a sheet from the right on compact ones, a page of their own on
+// phones. The settings are no panel: an area (`Settings`).
 export type Panel = "groups" | "notes";
 
 // Header icon buttons stand 8px apart; an open panel's button is filled, and
@@ -17,16 +16,14 @@ export type Panel = "groups" | "notes";
 const ICON =
   "aria-pressed:bg-accent aria-pressed:hover:bg-accent dark:aria-pressed:hover:bg-accent";
 
-// The one header row. Left the profile (menu and lock), then from compact on
-// the view tabs and the week (or the week filter); right the panels and the
-// settings. Phones keep the profile, the panels and the settings up here and
-// move tabs, week and day to the bar at the bottom (`BottomBar`).
-export function AppHeader({
+// The header's right side, inside `AppShell` (brand left, the views between
+// them from compact on): the panels and the settings, 8px apart. Phones keep
+// the lock up here too; from compact on it stands beside the profile. A
+// first visit shows the settings alone.
+export function HeaderActions({
   step,
-  profile,
   locked,
   onToggleLock,
-  views,
   panel,
   onPanel,
   settings,
@@ -34,98 +31,100 @@ export function AppHeader({
   welcome = false,
 }: {
   step: Step;
-  // The profile menu, its trigger included (deferred, with a look-alike).
-  profile: ReactNode;
   locked: boolean;
   onToggleLock: () => void;
-  // View tabs plus week nav or filter: shown here from compact on.
-  views: ReactNode;
   panel: Panel | null;
   onPanel: (panel: Panel | null) => void;
   // The settings are open.
   settings: boolean;
   onSettings: () => void;
-  // A first visit: the app's name instead of the profile, settings only.
+  // A first visit: settings only.
   welcome?: boolean;
 }) {
   const toggle = (next: Panel) => onPanel(panel === next ? null : next);
-  const wide = step === "wide";
   return (
-    <header
-      className={cn(
-        "flex shrink-0 items-center gap-4 border-b pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] compact:pr-[max(1.5rem,env(safe-area-inset-right))] compact:pl-[max(1.5rem,env(safe-area-inset-left))]",
-        "h-[calc(3.5rem+env(safe-area-inset-top))] short:h-[calc(3rem+env(safe-area-inset-top))]",
-      )}
-    >
-      {welcome ? (
-        <span className="flex min-w-0 items-center gap-2 text-base font-semibold">
-          <AppTile />
-          {m.app_title()}
-        </span>
-      ) : (
-        <div className="flex min-w-0 items-center gap-2">
-          {profile}
-          {step !== "narrow" && <LockButton locked={locked} onToggle={onToggleLock} />}
-        </div>
-      )}
-      {!welcome && step !== "narrow" && (
+    <>
+      {!welcome && step === "narrow" && <LockButton locked={locked} onToggle={onToggleLock} />}
+      {!welcome && (
         <>
-          <div aria-hidden className="h-6 w-px shrink-0 bg-border" />
-          <div className="flex min-w-0 items-center gap-4">{views}</div>
-        </>
-      )}
-      <span className="flex-1" />
-      <div className="-mr-2 flex shrink-0 items-center gap-2">
-        {!welcome && step === "narrow" && <LockButton locked={locked} onToggle={onToggleLock} />}
-        {!welcome && (
-          <>
-            {wide ? (
-              <Button
-                variant="ghost"
-                className={ICON}
-                aria-pressed={panel === "groups"}
-                onClick={() => toggle("groups")}
-              >
-                <Layers data-icon="inline-start" />
-                {m.panel_groups()}
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                className={ICON}
-                aria-label={m.panel_groups()}
-                aria-pressed={panel === "groups"}
-                onClick={() => toggle("groups")}
-              >
-                <Layers />
-              </Button>
-            )}
+          {step === "wide" ? (
+            <Button
+              variant="ghost"
+              className={ICON}
+              aria-pressed={panel === "groups"}
+              onClick={() => toggle("groups")}
+            >
+              <Layers data-icon="inline-start" />
+              {m.panel_groups()}
+            </Button>
+          ) : (
             <Button
               variant="ghost"
               size="icon"
               className={ICON}
-              aria-label={m.notes_title()}
-              aria-keyshortcuts="n"
-              aria-pressed={panel === "notes"}
-              onClick={() => toggle("notes")}
+              aria-label={m.panel_groups()}
+              aria-pressed={panel === "groups"}
+              onClick={() => toggle("groups")}
             >
-              <StickyNote />
+              <Layers />
             </Button>
-          </>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={ICON}
-          aria-label={m.tab_settings()}
-          aria-pressed={settings}
-          onClick={onSettings}
-        >
-          <Settings />
-        </Button>
-      </div>
-    </header>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={ICON}
+            aria-label={m.notes_title()}
+            aria-keyshortcuts={step === "narrow" ? undefined : "n"}
+            aria-pressed={panel === "notes"}
+            onClick={() => toggle("notes")}
+          >
+            <StickyNote />
+          </Button>
+        </>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={ICON}
+        aria-label={m.tab_settings()}
+        aria-pressed={settings}
+        onClick={onSettings}
+      >
+        <Settings />
+      </Button>
+    </>
+  );
+}
+
+// The header's left side: the profile menu (its trigger), from compact on
+// with the lock beside it; a first visit shows the app's tile and name.
+export function HeaderBrand({
+  step,
+  profile,
+  locked,
+  onToggleLock,
+  welcome = false,
+}: {
+  step: Step;
+  // The profile menu, its trigger included (deferred, with a look-alike).
+  profile: ReactNode;
+  locked: boolean;
+  onToggleLock: () => void;
+  welcome?: boolean;
+}) {
+  if (welcome) {
+    return (
+      <span className="flex min-w-0 items-center gap-2 text-base font-semibold">
+        <AppTile />
+        {m.app_title()}
+      </span>
+    );
+  }
+  return (
+    <>
+      {profile}
+      {step !== "narrow" && <LockButton locked={locked} onToggle={onToggleLock} />}
+    </>
   );
 }
 

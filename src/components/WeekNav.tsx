@@ -1,20 +1,16 @@
-import { Suspense, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { addDays, addWeeks, differenceInCalendarWeeks, startOfISOWeek } from "date-fns";
 import { CalendarCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
-import { lazyDeferred } from "@/components/lazyDeferred";
+import { ResponsivePopover } from "@/components/ohmtools/responsive-popover";
 import { Button } from "@/components/ui/button";
 import { LazyCalendar } from "@/components/LazyCalendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { isoWeek } from "@/lib/primitives/week";
 import { useNow } from "@/hooks/useNow";
 import { useSlideOnChange } from "@/hooks/useSlideOnChange";
-import { slideIn } from "@/lib/motion";
-import type { Step } from "@/lib/media";
-
-// The phones' week picker is a drawer (deferred chunk, with the dialogs).
-const WeekDrawer = lazyDeferred((d) => d.WeekDrawer);
+import { slideIn } from "@/lib/ohmtools/motion";
+import type { Step } from "@/lib/ohmtools/steps";
 
 function relativeWeekLabel(weekStart: Date, now: Date): string {
   const offset = differenceInCalendarWeeks(weekStart, now, {
@@ -80,15 +76,18 @@ export function WeekNav({ value, onChange, onToday, atToday, step, className }: 
       </span>
     </span>
   );
+  // The label opens the picker: a popover, a drawer on phones (the design's
+  // popup group).
   const trigger = (
     <Button
       variant="ghost"
-      className="h-9 min-w-0 gap-2 px-2"
+      className={cn("h-9 min-w-0 gap-2 px-2", step === "narrow" && "flex-1")}
       title={m.week_pick()}
       aria-haspopup="dialog"
-    />
+    >
+      {label}
+    </Button>
   );
-  const picker = <WeekPicker value={value} now={now} onPick={pick} />;
 
   return (
     <div className={cn("flex min-w-0 items-center", className)}>
@@ -100,29 +99,19 @@ export function WeekNav({ value, onChange, onToday, atToday, step, className }: 
       >
         <ChevronLeft />
       </Button>
-      {step === "narrow" ? (
-        <>
-          <Button
-            variant="ghost"
-            className="h-9 min-w-0 flex-1 gap-2 px-2"
-            title={m.week_pick()}
-            aria-haspopup="dialog"
-            onClick={() => setPickerOpen(true)}
-          >
-            {label}
-          </Button>
-          <Suspense fallback={null}>
-            <WeekDrawer open={pickerOpen} onOpenChange={setPickerOpen}>
-              {picker}
-            </WeekDrawer>
-          </Suspense>
-        </>
-      ) : (
-        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-          <PopoverTrigger render={trigger}>{label}</PopoverTrigger>
-          <PopoverContent className="w-auto gap-0 p-0">{picker}</PopoverContent>
-        </Popover>
-      )}
+      {/* The popup's own component, not `Popup`: the week nav is in the
+          first load, and `Popup` would bring every kind (menu, select,
+          dialogs) into it, 25 KB gzip. */}
+      <ResponsivePopover
+        trigger={trigger}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        title={m.week_pick()}
+        titleHidden
+        className="w-auto gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
+      >
+        <WeekPicker value={value} now={now} onPick={pick} />
+      </ResponsivePopover>
       <Button
         variant="ghost"
         size="icon"

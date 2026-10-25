@@ -1,18 +1,11 @@
 import { useEffect, useState, type ComponentProps } from "react";
 import { Bug, Copy } from "lucide-react";
 import { m } from "@/i18n";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { debugReport } from "@/lib/debug";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 
 // "Debug info" under About in the settings: the button and its dialog in one,
 // in the deferred chunk with the settings.
@@ -48,6 +41,12 @@ export function DebugDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [report, setReport] = useState<string | null>(null);
+  // Cleared on every opening, so it never shows an old report.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) setReport(null);
+  }
   // A report still being built when the dialog closes is dropped.
   useEffect(() => {
     if (!open) return;
@@ -74,28 +73,16 @@ export function DebugDialog({
   };
 
   return (
-    <Dialog
+    <Popup
+      kind="dialog"
       open={open}
       onOpenChange={onOpenChange}
-      // Cleared once closed, so the next opening never shows an old report.
-      onOpenChangeComplete={(next) => {
-        if (!next && !open) setReport(null);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{m.debug_title()}</DialogTitle>
-          <DialogDescription>{m.debug_text()}</DialogDescription>
-        </DialogHeader>
-        <Textarea
-          readOnly
-          aria-label={m.debug_title()}
-          value={report ?? m.debug_loading()}
-          // Phones keep the default 16px: smaller, iOS zooms in on focus.
-          className="h-72 font-mono md:text-xs"
-          onFocus={(event) => event.currentTarget.select()}
-        />
-        <DialogFooter>
+      onCancel={() => onOpenChange(false)}
+      title={m.debug_title()}
+      description={m.debug_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.close()}
           </Button>
@@ -103,8 +90,17 @@ export function DebugDialog({
             <Copy data-icon="inline-start" />
             {m.debug_copy()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <Textarea
+        readOnly
+        aria-label={m.debug_title()}
+        value={report ?? m.debug_loading()}
+        // Phones keep the default 16px: smaller, iOS zooms in on focus.
+        className="h-72 font-mono md:text-xs"
+        onFocus={(event) => event.currentTarget.select()}
+      />
+    </Popup>
   );
 }

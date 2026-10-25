@@ -1,18 +1,26 @@
 # src/components/ui — notes
 
-Shadcn make these. No hand-edit unless a note below says ok.
+Copies from [ohmtools/design](https://github.com/ohmtools/design)
+(`shadcn/src/components/ui/`), like `src/components/ohmtools/`,
+`src/lib/ohmtools/` and `src/styles/ohmtools.css`: shadcn's components with
+the design's hand-edits. Each starts with a marker naming its source; **never
+edit them here** (nor format them: `.prettierignore`). A change goes into the
+design first, for every app, then
+`npx --yes github:ohmtools/design add <name>` here; CI runs
+`ohmtools-design check` on them. The hand-edits came from zeiteisen; their
+reasons stay below.
 
 Style `base-vega` (Base UI primitives, not Radix), switched from `base-sera`
 in the redesign (user decision). The theme (colours, radius, Geist) is the
-app's own, in `src/index.css`.
+design's, in `src/styles/ohmtools.css`.
 
-- Add components with `npx shadcn@latest add <name>` into
-  `src/components/ui/`. Where the registry cannot be reached: shadcn's base
-  components (`apps/v4/registry/bases/base/ui/<name>.tsx` in shadcn-ui/ui)
-  with every `cn-*` class replaced by its `@apply` list from
+- A component the design does not have: `npx shadcn@latest add <name>` into
+  `src/components/ui/`, or where the registry cannot be reached shadcn's
+  base components (`apps/v4/registry/bases/base/ui/<name>.tsx` in
+  shadcn-ui/ui) with every `cn-*` class replaced by its `@apply` list from
   `apps/v4/registry/styles/style-vega.css` and the icon placeholders made
-  lucide icons — what the registry build does. Then put the hand-edits below
-  back in and run `oxfmt`.
+  lucide icons — what the registry build does. Then the hand-edits below.
+  Needed by a second app, it belongs in the design.
 - Tailwind classes in app components for layout plus semantic tokens
   (`text-muted-foreground`, `border`, `bg-kind-pr`, `text-warning`); no
   raw colours.
@@ -22,14 +30,15 @@ app's own, in `src/index.css`.
 - **No uppercase text** (user decision): `uppercase` and
   `tracking-wider/widest` stripped from `src/components/ui/*` (the menu
   shortcut). No reintroduce; strip from newly added components too.
-- Hand-edits, keep them when regenerating:
+- Hand-edits (DESIGN.md, "Hand-edits"), kept when the design regenerates:
   - `PopoverContent` forwards `anchor` to Base UI's `Positioner` (the grid's
     details open where the pointer clicked).
   - `DialogHeader` carries `pr-10`: the close X is absolute in the top right
     corner, so without it title and wrapping description run into it.
-  - `DialogContent`: on narrow screens a sheet from the bottom edge, full
-    width, scrolling inside itself; from `compact:` on centred, at most
-    28rem (a dialog widens it with its own `compact:max-w-…`).
+  - `DialogContent`: from `compact:` on centred, at most 28rem (a dialog
+    widens it with its own `compact:max-w-…`); below `compact:` a sheet
+    from the bottom edge, never shown there (phones get a drawer,
+    `Popup`).
     `DialogFooter` stacks below `compact:` (main button on top, full width)
     and is a row from there — `compact:`, not `sm:`, so a phone turned
     sideways gets the row too.
@@ -41,7 +50,7 @@ app's own, in `src/index.css`.
     scrim, `bg-black/40 dark:bg-black/70`, no blur (the design darkens).
   - Every floating surface is frosted glass (user decision: a popover on an
     iPad stood out too little from the black grid): `popup-glass`
-    (`src/index.css`) instead of `bg-popover` and shadcn's shadow on
+    (the design's stylesheet) instead of `bg-popover` and shadcn's shadow on
     `PopoverContent`, `DialogContent`, `AlertDialogContent`, `SheetContent`,
     `DrawerContent`, `SelectContent` (its `before:` blur layer is gone) and
     `SuggestInput`'s popup; the edge `ring-foreground/30` (sheets and
@@ -68,13 +77,16 @@ app's own, in `src/index.css`.
   - `sonner.tsx`: shadcn's version imports `useTheme` from `next-themes`,
     which this project never uses; `theme="system"` instead (sonner then
     reads `prefers-color-scheme`, the same source as `ThemeProvider`).
-    Mounted once, by `AppToaster` (deferred chunk), which also lifts toasts
-    above the phones' bottom bar.
+    Mounted once, by the design's `AppToaster` inside `AppShell`, which also
+    lifts toasts above the phones' bottom bar.
+  - `DialogContent` and `SheetContent` take `closeLabel` (the close
+    button's name in the app's language).
 - `cn` comes from the `cn` package (shadcn's clsx + tailwind-merge
   replacement), not a local helper. `src/lib/utils.ts` only re-exports it for
   the shadcn CLI (`components.json`).
-- Dark mode = shadcn's `.dark` class, set by `ThemeProvider`
-  (`src/components/theme-provider.tsx`, wraps `App` in `main.tsx`) from
+- Dark mode = shadcn's `.dark` class, set by the design's `ThemeProvider`
+  (`src/components/ohmtools/theme-provider.tsx`, in `AppShell` and around
+  the error screen in `main.tsx`) from
   `prefers-color-scheme`, live. Blocking `public/dark.js` (not inline: CSP
   without hashes) in `index.html` sets `.dark` before first paint (plus the
   `color-scheme` meta) so dark users get no white flash on load or locale
@@ -82,7 +94,8 @@ app's own, in `src/index.css`.
 - Language follows the browser too (paraglide strategy localStorage ->
   preferredLanguage). The only override: the language tabs in the settings.
 - `.oxlintrc.json` turns off `react/only-export-components` for
-  `src/components/ui/**` — shadcn files export their `cva` variants.
+  `src/components/ui/**` and `src/components/ohmtools/**` — shadcn files
+  export their `cva` variants, the design's groups their hooks.
 - Wide content inside a single-column grid needs `minmax(0,1fr)` columns
   (`grid-cols-1`), or it widens the page on mobile.
 - No combobox: free-text suggestions are `src/components/SuggestInput.tsx`,

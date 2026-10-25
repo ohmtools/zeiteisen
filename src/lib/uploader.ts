@@ -1,5 +1,5 @@
 import { m } from "@/i18n";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 
 // `@/lib/upload` (and zod's locales) load on the first upload only. `null`
 // when the chunk cannot be fetched (a deploy since the page loaded), said in

@@ -47,9 +47,6 @@ re-implements primitive logic.
   every piece with its offset in the text; `toggleTask` changes the one box
   character. `notesFromFile` reads an uploaded notes file (UTF-8, line
   ends, limit).
-- `toast.ts` — the only way to toast. Each call waits for sonner AND the
-  mounted `AppToaster`, so sonner stays out of the entry chunk and early toasts
-  are shown late instead of lost.
 - `edit.ts` — subject editor form ↔ subject; the duplicate check, the origin
   switch and the time / date / slot rules (`parseTime`, `isIsoDate`,
   `endsAfterStart`, `REPEAT_TYPES`) live in primitives.
@@ -154,24 +151,27 @@ re-implements primitive logic.
   Two modules so the settings' check stays out of the first load.
 - `link.ts` — tree ↔ grid: a group cell's `indexes` meet a block's timetable
   name + index.
-- `media.ts` — the `compact`, `wide` and `short` variants as media queries
-  for script, and the step (`narrow` | `compact` | `wide`) they make
-  (`useStep`).
-- `motion.ts` — the app's motion, without a library (user: "animate the
-  app", libraries allowed; none taken: `motion` & co. cost first load and a
-  component per block, of which there are hundreds). Three tools: View
+- `ohmtools/` — copies from the design (`src/components/ui/NOTES.md`),
+  never edited here: `steps.ts` (the `compact`, `wide` and `short` variants
+  as media queries for script, `useStep()`, `useMedia()`), `motion.ts`,
+  `toast.ts` (sonner's `toast`, the one way to toast) and
+  `bottom-bar-height.ts`.
+- Motion, without a library (user: "animate the app", libraries allowed;
+  none taken: `motion` & co. cost first load and a component per block, of
+  which there are hundreds), the design's `motion.ts`. Three tools: View
   Transitions (`transition()`) where the layout changes — the wide sidebar
-  opening, closing or switching (`panel`), a phone's panel page coming and
-  going (`forward` / `back`), their CSS in `src/motion.css`; the Web
-  Animations API (`slideIn`, via `useSlideOnChange`) where only something
-  new comes in — week, phone day, category view, week label; plain CSS for
-  the rest (blocks, tabs, day bar, cells, folds, now-line). `transition()`
-  waits (≤ 400 ms) for `ready`: a panel opened before the deferred chunk
-  arrived renders its Suspense fallback first; without the wait the page slid
-  in empty. Once the chunk is here the panel renders at once
-  (`lazyDeferred`, `src/NOTES.md`) and `ready` holds right away. Missing browser support or `prefers-reduced-motion`:
-  the change just happens. The compact sheet is never wrapped (it has its
-  own animation), nor N for the notes (the focus must land at once).
+  opening, closing or switching (`panel`), a phone's panel page or the
+  settings page coming and going (`forward` / `back`), the view tabs
+  (`view-next` / `view-previous`, `Views`), their CSS in the design's
+  stylesheet; the Web Animations API (`slideIn`, via `useSlideOnChange`)
+  where only something new comes in — week, phone day, category view, week
+  label; plain CSS for the rest (blocks, tabs, day bar, cells, folds,
+  now-line). The panel's header is in the first load, so a page or sidebar
+  never slides in empty; its body is the deferred chunk's, which has long
+  arrived by the first click (`lazyDeferred` answers at once,
+  `src/NOTES.md`). Missing browser support or `prefers-reduced-motion`: the
+  change just happens. The compact sheet is never wrapped (it has its own
+  animation), nor N for the notes (the focus must land at once).
 - `launch.ts` / `debug.ts` — the "Debug info" (settings → About).
   `launch.ts` sits in the entry chunk (`startLaunchLog` first in `main.tsx`,
   keep it tiny): performance marks for the first render and the deferred

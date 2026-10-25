@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { CalendarDays, Check, FileDown, Link2 } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { m } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { ShareWarningDialog } from "@/components/ShareWarningDialog";

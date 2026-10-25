@@ -9,7 +9,7 @@ import {
   syncedState,
   type ProfilesState,
 } from "@/lib/profileState";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { m } from "@/i18n";
 import { normalizeName } from "@/lib/primitives/name";
 import {

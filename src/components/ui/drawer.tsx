@@ -1,6 +1,7 @@
+// ohmtools/design: shadcn/src/components/ui/drawer.tsx (copied by `ohmtools-design add`, do not edit)
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 type DrawerContextProps = {
   hasSnapPoints: boolean;

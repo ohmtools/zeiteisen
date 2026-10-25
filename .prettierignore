@@ -1,0 +1,6 @@
+# Copied from github.com/ohmtools/design by `ohmtools-design add`, never
+# edited or formatted here (`ohmtools-design check` compares them).
+src/components/ui/
+src/components/ohmtools/
+src/lib/ohmtools/
+src/styles/

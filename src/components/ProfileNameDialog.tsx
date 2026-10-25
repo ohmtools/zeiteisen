@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { m } from "@/i18n";
+import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nameProblemText } from "@/lib/names";
@@ -51,40 +44,40 @@ export function ProfileNameDialog({ open, mode, initial, taken, onOpenChange, on
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {mode === "rename" ? m.profile_rename() : m.profile_duplicate_title()}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === "rename" ? m.profile_rename_text() : m.profile_duplicate_text()}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="profile-name">{m.profile_name()}</Label>
-          <Input
-            id="profile-name"
-            value={name}
-            autoFocus
-            aria-invalid={clash || problem !== null || undefined}
-            onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
-            }}
-          />
-          {clash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
-          {problem && <p className="text-sm text-destructive">{problem}</p>}
-        </div>
-        <DialogFooter>
+    <Popup
+      kind="dialog"
+      open={open}
+      onOpenChange={onOpenChange}
+      onCancel={() => onOpenChange(false)}
+      title={mode === "rename" ? m.profile_rename() : m.profile_duplicate_title()}
+      description={mode === "rename" ? m.profile_rename_text() : m.profile_duplicate_text()}
+      closeLabel={m.panel_close()}
+      footer={
+        <>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {m.cancel()}
           </Button>
           <Button disabled={invalid} onClick={submit}>
             {mode === "rename" ? m.profile_save() : m.profile_duplicate_confirm()}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="profile-name">{m.profile_name()}</Label>
+        <Input
+          id="profile-name"
+          value={name}
+          autoFocus
+          aria-invalid={clash || problem !== null || undefined}
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") submit();
+          }}
+        />
+        {clash && <p className="text-sm text-destructive">{m.profile_name_taken()}</p>}
+        {problem && <p className="text-sm text-destructive">{problem}</p>}
+      </div>
+    </Popup>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { m } from "@/i18n";
 import type { Profile } from "@/lib/primitives/profile";
 import { appRoot } from "@/lib/catalog";

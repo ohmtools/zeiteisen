@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useStorageSync } from "@/hooks/useStorageSync";
 import { requestPersistence } from "@/lib/persist";
-import { toast } from "@/lib/toast";
+import { toast } from "@/lib/ohmtools/toast";
 import { loadUpload } from "@/lib/uploader";
 import { m } from "@/i18n";
 import { Catalog, parseDates, type CatalogEntry, type FetchJson } from "@/lib/primitives/catalog";

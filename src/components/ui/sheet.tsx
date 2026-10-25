@@ -1,6 +1,7 @@
+// ohmtools/design: shadcn/src/components/ui/sheet.tsx (copied by `ohmtools-design add`, do not edit)
 import * as React from "react";
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
@@ -39,10 +40,13 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  closeLabel = "Close",
   ...props
 }: SheetPrimitive.Popup.Props & {
   side?: "top" | "right" | "bottom" | "left";
   showCloseButton?: boolean;
+  // Hand-edit: the close button's name in the app's language.
+  closeLabel?: string;
 }) {
   return (
     <SheetPortal>
@@ -63,7 +67,7 @@ function SheetContent({
             render={<Button variant="ghost" className="absolute top-4 right-4" size="icon-sm" />}
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

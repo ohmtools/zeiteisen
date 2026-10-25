@@ -7,41 +7,61 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 
 ## Shell
 
+- **The design's element groups** (ohmtools/design, DESIGN.md "Elements by
+  step", "Which group"; the copies in `ohmtools/`, never edited here): App
+  names the group, the group picks the element per step. `AppShell` (header,
+  content, wide sidebar, the bar at the bottom on phones, pages over
+  everything, toaster, colour scheme), `Views` ("Week | General") and
+  `ViewControls` (week nav or filter, the day bar on phones), `Panel`
+  (groups, notes), `Area` (the settings), `Popup` (menus, popovers,
+  dialogs, questions) and `toast()`. Each step has its own elements: no
+  popups on phones (drawers instead), no drawers from compact on, no sidebar
+  on phones, no pages of their own on wide screens.
 - Full width, no max-width container. **Every step is exactly one viewport
   tall, the page never scrolls** (user decision): the grid, the panels and
   the phone pages scroll inside themselves. Every region that scrolls is
   `relative` (design rule): an absolute child without a positioned ancestor
   (`sr-only` text) would escape it and make the document taller. The root
   sets `text-sm`, so text without a size of its own is 14px. Three steps
-  (`@/lib/media`, the `compact:` / `wide:` / `short:` variants in
-  `index.css`), the same content in other containers (user decision):
-  - **Narrow** (below 40rem: phones upright, Split View): header with the
+  (`useStep()` from `@/lib/ohmtools/steps`, the `compact:` / `wide:` /
+  `short:` variants of the design's stylesheet), the same content in other
+  containers (user decision):
+  - **Narrow** (below 40rem: phones upright, narrow windows): header with the
     profile and lock, groups, notes, settings; the grid shows one day; at the
-    bottom (`BottomBar`, within thumb reach, user decision) the view tabs,
-    the week nav (or the week filter) and the two-line day bar, the picked day
-    red. A panel (and the settings) is a page of its own in place of all
-    that, with a back arrow.
+    bottom (within thumb reach, user decision) the view tabs, the week nav
+    (or the week filter) and the two-line day bar, the picked day red. A
+    panel (and the settings) is a page of its own over all that, with a back
+    arrow; the rest is inert under it.
   - **Compact** (from 40rem, or under 600px height in landscape: a phone
-    turned sideways, an iPad upright, short laptops): the whole week, one
-    header row (week nav as "‹ CW 43 [today] ›", range from `md`), panels as a
-    380px sheet from the right (`PanelSheet`). On `short` screens blocks
-    show code and kinds only, every second hour is labelled, the header is
-    48px and the details are a sheet from the right.
-  - **Wide** (from 64rem AND 600px height: iPad landscape, desktop): the
-    week beside a 340px sidebar, **closable** (user decision; was always
-    there). It opens on the groups (user decision), elsewhere panels start
-    closed. Not persisted.
-  - Panels are groups and notes only. **The settings are a dialog** (user
-    decision, room for more settings later; was a panel): never a sidebar or
-    sheet, beside whatever panel is open.
-- Header (`AppHeader`, entry chunk): the profile menu's trigger (the logo,
-  name, chevrons; a disabled look-alike until the deferred chunk arrives),
-  lock, a divider, the view tabs "Week | General", the week nav or the
-  filter; right "Groups" (with its label on wide screens), notes, settings,
-  8px apart. An open panel's button is filled, hovered too (dark mode's ghost
-  hover is darker than the fill). A first visit (one empty
-  profile) shows the app's name and settings only, and the grid's place
-  shows the welcome with three ways in (catalog, import, empty timetable).
+    turned sideways, iPads upright, small laptops): the whole week, one
+    header row (week nav as "‹ CW 43 [today] ›", range from `md`; on an
+    iPad upright in German the views take a second row), panels as a 380px
+    sheet from the right. On `short` screens blocks show code and kinds
+    only, every second hour is labelled, the header is 48px and the details
+    are a sheet from the right.
+  - **Wide** (from 64rem AND 700px height, the design's: large iPads, iPads
+    in landscape, desktops; a laptop with about 650px under the browser's
+    bars is compact): the week beside a 340px sidebar, **closable** (user
+    decision; was always there). It opens on the groups (user decision),
+    elsewhere panels start closed. Not persisted.
+  - Panels are groups and notes only. **The settings are an area** (user
+    decision, room for more settings later; was a panel): a dialog on wide
+    screens beside whatever panel is open, a page on phones and compact
+    screens (the design's, 2026-10-25; was a dialog from compact on).
+- Header (`HeaderBrand` / `HeaderActions` in `AppShell`, entry chunk): the
+  profile menu's trigger (the logo, name, chevrons; a disabled look-alike
+  until the deferred chunk arrives), lock, a divider, the view tabs "Week |
+  General", the week nav or the filter; right "Groups" (with its label on
+  wide screens), notes, settings, 8px apart. An open panel's button is
+  filled, hovered too (dark mode's ghost hover is darker than the fill). A
+  first visit (one empty profile) shows the app's name and settings only,
+  and the grid's place shows the welcome with three ways in (catalog,
+  import, empty timetable). On phones a long profile name truncates.
+- The panel's header is App's (`Panel` draws it): groups with "+" (add
+  timetables), a category with its title, the timetable as subtitle and a
+  back arrow on every step (`onBack`), notes with upload and download
+  (`NotesActions`, deferred); the lock on phones. The bodies (`GroupTree`,
+  `NotesSection`) are the deferred chunk's.
 - Lock applies to the profile, so its button sits on every view of it (header,
   groups page), never on notes or settings. Filled while locked; the groups
   panel then says so with an "Unlock" button (user decision, was no line).
@@ -50,7 +70,7 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   user decision: back to this week and the phone's default day, disabled
   while both are shown) · ›. The picker is a month with week numbers, the
   shown week a band, today red, and "This week" under a divider (user
-  request); a popover, a drawer on phones (`WeekDrawer`, deferred).
+  request); `Popup kind="popover"`, a drawer on phones.
 - General view: "All weeks | Even weeks | Odd weeks" takes the week nav's
   place and height. It filters G and U only (user decision): G1, G2, U1 and
   U2 stay and show their code, SH1/SH2 and listed dates stay in Other.
@@ -58,17 +78,18 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   spacing unit (24px, 16px on phones) around every divider — change the
   paddings together so edges stay aligned. Safe areas pad header, grid,
   pages, bottom bar and sheets (`viewport-fit=cover` in `index.html`).
-- Settings (`SettingsPage.tsx`; design on the canvas "Zeiteisen
-  Einstellungen"): five sections, the same on every step (user decision).
-  From compact on `SettingsDialog`: a dialog of up to 1000×720 (user
-  decision, was 760×560; 24px off the screen's edges below that, on a short
-  landscape screen 12px above and below, inside the safe areas), the
-  sections on the left (240px, 184px on `short`), the picked one on the
-  right under its title with the close button, scrolling inside; it opens
-  on "General" and keeps the last section while the app runs. On phones
-  `SettingsPage`: a page listing the sections, each row with what is set
-  now (language, own files in use, catalog mode, version), each section a
-  page one level deeper (forward / back transitions, back goes to the list).
+- Settings (`Settings.tsx`, the design's `Area`; design on the canvas
+  "Zeiteisen Einstellungen"): five sections, the same on every step (user
+  decision). Wide: a dialog of up to 1000×720 (user decision, was 760×560;
+  24px off the screen's edges below that), the sections on the left
+  (240px), the picked one on the right under its title with the close
+  button, scrolling inside; it opens on "General" and keeps the last
+  section while the app runs. Phones and compact screens: a page listing
+  the sections, each row with what is set now (language, own files in use,
+  catalog mode, version), each section a page one level deeper (forward /
+  back transitions, back goes to the list). `useDataControls`' dialogs and
+  file inputs render inside the open section, so their dialogs stand over
+  the settings dialog.
   The sections: general (language tabs, the languages named in themselves;
   a note that light and dark follow the browser), own files (below them,
   after a divider, "Create with AI…" with a note), catalog (mode tabs
@@ -102,7 +123,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   `ErrorTools` from the deferred chunk: "Save backup" and "Delete data…",
   since the settings are out of reach and no toaster runs. If that chunk does
   not load either, the screen stays with Reload alone.
-- Profile menu (`ProfileMenu`, deferred; a popover, a drawer on phones):
+- Profile menu (`ProfileMenu`, deferred; `Popup kind="popover"`, a drawer
+  on phones):
   the profiles with the active one ticked and a lock on locked ones, each
   row with rename, duplicate and delete (icon buttons without gaps); "New
   profile", "Import…"; then the active profile's exports. Duplicate copies
@@ -117,15 +139,19 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   warns first when a timetable is outside the catalog (the receiver needs its
   file); past `MAX_SHARE_LENGTH` it is disabled and the profile file becomes
   the obvious fallback. ICS without dates asks for the range.
-- Transient feedback is a toast, never a panel; on phones above the bottom
-  bar (`--bottom-bar`), elsewhere bottom right. Copying the link toasts too
+- Transient feedback is a toast (`toast()` from `@/lib/ohmtools/toast`),
+  never a panel; on phones above the bottom bar (`--bottom-bar`), elsewhere
+  bottom right. Copying the link toasts too
   (user decision), on top of the button's inline "Copied".
-- Drawers (phones: details, all-day events, profile menu): the content
-  starts 16px under the swipe handle (user request, was 8px).
-- Dialogs: centred from compact on, a sheet from the bottom on phones with the
-  main button on top, full width (`ui/dialog.tsx`); questions
-  (`AlertDialog`) are centred everywhere, destructive buttons red next to
-  "Cancel".
+- Popups (`Popup`, DESIGN.md "Popups"): on phones every menu, popover,
+  dialog and question is a drawer from the bottom (the content 16px under
+  the swipe handle, buttons 44px, the main one on top); from compact on a
+  menu or popover at its trigger, a centred dialog or question, destructive
+  buttons red next to "Cancel". Leaving without choosing (a swipe down, a
+  press outside, Esc, the close button) runs the popup's Cancel; a dialog
+  without a Cancel does nothing then and shows no swipe handle. The grid's
+  details are the one exception to `Popup` (one popover for the whole grid,
+  at the pointer, below): `DetailsSheet` with the design's `PhoneDrawer`.
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`, `.degree`; the pickers accept
   only their own. Downloads go out as `application/octet-stream` so no browser
@@ -167,8 +193,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   REPLACES the notes (no merging); with notes there that differ, an alert
   dialog asks first and offers "Save current notes first", like the backup
   restore. Plain text has no schema, so no zod here.
-- Android's keyboard resizes the page instead of covering it
-  (`interactive-widget=resizes-content` in `index.html`).
+- The on-screen keyboard covers the page instead of resizing it
+  (`interactive-widget=resizes-visual` in `index.html`, the design's rule:
+  the keyboard never changes the step); the browser keeps the caret in
+  view. Was `resizes-content` for the notes' sake.
 
 ## Grid
 
@@ -212,8 +240,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   A profile without timetables shows its own card there.
 - Opens on Current week inside the lecture period, General otherwise (user
   decision).
-- A horizontal touch swipe changes the day on phones, the week elsewhere
-  (Current week only). The overlay is `pointer-events-none` so swipes work; a
+- A horizontal touch swipe changes the day on phones, the week on compact
+  screens (Current week only); never on wide ones (the design: no swipe
+  gestures there), the buttons do it everywhere. The overlay is `pointer-events-none` so swipes work; a
   pointer that moved > 10px is a swipe, not a click.
 - Details (user decision: names NO timetable): kind badges in their colours
   and the group, the full name with the code under it, time with rhythm and
@@ -330,7 +359,8 @@ The app moves where state changes, never for decoration; how it is done is in
 `src/lib/NOTES.md` (`motion.ts`). One easing, `cubic-bezier(0.2, 0, 0, 1)`,
 at half the usual speed (design decision, 2026-10-25): 560 ms coming in,
 400 ms going out, shadcn's popups 200 ms; hover and press feedback stays
-quick. Everything stops under `prefers-reduced-motion` (`src/motion.css`).
+quick. Everything stops under `prefers-reduced-motion` (the design's
+stylesheet).
 
 - Week and phone day: the day heads' labels, the columns' contents (never the
   hour lines or borders) and the all-day row slide in from the side the week

@@ -21,8 +21,8 @@ import { DAYS, isUnclearRepeat, type WeekEvents } from "@/lib/primitives/week";
 import { allDaySegments, type AllDaySegment } from "@/lib/allday";
 import { byDay, FIRST_HOUR, fitDay, LAST_HOUR, WEEKDAYS, type Entry } from "@/lib/layout";
 import { isHighlighted, type Highlight } from "@/lib/link";
-import type { Step } from "@/lib/media";
-import { slideIn } from "@/lib/motion";
+import type { Step } from "@/lib/ohmtools/steps";
+import { slideIn } from "@/lib/ohmtools/motion";
 import { dateOf, dayName as dayLabel, shortDate } from "@/lib/subjects";
 
 // On phones the details are a drawer from the bottom, on a phone turned
