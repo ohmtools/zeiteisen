@@ -28,7 +28,7 @@ Designentscheidungen"; this file keeps what the code has to hold to.
     week beside a 340px sidebar, **closable** (user decision; was always
     there). It opens on the groups (user decision), elsewhere panels start
     closed. Not persisted.
-- Header (`AppHeader`, entry chunk): the profile menu's trigger (red tile,
+- Header (`AppHeader`, entry chunk): the profile menu's trigger (the logo,
   name, chevrons; a disabled look-alike until the deferred chunk arrives),
   lock, a divider, the view tabs "Week | General", the week nav or the
   filter; right "Groups" (with its label on wide screens), notes, settings,
