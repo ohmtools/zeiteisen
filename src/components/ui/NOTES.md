@@ -39,6 +39,15 @@ app's own, in `src/index.css`.
     ghost unless they are the main action).
   - The overlays of `Dialog`, `AlertDialog`, `Sheet` and `Drawer` are a plain
     scrim, `bg-black/40 dark:bg-black/70`, no blur (the design darkens).
+  - Every floating surface is frosted glass (user decision: a popover on an
+    iPad stood out too little from the black grid): `popup-glass`
+    (`src/index.css`) instead of `bg-popover` and shadcn's shadow on
+    `PopoverContent`, `DialogContent`, `AlertDialogContent`, `SheetContent`,
+    `DrawerContent`, `SelectContent` (its `before:` blur layer is gone) and
+    `SuggestInput`'s popup; the edge `ring-foreground/30` (sheets and
+    drawers: `border-foreground/30`). The drawer's bleed is the same glass
+    colour. The toasts (`sonner.tsx`) take it through `--normal-bg`,
+    `--normal-border` and the class.
   - `TabsList` (default variant): one indicator span before the tabs glides
     to the active tab (`translate` + `width`, measured from `offsetLeft` /
     `offsetWidth`, re-measured on `data-active` changes and resizes); the

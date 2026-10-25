@@ -120,7 +120,8 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
   rooms, dates, week numbers, group numbers, file endings. Radii 6px
   (blocks, badges, tab fields), 8px (buttons, fields, menus), 10px (grid
   frame, dialogs, drawers). Buttons are ghost unless they are the main
-  action.
+  action. Every popup (popover, menu, dialog, sheet, drawer, toast) is
+  frosted glass with a stronger edge (`popup-glass`, user decision).
 - **No uppercase text, no boxes** (divider lines instead), **no theme
   toggle**, no counters or legends except where a number tells things apart
   ("14 of 40 picked") — user decisions, do not bring back.
