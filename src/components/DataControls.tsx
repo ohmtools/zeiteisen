@@ -114,8 +114,14 @@ export function useDataControls({
   own: DataAction[];
   // Shown while any own file is in use.
   ownHint: string | null;
+  // The AI skill, below the own files.
+  skill: DataAction;
   catalogUrl: DataAction;
   backup: DataAction[];
+  // "Delete data…", apart from the backup.
+  erase: DataAction;
+  // Own files in use: dates, locations, degree programs.
+  ownCount: number;
   elements: ReactNode;
 } {
   // One file input for every own file; `picking` says which kind it is for
@@ -197,10 +203,15 @@ export function useDataControls({
           },
         ]
       : []),
-    // Always there, even with the catalog ignored: the way to own files when
-    // there is none yet.
-    { key: "skill", icon: Sparkles, label: m.skill_menu(), onSelect: () => setSkillOpen(true) },
   ];
+  // Always there, even with the catalog ignored: the way to own files when
+  // there is none yet.
+  const skill: DataAction = {
+    key: "skill",
+    icon: Sparkles,
+    label: m.skill_menu(),
+    onSelect: () => setSkillOpen(true),
+  };
 
   const backup: DataAction[] = [
     { key: "save", icon: Download, label: m.backup_save(), onSelect: () => downloadBackup() },
@@ -210,14 +221,14 @@ export function useDataControls({
       label: m.backup_load(),
       onSelect: () => backupInput.current?.click(),
     },
-    {
-      key: "delete",
-      icon: Eraser,
-      label: m.data_delete(),
-      destructive: true,
-      onSelect: () => setDeleting(true),
-    },
   ];
+  const erase: DataAction = {
+    key: "delete",
+    icon: Eraser,
+    label: m.data_delete(),
+    destructive: true,
+    onSelect: () => setDeleting(true),
+  };
 
   const elements = (
     <>
@@ -318,7 +329,10 @@ export function useDataControls({
       note: catalogUrl !== null ? m.catalog_url_custom() : undefined,
       onSelect: () => setEditingUrl(true),
     },
+    skill,
     backup,
+    erase,
+    ownCount: (datesManual ? 1 : 0) + (ownLocations ? 1 : 0) + ownCount,
     elements,
   };
 }

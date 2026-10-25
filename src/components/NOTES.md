@@ -16,8 +16,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
     profile and lock, groups, notes, settings; the grid shows one day; at the
     bottom (`BottomBar`, within thumb reach, user decision) the view tabs,
     the week nav (or the week filter) and the two-line day bar, the picked day
-    red. A panel is a page of its own in place of all that, with a back
-    arrow.
+    red. A panel (and the settings) is a page of its own in place of all
+    that, with a back arrow.
   - **Compact** (from 40rem, or under 600px height in landscape: a phone
     turned sideways, an iPad upright, short laptops): the whole week, one
     header row (week nav as "‹ CW 43 [today] ›", range from `md`), panels as a
@@ -28,6 +28,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
     week beside a 340px sidebar, **closable** (user decision; was always
     there). It opens on the groups (user decision), elsewhere panels start
     closed. Not persisted.
+  - Panels are groups and notes only. **The settings are a dialog** (user
+    decision, room for more settings later; was a panel): never a sidebar or
+    sheet, beside whatever panel is open.
 - Header (`AppHeader`, entry chunk): the profile menu's trigger (the logo,
   name, chevrons; a disabled look-alike until the deferred chunk arrives),
   lock, a divider, the view tabs "Week | General", the week nav or the
@@ -52,12 +55,24 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   spacing unit (24px, 16px on phones) around every divider — change the
   paddings together so edges stay aligned. Safe areas pad header, grid,
   pages, bottom bar and sheets (`viewport-fit=cover` in `index.html`).
-- Settings (`SettingsPage`, a panel): language tabs (the languages named in
-  themselves), own files, catalog (mode tabs "Ignore | Auto-update |
-  Freeze", applied on pick — nothing passes through ignore — with its
-  explanation and "Catalog URL…"), backup ("Save backup", "Load backup…",
+- Settings (`SettingsPage.tsx`; design on the canvas "Zeiteisen
+  Einstellungen"): five sections, the same on every step (user decision).
+  From compact on `SettingsDialog`: a dialog of up to 760×560 (a short
+  landscape screen: its height less 12px each side, inside the safe areas),
+  the sections on the left (216px, 184px on `short`), the picked one on the
+  right under its title with the close button, scrolling inside; it opens
+  on "General" and keeps the last section while the app runs. On phones
+  `SettingsPage`: a page listing the sections, each row with what is set
+  now (language, own files in use, catalog mode, version), each section a
+  page one level deeper (forward / back transitions, back goes to the list).
+  The sections: general (language tabs, the languages named in themselves;
+  a note that light and dark follow the browser), own files (below them,
+  after a divider, "Create with AI…" with a note), catalog (mode tabs
+  "Ignore | Auto-update | Freeze", applied on pick — nothing passes through
+  ignore — with its explanation; under "Source" "Catalog URL…"), backup
+  ("Save backup", "Load backup…" with what a backup holds; after a divider
   "Delete data…" in red), about (name, version, GitHub mark, note, "Debug
-  info"). Rows are ghost buttons flush with the text; `useDataControls`
+  info"). Its dialogs open over the settings dialog. Rows are ghost buttons flush with the text; `useDataControls`
   (`DataControls.tsx`) holds their state, dialogs (`DataDialogs.tsx`) and
   hidden inputs. Own files: dates and locations one row each ("Load …"
   while the catalog's is in use, "Use catalog …" plus a trailing "own file"

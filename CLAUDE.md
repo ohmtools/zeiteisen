@@ -132,6 +132,9 @@ npm run hooks     # point git at .githooks/ (also run by npm install)
   from the right), wide (from 64rem AND 600px height: a closable 340px
   sidebar beside the grid). Every step is one viewport tall, no page scroll;
   grid, panels and pages scroll inside themselves.
+- Groups and notes are panels (sidebar, sheet, page). The settings are not:
+  a dialog with sections on the left, on phones a page of sections, each a
+  page of its own (user decision; room for more settings).
 - One spacing unit around every divider: 24px (16px on phones), plus the
   safe areas.
 - Dark mode and language follow the browser; the only language control is

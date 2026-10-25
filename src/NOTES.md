@@ -6,7 +6,7 @@
   primitives.
 - **First paint = the grid.** `App.tsx` statically imports only the shell
   (header, view tabs, week nav, week filter, day bar, bottom bar, grid), the
-  state hooks and what they need. The panels (groups, notes, settings), the
+  state hooks and what they need. The panels (groups, notes), the settings, the
   profile menu, the sheets and drawers (panel sheet, details, week picker),
   dialogs and toaster come from ONE deferred chunk: `components/deferred.ts`
   re-exports them and App takes each through `lazyDeferred` (same `import()`).

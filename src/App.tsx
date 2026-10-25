@@ -63,6 +63,7 @@ const AppDialogs = lazyDeferred((d) => d.AppDialogs);
 const SubjectInfoDialog = lazyDeferred((d) => d.SubjectInfoDialog);
 const AppToaster = lazyDeferred((d) => d.AppToaster);
 const SettingsPage = lazyDeferred((d) => d.SettingsPage);
+const SettingsDialog = lazyDeferred((d) => d.SettingsDialog);
 const NotesSection = lazyDeferred((d) => d.NotesSection);
 
 export default function App() {
@@ -163,7 +164,7 @@ export default function App() {
   // A first visit: one profile, still empty.
   const welcome = !hasTimetables && profiles.profiles.length <= 1;
 
-  // Groups, notes or settings: open beside the grid on wide screens (groups
+  // Groups or notes: open beside the grid on wide screens (groups
   // at first, user decision: they are what the app is for), else closed until
   // asked for. Not persisted.
   const [panel, setPanel] = useState<Panel | null>(() =>
@@ -196,6 +197,18 @@ export default function App() {
     else transition(next === null ? "back" : "forward", update, ready);
   };
 
+  // The settings: a dialog from compact on, beside whatever panel is open;
+  // on phones a page like a panel's, coming in the same way.
+  const [settings, setSettings] = useState(false);
+  const openSettings = (open: boolean) => {
+    const update = () => setSettings(open);
+    const ready = () =>
+      !open || (document.querySelector("[data-panel-host]")?.childElementCount ?? 0) > 0;
+    if (step === "narrow" && open !== settings) {
+      transition(open ? "forward" : "back", update, ready);
+    } else update();
+  };
+
   // N, anywhere but in a field, a dialog or a menu: to the notes, caret at
   // the end. Escape in them goes back to the grid. Before the deferred chunk
   // has arrived the notes are not there yet: the caret waits for them.
@@ -217,6 +230,7 @@ export default function App() {
       // The notes have to be on screen before the text area takes the focus.
       flushSync(() => {
         setPanel("notes");
+        setSettings(false);
         setNotesByKey(true);
         setHighlight(null);
       });
@@ -270,7 +284,7 @@ export default function App() {
     return added ? name : null;
   };
 
-  // The settings, as sidebar, sheet or page.
+  // The settings, as dialog or page.
   const dataProps: DataProps = {
     catalogMode: sources.mode,
     onCatalogMode: (mode) => {
@@ -432,12 +446,11 @@ export default function App() {
         onClose={() => openPanel(null)}
         onLeave={() => gridRef.current?.focus()}
       />
-    ) : panel === "settings" ? (
-      <SettingsPage step={step} onClose={() => openPanel(null)} {...dataProps} />
     ) : null;
 
-  // Phones: a panel is a page of its own, in place of grid and bars.
-  const page = step === "narrow" && panel !== null;
+  // Phones: a panel (or the settings) is a page of its own, in place of grid
+  // and bars.
+  const page = step === "narrow" && (panel !== null || settings);
 
   return (
     // Names and building links for every block and the subject editor.
@@ -452,7 +465,13 @@ export default function App() {
             data-panel-host
             className="flex min-h-0 flex-1 flex-col pt-[env(safe-area-inset-top)]"
           >
-            <Suspense fallback={null}>{panelContent}</Suspense>
+            <Suspense fallback={null}>
+              {settings ? (
+                <SettingsPage onClose={() => openSettings(false)} {...dataProps} />
+              ) : (
+                panelContent
+              )}
+            </Suspense>
           </div>
         ) : (
           <>
@@ -469,6 +488,8 @@ export default function App() {
               }
               panel={panel}
               onPanel={openPanel}
+              settings={settings}
+              onSettings={() => openSettings(!settings)}
               welcome={welcome}
             />
             <div className="flex min-h-0 flex-1">
@@ -537,6 +558,15 @@ export default function App() {
                 >
                   {panelContent}
                 </PanelSheet>
+              </Suspense>
+            )}
+            {step !== "narrow" && (
+              <Suspense fallback={null}>
+                <SettingsDialog
+                  open={settings}
+                  onClose={() => openSettings(false)}
+                  {...dataProps}
+                />
               </Suspense>
             )}
           </>

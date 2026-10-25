@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { AppTile } from "@/components/ProfileTrigger";
 import type { Step } from "@/lib/media";
 
-// Groups, notes and settings: a sidebar beside the grid on wide screens, a
-// sheet from the right on compact ones, a page of their own on phones.
-export type Panel = "groups" | "notes" | "settings";
+// Groups and notes: a sidebar beside the grid on wide screens, a sheet from
+// the right on compact ones, a page of their own on phones. The settings are
+// no panel: a dialog, a page on phones (`SettingsPage`).
+export type Panel = "groups" | "notes";
 
 // Header icon buttons stand 8px apart; an open panel's button is filled, and
 // stays so under the pointer (the ghost hover is darker than the fill in dark
@@ -17,9 +18,9 @@ const ICON =
   "aria-pressed:bg-accent aria-pressed:hover:bg-accent dark:aria-pressed:hover:bg-accent";
 
 // The one header row. Left the profile (menu and lock), then from compact on
-// the view tabs and the week (or the week filter); right the panels. Phones
-// keep the profile and the panels up here and move tabs, week and day to the
-// bar at the bottom (`BottomBar`).
+// the view tabs and the week (or the week filter); right the panels and the
+// settings. Phones keep the profile, the panels and the settings up here and
+// move tabs, week and day to the bar at the bottom (`BottomBar`).
 export function AppHeader({
   step,
   profile,
@@ -28,6 +29,8 @@ export function AppHeader({
   views,
   panel,
   onPanel,
+  settings,
+  onSettings,
   welcome = false,
 }: {
   step: Step;
@@ -39,6 +42,9 @@ export function AppHeader({
   views: ReactNode;
   panel: Panel | null;
   onPanel: (panel: Panel | null) => void;
+  // The settings are open.
+  settings: boolean;
+  onSettings: () => void;
   // A first visit: the app's name instead of the profile, settings only.
   welcome?: boolean;
 }) {
@@ -113,8 +119,8 @@ export function AppHeader({
           size="icon"
           className={ICON}
           aria-label={m.tab_settings()}
-          aria-pressed={panel === "settings"}
-          onClick={() => toggle("settings")}
+          aria-pressed={settings}
+          onClick={onSettings}
         >
           <Settings />
         </Button>
