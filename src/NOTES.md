@@ -29,12 +29,19 @@
   sidebar keeps its width; the profile menu: a disabled look-alike trigger).
   `vite.config.ts` names only a `react` chunk group, no catch-all `vendor`,
   so `ics` and `react-day-picker` stay next to their only user.
-- A tab left open across a deploy asks for chunk names that no longer exist
-  (`autoUpdate`: the new service worker takes over and drops the old
-  precache). `main.tsx` reloads on `vite:preloadError` (at most once a
-  minute), and `ErrorBoundary` around App shows a reload button instead of a
-  blank page if that is not enough, with backup and "Delete data…" from the
-  deferred chunk below it (`components/NOTES.md`).
+- A new version is offered, never forced (`registerType: "prompt"`, like
+  faltung): `UpdatePrompt` (deferred chunk) registers the service worker and
+  shows a toast "A new version is available" with "Reload" that stays until
+  used or wiped away; the new worker waits until then, so an open tab keeps
+  the files it started with. Besides the browser's own check on every start,
+  it asks again when the page becomes visible or stays open, at most once an
+  hour. Should a chunk still go missing (the user cleared the caches, or a
+  tab from before this), `main.tsx` reloads on `vite:preloadError` (at most
+  once a minute), and `ErrorBoundary` around App shows a reload button
+  instead of a blank page if that is not enough, with backup and "Delete
+  data…" from the deferred chunk below it (`components/NOTES.md`). Its
+  reload lets a waiting new version take over first: a plain reload would
+  start the failed one again.
 - The first load is what the grid waits for: check it after touching anything
   App or `main.tsx` import statically — `vite build`, then add up the
   scripts, `modulepreload`s and stylesheet `dist/index.html` names (gzip).

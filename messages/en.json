@@ -390,6 +390,8 @@
   "app_error_text": "Part of the app could not be loaded, probably because a new version was published. Your data is safe on this device.",
   "app_error_reload": "Reload",
   "app_error_help": "If reloading does not help: save a backup, then delete what keeps the app from starting.",
+  "app_update_ready": "A new version is available.",
+  "app_update_reload": "Reload",
   "degree_names_title": "Names of your degree programs",
   "degree_names_text": "Give each file the name subjects use as their degree program, e.g. B-ABC. It replaces the catalog's degree program of that name.",
   "degree_name_label": "Name of {file}",

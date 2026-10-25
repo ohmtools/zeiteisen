@@ -41,7 +41,7 @@ function ErrorScreen() {
         <EmptyTitle>{m.app_error_title()}</EmptyTitle>
         <EmptyDescription>{m.app_error_text()}</EmptyDescription>
       </EmptyHeader>
-      <Button onClick={() => location.reload()}>{m.app_error_reload()}</Button>
+      <Button onClick={reloadNewest}>{m.app_error_reload()}</Button>
       <ErrorBoundary fallback={null}>
         <Suspense fallback={null}>
           <ErrorTools />
@@ -49,4 +49,24 @@ function ErrorScreen() {
       </ErrorBoundary>
     </Empty>
   );
+}
+
+// A new version may be waiting behind the one that failed (the service worker
+// waits for the update toast, `UpdatePrompt`): let it take over first, or a
+// reload starts the failed version again. Reloads anyway should the new worker
+// not take over within a few seconds.
+async function reloadNewest() {
+  try {
+    const sw = navigator.serviceWorker;
+    const waiting = sw?.controller && (await sw.getRegistration())?.waiting;
+    if (waiting) {
+      sw.addEventListener("controllerchange", () => location.reload(), { once: true });
+      setTimeout(() => location.reload(), 3000);
+      waiting.postMessage({ type: "SKIP_WAITING" });
+      return;
+    }
+  } catch {
+    // No service worker to ask: a plain reload.
+  }
+  location.reload();
 }

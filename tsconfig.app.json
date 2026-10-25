@@ -9,7 +9,7 @@
     "module": "esnext",
     "types": [
       "vite/client",
-      "vite-plugin-pwa/client"
+      "vite-plugin-pwa/react"
     ],
     "allowArbitraryExtensions": true,
     "paths": {

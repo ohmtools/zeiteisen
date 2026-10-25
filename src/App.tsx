@@ -64,6 +64,7 @@ const SubjectInfoDialog = lazyDeferred((d) => d.SubjectInfoDialog);
 const Settings = lazyDeferred((d) => d.Settings);
 const NotesSection = lazyDeferred((d) => d.NotesSection);
 const NotesActions = lazyDeferred((d) => d.NotesActions);
+const UpdatePrompt = lazyDeferred((d) => d.UpdatePrompt);
 
 export default function App() {
   // "Now" ticks every minute, so a page left open moves on with the clock.
@@ -627,6 +628,7 @@ export default function App() {
             onRefreshCatalog={() => refreshCatalog()}
           />
           <SubjectInfoDialog info={subjectInfo} onClose={() => setSubjectInfo(null)} />
+          <UpdatePrompt />
         </Suspense>
       </AppShell>
     </OverridesContext>

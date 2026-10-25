@@ -112,7 +112,9 @@ export default defineConfig({
       strategy: ["localStorage", "preferredLanguage", "baseLocale"],
     }),
     VitePWA({
-      registerType: "autoUpdate",
+      // A new version waits until the user reloads from its toast
+      // (`components/UpdatePrompt`), which also registers the worker.
+      registerType: "prompt",
       includeAssets: ["favicon.svg"],
       // The manifest's icons would be precached regardless of `globIgnores`
       // below; they are read at install time only (`logo.svg` still comes

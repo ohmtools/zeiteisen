@@ -390,6 +390,8 @@
   "app_error_text": "Ein Teil der App konnte nicht geladen werden, wahrscheinlich wegen einer neuen Version. Deine Daten sind auf diesem Gerät sicher.",
   "app_error_reload": "Neu laden",
   "app_error_help": "Hilft Neuladen nicht: Speichere ein Backup und lösche dann, was den Start verhindert.",
+  "app_update_ready": "Eine neue Version ist verfügbar.",
+  "app_update_reload": "Neu laden",
   "degree_names_title": "Namen deiner Studiengänge",
   "degree_names_text": "Gib jeder Datei den Namen, den Fächer als Studiengang nennen, z. B. B-ABC. Sie ersetzt den gleichnamigen Studiengang des Katalogs.",
   "degree_name_label": "Name von {file}",
