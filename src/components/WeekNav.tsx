@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { LazyCalendar } from "@/components/LazyCalendar";
 import { isoWeek } from "@/lib/primitives/week";
 import { useNow } from "@/hooks/useNow";
+import { calendarWeek } from "@/lib/view";
 import { useSlideOnChange } from "@/hooks/useSlideOnChange";
 import { slideIn } from "@/lib/ohmtools/motion";
 import type { Step } from "@/lib/ohmtools/steps";
@@ -136,7 +137,7 @@ export function WeekNav({ value, onChange, onToday, atToday, step, className }: 
 
 // A month with its week numbers, the shown week marked, today red; under a
 // divider the way back to this week (user request), disabled while it is
-// shown.
+// shown: the calendar's, so on Sunday the one ending.
 function WeekPicker({
   value,
   now,
@@ -146,7 +147,7 @@ function WeekPicker({
   now: Date;
   onPick: (weekStart: Date) => void;
 }): ReactNode {
-  const thisWeek = startOfISOWeek(now);
+  const thisWeek = calendarWeek(now);
   return (
     <div className="flex flex-col">
       {/* The shown week is a band, today red (the one accent); no
@@ -168,8 +169,8 @@ function WeekPicker({
         <Button
           variant="secondary"
           className="w-full"
-          disabled={value.getTime() === thisWeek.getTime()}
-          onClick={() => onPick(thisWeek)}
+          disabled={value.getTime() === thisWeek}
+          onClick={() => onPick(new Date(thisWeek))}
         >
           <CalendarCheck data-icon="inline-start" />
           {m.week_this()}
