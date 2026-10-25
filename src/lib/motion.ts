@@ -59,7 +59,7 @@ export const EASE = "cubic-bezier(0.2, 0, 0, 1)";
 export function slideIn(
   element: Element,
   direction: -1 | 0 | 1,
-  { distance = 24, delay = 0, duration = 260 } = {},
+  { distance = 24, delay = 0, duration = 560 } = {},
 ): void {
   if (reducedMotion()) return;
   element.animate(

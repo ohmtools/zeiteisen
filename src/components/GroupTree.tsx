@@ -722,7 +722,7 @@ function SubjectFold({
         )}
       </CollapsibleTrigger>
       {/* Opens and closes by its height (Base UI measures it). */}
-      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-560 ease-out data-ending-style:h-0 data-ending-style:duration-400 data-starting-style:h-0">
         <div className="mb-2 ml-4 flex flex-col gap-1 border-l pl-4">
           {problem && <WarningLine>{problem}</WarningLine>}
           {shown.map((one, i) => (

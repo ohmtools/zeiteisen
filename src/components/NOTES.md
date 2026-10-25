@@ -328,8 +328,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 
 The app moves where state changes, never for decoration; how it is done is in
 `src/lib/NOTES.md` (`motion.ts`). One easing, `cubic-bezier(0.2, 0, 0, 1)`,
-~200–300 ms. Everything stops under `prefers-reduced-motion`
-(`src/motion.css`).
+at half the usual speed (design decision, 2026-10-25): 560 ms coming in,
+400 ms going out, shadcn's popups 200 ms; hover and press feedback stays
+quick. Everything stops under `prefers-reduced-motion` (`src/motion.css`).
 
 - Week and phone day: the day heads' labels, the columns' contents (never the
   hour lines or borders) and the all-day row slide in from the side the week

@@ -38,7 +38,7 @@ export function SuggestInput({ value, onValueChange, suggestions, ...props }: Pr
       <Autocomplete.Input render={<Input autoComplete="off" {...props} />} />
       <Autocomplete.Portal>
         <Autocomplete.Positioner sideOffset={6} align="start" className="isolate z-50">
-          <Autocomplete.Popup className="max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-none popup-glass text-popover-foreground ring-1 ring-foreground/30 duration-100 data-empty:hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+          <Autocomplete.Popup className="max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-none popup-glass text-popover-foreground ring-1 ring-foreground/30 duration-200 data-empty:hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
             <Autocomplete.List className="max-h-[min(--spacing(72),var(--available-height))] scroll-py-1.5 overflow-y-auto overscroll-contain p-1.5 data-empty:p-0">
               {(item: Suggestion) => (
                 <Autocomplete.Item

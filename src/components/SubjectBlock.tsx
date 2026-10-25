@@ -53,7 +53,7 @@ const BLOCK_SELECTOR = "[data-subject-block]";
 // instead of snapping; hover lifts its colour a little. All CSS: a block's
 // cost multiplies by hundreds.
 const BLOCK_MOTION =
-  "animate-in fade-in-0 zoom-in-95 duration-200 ease-out transition-[opacity,box-shadow,scale,filter] hover:brightness-[0.97] active:scale-[0.97] dark:hover:brightness-125";
+  "animate-in fade-in-0 zoom-in-95 animation-duration-400 duration-200 ease-out transition-[opacity,box-shadow,scale,filter] hover:brightness-[0.97] active:scale-[0.97] dark:hover:brightness-125";
 
 // A tap that moved this far is a swipe (day change), not a click on the block.
 const TAP_MAX_PX = 10;

@@ -32,7 +32,7 @@ export function DayToggle({
           its own widths plus gaps in. */}
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 rounded-md bg-red transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]"
+        className="absolute inset-y-0 left-0 rounded-md bg-red transition-transform duration-560 ease-[cubic-bezier(0.2,0,0,1)]"
         style={{
           width: `calc((100% - ${DAYS.length - 1} * 0.25rem) / ${DAYS.length})`,
           transform: `translateX(calc(${index} * (100% + 0.25rem)))`,
@@ -47,7 +47,7 @@ export function DayToggle({
             role="tab"
             aria-selected={selected}
             className={cn(
-              "relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-md text-sm transition-[color,scale] duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
+              "relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-md text-sm transition-[color,scale] duration-560 outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
               weekStart ? "h-14" : "h-10",
               selected ? "font-semibold text-red-foreground" : "text-muted-foreground",
             )}
@@ -63,7 +63,7 @@ export function DayToggle({
                   // eases from grey, dipped the picked date to grey and back.
                   <span
                     className={cn(
-                      "font-mono text-base transition-colors duration-300",
+                      "font-mono text-base transition-colors duration-560",
                       selected ? "text-red-foreground" : "text-foreground",
                     )}
                   >

@@ -631,7 +631,7 @@ function EmptyState({
   action: React.ReactNode;
 }) {
   return (
-    <div className="flex max-w-xs animate-in flex-col items-center gap-4 rounded-[10px] bg-background/80 p-4 text-center backdrop-blur-sm duration-300 ease-out fade-in-0 zoom-in-95">
+    <div className="flex max-w-xs animate-in flex-col items-center gap-4 rounded-[10px] bg-background/80 p-4 text-center backdrop-blur-sm duration-560 ease-out fade-in-0 zoom-in-95">
       <span className="flex size-9 items-center justify-center rounded-md bg-secondary">
         <CalendarDays className="size-4" />
       </span>

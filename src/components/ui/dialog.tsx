@@ -26,7 +26,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 bg-black/40 dark:bg-black/70 duration-100  fixed inset-0 isolate z-50",
+        "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 bg-black/40 dark:bg-black/70 duration-400 compact:duration-200 data-closed:fill-mode-forwards fixed inset-0 isolate z-50",
         className,
       )}
       {...props}
@@ -50,9 +50,9 @@ function DialogContent({
         className={cn(
           // Hand-edit: on narrow screens a sheet from the bottom edge, full
           // width, scrolling inside itself (`compact:` and up: centred).
-          "popup-glass text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 ring-foreground/30 grid gap-6 text-sm ring-1 duration-200 fixed z-50 outline-none",
+          "popup-glass text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 ring-foreground/30 grid gap-6 text-sm ring-1 duration-400 data-closed:fill-mode-forwards fixed z-50 outline-none",
           "inset-x-0 bottom-0 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-t-[10px] p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] data-open:slide-in-from-bottom-10 data-closed:slide-out-to-bottom-10",
-          "compact:inset-x-auto compact:top-1/2 compact:bottom-auto compact:left-1/2 compact:w-full compact:max-w-[min(28rem,calc(100%-2rem))] compact:-translate-x-1/2 compact:-translate-y-1/2 compact:rounded-[10px] compact:p-6 compact:duration-100 compact:data-open:slide-in-from-bottom-0 compact:data-open:zoom-in-95 compact:data-closed:slide-out-to-bottom-0 compact:data-closed:zoom-out-95",
+          "compact:inset-x-auto compact:top-1/2 compact:bottom-auto compact:left-1/2 compact:w-full compact:max-w-[min(28rem,calc(100%-2rem))] compact:-translate-x-1/2 compact:-translate-y-1/2 compact:rounded-[10px] compact:p-6 compact:duration-200 compact:data-open:slide-in-from-bottom-0 compact:data-open:zoom-in-95 compact:data-closed:slide-out-to-bottom-0 compact:data-closed:zoom-out-95",
           className,
         )}
         {...props}

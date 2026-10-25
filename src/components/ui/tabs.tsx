@@ -79,7 +79,7 @@ function TabsList({
         <span
           aria-hidden
           data-slot="tabs-indicator"
-          className="absolute top-[3px] bottom-[4px] left-0 rounded-md border border-transparent bg-background shadow-sm transition-[translate,width] duration-300 ease-[cubic-bezier(0.2,0,0,1)] dark:border-input dark:bg-input/30"
+          className="absolute top-[3px] bottom-[4px] left-0 rounded-md border border-transparent bg-background shadow-sm transition-[translate,width] duration-560 ease-[cubic-bezier(0.2,0,0,1)] dark:border-input dark:bg-input/30"
           style={{ width: active.width, translate: `${active.left}px` }}
         />
       )}

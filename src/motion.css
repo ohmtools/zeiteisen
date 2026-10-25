@@ -31,7 +31,7 @@
 ::view-transition-group(*),
 ::view-transition-old(*),
 ::view-transition-new(*) {
-  animation-duration: 280ms;
+  animation-duration: 560ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -52,21 +52,21 @@ html[data-transition="panel"]::view-transition-new(panel):only-child {
 }
 html[data-transition="panel"]::view-transition-old(panel):only-child {
   animation-name: vt-out-right;
-  animation-duration: 200ms;
+  animation-duration: 400ms;
 }
 
 /* Phones: a panel's page comes in from the right, the grid steps aside to
    the left; back is the mirror. */
 html[data-transition="forward"]::view-transition-old(root) {
   animation-name: vt-out-left;
-  animation-duration: 200ms;
+  animation-duration: 400ms;
 }
 html[data-transition="forward"]::view-transition-new(root) {
   animation-name: vt-in-right;
 }
 html[data-transition="back"]::view-transition-old(root) {
   animation-name: vt-out-right;
-  animation-duration: 200ms;
+  animation-duration: 400ms;
 }
 html[data-transition="back"]::view-transition-new(root) {
   animation-name: vt-in-left;

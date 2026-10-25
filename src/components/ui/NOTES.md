@@ -53,6 +53,13 @@ app's own, in `src/index.css`.
     `offsetWidth`, re-measured on `data-active` changes and resizes); the
     active tab itself has no fill, border or shadow any more. Not Base UI's
     `Tabs.Indicator`: it put 3 KB gzip into the first load.
+  - Motion at half speed (design decision, 2026-10-25): shadcn's 100 ms
+    popups (`Popover`, `Select`, `AlertDialog`, the centred `Dialog`,
+    `SuggestInput`'s popup) take 200 ms; the phones' dialog sheet and its
+    scrim 400 ms, both `data-closed:fill-mode-forwards` (else the scrim
+    springs back for a frame before it unmounts); `Sheet` and its scrim
+    560 ms in, 400 ms out in the app's easing; `Drawer` 560 ms in (its own
+    easing; a swipe's close stays its own); the tab indicator 560 ms.
   - `checkbox.tsx`: the indicator renders `MinusIcon` instead of `CheckIcon`
     when `indeterminate` is set, so a partial pick reads as partial.
   - `sonner.tsx`: shadcn's version imports `useTheme` from `next-themes`,
