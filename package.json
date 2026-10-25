@@ -1,6 +1,6 @@
 {
   "name": "zeiteisen",
-  "version": "2.1.10",
+  "version": "2.1.11",
   "private": true,
   "license": "BSD-3-Clause",
   "type": "module",
@@ -27,7 +27,7 @@
     "release": "git tag \"v$npm_package_version\" && git push origin \"v$npm_package_version\""
   },
   "dependencies": {
-    "@base-ui/react": "^1.8.0",
+    "@base-ui/react": "^1.9.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@inlang/paraglide-js": "^2.25.4",

@@ -212,7 +212,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - The on-screen keyboard covers the page instead of resizing it
   (`interactive-widget=resizes-visual` in `index.html`, the design's rule:
   the keyboard never changes the step); the browser keeps the caret in
-  view. Was `resizes-content` for the notes' sake.
+  view, and a drawer stands above the keyboard (the design's `Drawer`). Was
+  `resizes-content` for the notes' sake.
 
 ## Grid
 

@@ -65,6 +65,11 @@ design's, in `src/styles/ohmtools.css`.
   - `SheetContent` and `DrawerContent` round their free corners 10px
     (`rounded-*-lg`, design: "dialogs, drawers and sheets"), not square or
     shadcn's 14px.
+  - `DrawerContent` wraps its viewport in Base UI's
+    `Drawer.VirtualKeyboardProvider` and a drawer from the bottom stands on
+    `--drawer-keyboard-inset`: the keyboard covers the page
+    (`resizes-visual`), and a field focused as the drawer opens (a
+    timetable's name) stayed under it until tapped a second time.
   - Motion at half speed (design decision, 2026-10-25): shadcn's 100 ms
     popups (`Popover`, `Select`, `AlertDialog`, the centred `Dialog`,
     `SuggestInput`'s popup) take 200 ms; the phones' dialog sheet and its
