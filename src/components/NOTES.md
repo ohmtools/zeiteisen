@@ -69,9 +69,12 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - `WeekNav` stays one row: ‹ · relative label ("This week", "In 4 weeks";
   opens the week picker) with "CW 43 · 19.–25.10." · today (icon only,
   user decision: back to this week and the phone's default day, disabled
-  while both are shown) · ›. The picker is a month with week numbers, the
-  shown week a band, today red, and "This week" under a divider (user
-  request); `Popup kind="popover"`, a drawer on phones.
+  while both are shown; on Sunday the week ahead, `src/lib/NOTES.md`) · ›.
+  The label stays the calendar's: on Sunday the opening week reads "Next
+  week". The picker is a month with week numbers, the shown week a band,
+  today red, and "This week" under a divider (user request; the calendar
+  week, so on Sunday the way back to the one ending); `Popup kind="popover"`,
+  a drawer on phones.
 - General view: "All weeks | Even weeks | Odd weeks" takes the week nav's
   place and height; on `short` screens "All | Even | Odd" (one header row
   holds it only with less in each part, the design's rule). It filters G and U only (user decision): G1, G2, U1 and

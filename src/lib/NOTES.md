@@ -132,11 +132,13 @@ re-implements primitive logic.
   period of the installed dates, General otherwise (user decision, not
   persisted). The shown week and the phone's day follow "now"; a week or day the
   user picks holds while the week (day) it was picked in lasts (`shownWeek` /
-  `shownDay`), so an app left open over the weekend shows the new week on
-  Monday. The phone's day turns to the next one at 19:00 (user decision), a day
-  pick holds until then; Sunday evening stays on the weekend list, since next
-  Monday is not in the shown week. The week is epoch ms, so what depends on it
-  is not recomputed on every tick of `useNow`.
+  `shownDay`). Sunday already belongs to the week ahead (user decision): all
+  Sunday the week view shows the next week and the phone its Monday, so an app
+  left open over the weekend moves on at Sunday midnight, a week pick made on
+  Sunday holds until Saturday, and the opening view asks about that Monday.
+  The phone's day turns to the next one at 19:00 (user decision), a day pick
+  holds until then; Saturday evening stays on the weekend list. The week is
+  epoch ms, so what depends on it is not recomputed on every tick of `useNow`.
 - `refresh.ts` — `useCatalog`'s scheduling as plain code: one refresh at a
   time, not again within a minute unless forced, a restart (mode or URL
   changed) makes the running one stale (`refreshScheduler`), `cancel` does
