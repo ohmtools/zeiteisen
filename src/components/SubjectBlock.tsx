@@ -1,5 +1,17 @@
 import { use, useMemo, useRef, type ReactNode } from "react";
-import { Clock, EyeOff, Hand, Info, Layers, MapPin, Pencil, StickyNote, User } from "lucide-react";
+import {
+  ChevronRight,
+  Clock,
+  EyeOff,
+  Hand,
+  Info,
+  Layers,
+  MapPin,
+  NotebookPen,
+  Pencil,
+  StickyNote,
+  User,
+} from "lucide-react";
 import { cn } from "cn";
 import type { SubjectInformation } from "@/lib/primitives/meta";
 import { groupName } from "@/lib/primitives/group";
@@ -10,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { FIRST_HOUR, LAST_HOUR, type Entry } from "@/lib/layout";
 import { KIND_CLASS, kindClass } from "@/lib/kinds";
+import { plainText, type Mention } from "@/lib/mentions";
 import {
   dateLabel,
   dayName,
@@ -147,6 +160,10 @@ type Props = {
   onHover?: (name: string | null) => void;
   // This block's details are the ones open: it gets a light border.
   expanded: boolean;
+  // A link in the notes points at it: the notes' mark in its corner.
+  noted?: boolean;
+  // A link in the notes was followed to it: it pulses for a moment.
+  flashing?: boolean;
   onPress: Press;
 };
 
@@ -160,6 +177,8 @@ export function SubjectBlock({
   related = false,
   onHover,
   expanded,
+  noted = false,
+  flashing = false,
   onPress,
 }: Props) {
   const { subject, meeting, dates } = entry;
@@ -188,6 +207,7 @@ export function SubjectBlock({
     place === null ? null : (datesLabel ?? dayName(meeting.day)),
     place === null ? null : timeRangeLabel(meeting),
     entry.timetableName,
+    noted ? m.block_noted() : null,
   ]
     .filter((part) => part !== null)
     .join(", ");
@@ -196,6 +216,7 @@ export function SubjectBlock({
     <div
       {...press}
       aria-expanded={expanded}
+      data-flash={flashing ? "" : undefined}
       className={cn(
         "flex cursor-pointer flex-col overflow-hidden rounded-sm border px-2 py-1 text-left text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
         BLOCK_MOTION,
@@ -204,6 +225,7 @@ export function SubjectBlock({
         dimmed && "opacity-30",
         related && "ring-1 ring-foreground/40",
         expanded && "outline-2 -outline-offset-1 outline-foreground",
+        flashing && "z-[3] ring-2 ring-foreground motion-safe:animate-pulse",
       )}
       style={place ? placeStyle(place) : undefined}
       // Mouse only: a tap would leave the highlight behind.
@@ -216,9 +238,21 @@ export function SubjectBlock({
     >
       {/* Never cut or broken inside: a column too narrow for it gathers its
           blocks instead (`fitDay`). */}
-      <span className="font-semibold break-normal whitespace-nowrap text-foreground">
+      <span
+        className={cn(
+          "font-semibold break-normal whitespace-nowrap text-foreground",
+          noted && "pr-3",
+        )}
+      >
         {subject.name}
       </span>
+      {/* The notes' own icon (the header's): a link there points here. */}
+      {noted && (
+        <StickyNote
+          aria-hidden
+          className="pointer-events-none absolute top-1 right-1 size-3 text-block-kind"
+        />
+      )}
       <span className="truncate text-block-kind">{kindsLine(entry)}</span>
       {unclear && <span className="truncate text-warning">{m.badge_sh_unclear()}</span>}
       {!brief && when && <span className="truncate font-mono text-block-room">{when}</span>}
@@ -299,6 +333,14 @@ export type DetailActions = {
   onJump: (entry: Entry) => void;
   // "Module description": the dialog lives in the deferred chunk.
   onInfo?: (info: SubjectInformation) => void;
+  // The links in the notes pointing at this block (week view only: a link
+  // names a date).
+  mentionsOf?: (entry: Entry) => Mention[];
+  // "Go to note": the notes, scrolled to the line starting at `start`.
+  onOpenNote?: (start: number) => void;
+  // "Mention in the notes": a new task linking to the block. Not locked by
+  // the profile's lock: the notes are no part of it.
+  onMention?: (entry: Entry) => void;
 };
 
 type PopupProps = {
@@ -313,6 +355,8 @@ type PopupProps = {
   // Opened with the keys: focus moves into the popup. A tap or click leaves
   // it where it is, as the popover trigger did.
   keyboard: boolean;
+  // Closing leaves the focus where an action put it (the notes).
+  stay?: boolean;
   onClose: () => void;
   children: ReactNode;
 };
@@ -326,6 +370,7 @@ export function SubjectPopup({
   point,
   block,
   keyboard,
+  stay = false,
   onClose,
   children,
 }: PopupProps) {
@@ -356,7 +401,7 @@ export function SubjectPopup({
         sideOffset={8}
         className="w-80 gap-0 p-4"
         initialFocus={keyboard}
-        finalFocus={() => (block?.isConnected ? block : false)}
+        finalFocus={() => (!stay && block?.isConnected ? block : false)}
       >
         {children}
       </PopoverContent>
@@ -427,7 +472,8 @@ export function SubjectDetails({
   general: boolean;
   unclear: boolean;
   actions: DetailActions;
-  onClose: () => void;
+  // `stay`: the action moves the focus on (the notes), closing leaves it.
+  onClose: (stay?: boolean) => void;
 }) {
   const { subject, meeting, dates } = entry;
   const now = useNow();
@@ -440,10 +486,15 @@ export function SubjectDetails({
   const links = buildingLinks(meeting.location, overrides.locations);
   const running = runningNow(entry, now, general);
   const status = [repeat, running ? m.details_running() : null].filter(Boolean).join(" · ");
-  const act = (run: () => void) => () => {
-    onClose();
-    run();
-  };
+  const act =
+    (run: () => void, stay = false) =>
+    () => {
+      onClose(stay);
+      run();
+    };
+  // Links name a date: the general view has none to link or look up.
+  const mentions = meeting.date !== null && !general ? (actions.mentionsOf?.(entry) ?? []) : [];
+  const canMention = meeting.date !== null && !general && actions.onMention !== undefined;
 
   return (
     <div className="flex flex-col gap-4 text-sm">
@@ -517,6 +568,53 @@ export function SubjectDetails({
             )}
           </Row>
         )}
+        {mentions.length > 0 && actions.onOpenNote && (
+          <Row icon={<StickyNote />}>
+            <span className="text-xs text-muted-foreground">{m.details_notes()}</span>
+            <div className="-mx-2 flex flex-col">
+              {mentions.map((mention) => {
+                const done = mention.line.task?.done === true;
+                return (
+                  <Button
+                    key={mention.start}
+                    variant="ghost"
+                    className="h-auto min-h-9 justify-start gap-2 px-2 py-1 text-left whitespace-normal"
+                    onClick={act(() => actions.onOpenNote?.(mention.line.start), true)}
+                  >
+                    {mention.line.task && (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "size-3.5 shrink-0 rounded-[4px] border",
+                          done ? "border-primary bg-primary" : "border-muted-foreground",
+                        )}
+                      />
+                    )}
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span
+                        className={cn(
+                          "truncate font-normal",
+                          done && "text-muted-foreground line-through",
+                        )}
+                      >
+                        {plainText(mention.line.pieces, mention.start)}
+                      </span>
+                      {mention.heading && (
+                        <small className="truncate text-xs font-normal text-muted-foreground">
+                          {mention.heading}
+                        </small>
+                      )}
+                    </span>
+                    <span className="flex shrink-0 items-center text-xs">
+                      {m.details_to_note()}
+                      <ChevronRight />
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          </Row>
+        )}
         {subject.onDemand && (
           <Row icon={<Hand />}>
             {m.subject_on_demand()}
@@ -541,6 +639,11 @@ export function SubjectDetails({
       </div>
 
       <div className="-mx-2 flex flex-col border-t pt-2">
+        {canMention && mentions.length === 0 && (
+          <Action icon={<NotebookPen />} onClick={act(() => actions.onMention?.(entry), true)}>
+            {m.details_mention()}
+          </Action>
+        )}
         {!actions.locked && (
           <>
             <Action icon={<EyeOff />} onClick={act(() => actions.onDisable(entry))}>
@@ -565,7 +668,7 @@ function Row({ icon, children }: { icon: ReactNode; children: ReactNode }) {
       <span className="flex h-5 shrink-0 items-center text-muted-foreground [&_svg]:size-4">
         {icon}
       </span>
-      <div className="flex min-w-0 flex-col gap-1">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">{children}</div>
     </div>
   );
 }

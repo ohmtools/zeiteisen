@@ -419,7 +419,7 @@
   "data_delete_app": "Offline-App-Dateien",
   "data_delete_app_text": "Die App wird beim nächsten Start neu geladen; dafür braucht es eine Verbindung.",
   "notes_title": "Notizen",
-  "notes_text": "Nur auf diesem Gerät, nie in einem Link oder einer Profildatei. Links öffnen per Klick, Zeilen mit „- [ ] “ werden Kontrollkästchen.",
+  "notes_text": "Nur auf diesem Gerät, nie in einem Link oder einer Profildatei. „# “ macht eine Überschrift, „- [ ] “ eine Aufgabe, „@“ verknüpft einen Termin.",
   "notes_error_storage": "Dein Browser hat das Speichern der Notizen abgelehnt; die Änderung ist nach dem Neuladen weg.",
   "notes_placeholder": "Notizen hier eingeben…",
   "notes_download": "Notizen als Textdatei herunterladen",
@@ -562,5 +562,112 @@
   "toast_notes_replaced": "Notizen durch {file} ersetzt.",
   "filter_all_short": "Alle",
   "filter_even_short": "Gerade",
-  "filter_odd_short": "Ungerade"
+  "filter_odd_short": "Ungerade",
+  "notes_insert": "Einfügen",
+  "notes_insert_task": "Aufgabe",
+  "notes_insert_heading": "Überschrift",
+  "notes_insert_mention": "Termin",
+  "mention_title": "Termin verknüpfen",
+  "mention_search": "Fach, Art, Datum …",
+  "mention_search_label": "Termin suchen",
+  "mention_next": "Wählen fügt den nächsten Termin ein",
+  "mention_on_date": [
+    {
+      "declarations": [
+        "input count",
+        "input date",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Termin am {date}",
+        "countPlural=other": "{count} Termine am {date}"
+      }
+    }
+  ],
+  "mention_in_week": [
+    {
+      "declarations": [
+        "input count",
+        "input week",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Termin in KW {week}",
+        "countPlural=other": "{count} Termine in KW {week}"
+      }
+    }
+  ],
+  "mention_none": "Kein Termin gefunden",
+  "mention_empty": "Im Stundenplan sind noch keine Termine.",
+  "mention_hint": "Datum dazutippen, z. B. „ma3 9.11“",
+  "mention_other_date": "Anderes Datum",
+  "mention_dates": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Termin",
+        "countPlural=other": "{count} Termine"
+      }
+    }
+  ],
+  "mention_past": "vergangen",
+  "mention_next_date": "nächster Termin",
+  "mention_noted": "Schon in den Notizen",
+  "mention_show": "Im Stundenplan zeigen",
+  "mention_broken_title": "Termin nicht gefunden",
+  "mention_broken_text": "Am {date} gibt es diesen Termin nicht mehr: geändert oder gelöscht.",
+  "mention_relink": "Neu verknüpfen",
+  "mention_keep_text": "Als Text behalten",
+  "details_notes": "In den Notizen",
+  "details_to_note": "Zur Notiz",
+  "details_mention": "In den Notizen erwähnen",
+  "block_noted": "In den Notizen erwähnt",
+  "mention_moved_text": "Am {date} ist {label} um {time} statt {old}.",
+  "mention_off_title": "Termin ausgeschaltet",
+  "mention_off_text": "{label} ist in diesem Profil ausgeschaltet.",
+  "mention_elsewhere_title": "Nicht in diesem Profil",
+  "mention_elsewhere_text": "{label} steht im Profil „{profile}“.",
+  "mention_switch_profile": "Zu „{profile}“ wechseln",
+  "toast_mentions_moved": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Link in den Notizen angepasst.",
+        "countPlural=other": "{count} Links in den Notizen angepasst."
+      }
+    }
+  ],
+  "toast_mentions_lost": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Link in den Notizen zeigt jetzt ins Leere.",
+        "countPlural=other": "{count} Links in den Notizen zeigen jetzt ins Leere."
+      }
+    }
+  ]
 }

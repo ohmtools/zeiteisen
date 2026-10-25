@@ -419,7 +419,7 @@
   "data_delete_app": "Offline app files",
   "data_delete_app_text": "The app is downloaded again on the next start; that needs a connection.",
   "notes_title": "Notes",
-  "notes_text": "On this device only, never in a link or a profile file. Links open on click, lines starting with “- [ ] ” become checkboxes.",
+  "notes_text": "On this device only, never in a link or a profile file. “# ” starts a heading, “- [ ] ” a task, “@” links a class.",
   "notes_error_storage": "Your browser refused to save the notes; the change will be gone after a reload.",
   "notes_placeholder": "Type notes here…",
   "notes_download": "Download notes as text file",
@@ -562,5 +562,112 @@
   "toast_notes_replaced": "Notes replaced by {file}.",
   "filter_all_short": "All",
   "filter_even_short": "Even",
-  "filter_odd_short": "Odd"
+  "filter_odd_short": "Odd",
+  "notes_insert": "Insert",
+  "notes_insert_task": "Task",
+  "notes_insert_heading": "Heading",
+  "notes_insert_mention": "Class",
+  "mention_title": "Link a class",
+  "mention_search": "Subject, kind, date …",
+  "mention_search_label": "Search classes",
+  "mention_next": "Picking links the next date",
+  "mention_on_date": [
+    {
+      "declarations": [
+        "input count",
+        "input date",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} class on {date}",
+        "countPlural=other": "{count} classes on {date}"
+      }
+    }
+  ],
+  "mention_in_week": [
+    {
+      "declarations": [
+        "input count",
+        "input week",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} class in CW {week}",
+        "countPlural=other": "{count} classes in CW {week}"
+      }
+    }
+  ],
+  "mention_none": "No class found",
+  "mention_empty": "The timetable has no classes yet.",
+  "mention_hint": "Add a date, e.g. “ma3 9.11”",
+  "mention_other_date": "Other date",
+  "mention_dates": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} date",
+        "countPlural=other": "{count} dates"
+      }
+    }
+  ],
+  "mention_past": "past",
+  "mention_next_date": "next date",
+  "mention_noted": "Already in the notes",
+  "mention_show": "Show in the timetable",
+  "mention_broken_title": "Class not found",
+  "mention_broken_text": "On {date} this class no longer exists: changed or removed.",
+  "mention_relink": "Link again",
+  "mention_keep_text": "Keep as text",
+  "details_notes": "In the notes",
+  "details_to_note": "Go to note",
+  "details_mention": "Mention in the notes",
+  "block_noted": "Mentioned in the notes",
+  "mention_moved_text": "On {date}, {label} is at {time} instead of {old}.",
+  "mention_off_title": "Class switched off",
+  "mention_off_text": "{label} is switched off in this profile.",
+  "mention_elsewhere_title": "Not in this profile",
+  "mention_elsewhere_text": "{label} is in the profile “{profile}”.",
+  "mention_switch_profile": "Switch to “{profile}”",
+  "toast_mentions_moved": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} link in the notes updated.",
+        "countPlural=other": "{count} links in the notes updated."
+      }
+    }
+  ],
+  "toast_mentions_lost": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} link in the notes now points nowhere.",
+        "countPlural=other": "{count} links in the notes now point nowhere."
+      }
+    }
+  ]
 }
