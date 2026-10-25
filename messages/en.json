@@ -627,11 +627,47 @@
   "mention_noted": "Already in the notes",
   "mention_show": "Show in the timetable",
   "mention_broken_title": "Class not found",
-  "mention_broken_text": "On {date} this class is no longer as it was linked: changed, switched off or removed.",
+  "mention_broken_text": "On {date} this class no longer exists: changed or removed.",
   "mention_relink": "Link again",
   "mention_keep_text": "Keep as text",
   "details_notes": "In the notes",
   "details_to_note": "Go to note",
   "details_mention": "Mention in the notes",
-  "block_noted": "Mentioned in the notes"
+  "block_noted": "Mentioned in the notes",
+  "mention_moved_text": "On {date}, {label} is at {time} instead of {old}.",
+  "mention_off_title": "Class switched off",
+  "mention_off_text": "{label} is switched off in this profile.",
+  "mention_elsewhere_title": "Not in this profile",
+  "mention_elsewhere_text": "{label} is in the profile “{profile}”.",
+  "mention_switch_profile": "Switch to “{profile}”",
+  "toast_mentions_moved": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} link in the notes updated.",
+        "countPlural=other": "{count} links in the notes updated."
+      }
+    }
+  ],
+  "toast_mentions_lost": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} link in the notes now points nowhere.",
+        "countPlural=other": "{count} links in the notes now point nowhere."
+      }
+    }
+  ]
 }

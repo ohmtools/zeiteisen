@@ -7,10 +7,9 @@
 export type NotesPiece =
   | { kind: "text"; start: number; text: string }
   | { kind: "link"; start: number; text: string; href: string }
-  // `@[2026-10-26#a3f91c MA3 Ue]`: the Termin on that date whose hash
-  // (`termHash`) it is; the label after it is only what the link shows
-  // when the Termin is gone.
-  | { kind: "mention"; start: number; text: string; date: string; hash: string; label: string };
+  // `@[2026-10-26 09:45 MA3 Ue 2.1]`: the Termin on that date at that start
+  // time whose name, kinds and group the label spells (`@/lib/mentions`).
+  | { kind: "mention"; start: number; text: string; date: string; time: string; label: string };
 
 export type NotesLine = {
   start: number;
@@ -29,8 +28,8 @@ const TASK = /^(\s*)[-*] \[([ xX])\] /;
 // Markdown's headings; one look for all three levels.
 const HEADING = /^#{1,3} /;
 
-// A link to a Termin: date, hash and an optional label, brackets around.
-const MENTION = /@\[(\d{4}-\d{2}-\d{2})#([\w-]+)(?: ([^\]\n]*))?\]/g;
+// A link to a Termin: date, start time and label, brackets around.
+const MENTION = /@\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) ([^\]\n]+)\]/g;
 
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)
 // stays text.
@@ -86,8 +85,8 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
       start: start + at,
       text: match[0],
       date: match[1],
-      hash: match[2],
-      label: (match[3] ?? "").trim(),
+      time: match[2],
+      label: match[3].trim(),
     });
     last = at + match[0].length;
   }

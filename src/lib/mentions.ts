@@ -2,53 +2,88 @@ import { addDays, addWeeks, isAfter, parseISO, startOfISOWeek } from "date-fns";
 import { groupName } from "@/lib/primitives/group";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import { lectureRange, type DateRange } from "@/lib/primitives/occurrence";
-import { Day, formatTime, minutesOf, shortHash, type Subject } from "@/lib/primitives/subject";
+import type { Profile, ProfileName } from "@/lib/primitives/profile";
+import {
+  Day,
+  formatTime,
+  Kind,
+  kindLabel,
+  minutesOf,
+  sameSubject,
+  type Subject,
+} from "@/lib/primitives/subject";
 import { enabledSubjects, type Timetable } from "@/lib/primitives/timetable";
-import { DAYS, dayOf, eventsForWeek, isoDay, isoWeek, type Meeting } from "@/lib/primitives/week";
+import { DAYS, dayOf, eventsForWeek, isoDay, isoWeek } from "@/lib/primitives/week";
 import { weekEntries, type Entry } from "@/lib/layout";
 import { notesLines, type NotesLine, type NotesPiece } from "@/lib/notes";
 
-// Links from the notes to a Termin: `@[date#hash label]`. The date says which
-// day, the hash which of that day's Termine; the label is only what the link
-// shows once its Termin is gone (red, never guessed back). Plain text in
-// `tt.notes.v1`, so the notes stay a string.
+// Links from the notes to a Termin: `@[2026-10-26 09:45 MA3 Ue 2.1]`, the
+// date, the start time and the class (name, kinds, group) in words. Readable
+// in the text area, and when its Termin is gone the app can say what no
+// longer fits (another time, switched off, in another profile). Plain text in
+// `tt.notes.v1`, so the notes stay a string. Was a hash of the same fields
+// (user decision, 2026-10-25: a hash tells nothing once it no longer fits).
 
-// What the hash covers: the class (name, kinds, group, degree program) and
-// when it starts. Room, professor and end time are left out: a room change
-// keeps the link; another start time, group or name breaks it (red).
-export function termHash(subject: Subject, meeting: Pick<Meeting, "startTime">): string {
-  return shortHash([
-    subject.name,
-    subject.kind,
-    subject.group ? groupName(subject.group) : null,
-    subject.degreeProgram ?? null,
-    formatTime(meeting.startTime),
-  ]);
+// What a link points at.
+export type MentionTarget = { date: string; time: string; label: string };
+
+const KINDS = new Set<string>(Object.values(Kind));
+
+// A name as a label holds it: one space between words, no brackets.
+function labelName(name: string): string {
+  return name
+    .replace(/[\]\n]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// "MA3 SU,Ue 1.1": what a link names, readable in the text area.
+// "MA3 SU,Ue 2.1": the class a link names, readable in the text area.
 export function mentionLabel(subject: Subject): string {
-  return [subject.name, subject.kind.join(","), subject.group ? groupName(subject.group) : null]
+  return [
+    labelName(subject.name),
+    kindLabel(subject.kind),
+    subject.group ? groupName(subject.group) : null,
+  ]
     .filter((part) => part !== null)
-    .join(" ")
-    .replace(/[\]\n]/g, " ");
+    .join(" ");
+}
+
+// The label back in its parts, read from the end (a name may hold spaces):
+// a group like "2.1", the kinds ("SU,Ue"), the name. `null` when it reads as
+// none.
+export function labelParts(label: string): { name: string; kinds: string; group: string } | null {
+  const words = label.trim().split(/ +/);
+  const group = words.length > 2 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : "";
+  const kinds = words.pop();
+  if (!kinds || words.length === 0 || !kinds.split(",").every((kind) => KINDS.has(kind)))
+    return null;
+  return { name: words.join(" "), kinds, group };
 }
 
 // The text a link to this Termin on its date is written as.
 export function mentionToken(entry: Entry): string {
-  return `@[${entry.meeting.date}#${termHash(entry.subject, entry.meeting)} ${mentionLabel(entry.subject)}]`;
+  return `@[${entry.meeting.date} ${formatTime(entry.meeting.startTime)} ${mentionLabel(entry.subject)}]`;
 }
 
-// What a link points at: a date and a hash.
-export type MentionTarget = { date: string; hash: string };
-
-// Whether the link points at this block: its date and its hash.
+// Whether the link points at this block: date, start, name, kinds, group.
 export function mentionMatches(
   mention: MentionTarget,
   entry: Pick<Entry, "subject" | "meeting">,
 ): boolean {
+  const parts = labelParts(mention.label);
   return (
-    entry.meeting.date === mention.date && termHash(entry.subject, entry.meeting) === mention.hash
+    parts !== null &&
+    entry.meeting.date === mention.date &&
+    formatTime(entry.meeting.startTime) === mention.time &&
+    sameClass(parts, entry.subject)
+  );
+}
+
+function sameClass(parts: { name: string; kinds: string; group: string }, subject: Subject) {
+  return (
+    labelName(subject.name) === parts.name &&
+    kindLabel(subject.kind) === parts.kinds &&
+    (subject.group ? groupName(subject.group) : "") === parts.group
   );
 }
 
@@ -88,33 +123,171 @@ export function mentionsOfText(text: string): Mention[] {
   return mentionsIn(notesLines(text));
 }
 
-// Finds the block a link points at, one week of the profile's grid at a
-// time, each week built once.
-export function mentionResolver(
-  timetables: readonly Timetable[],
-  dates: SemesterDates | null,
-): {
-  entry: (mention: MentionTarget) => Entry | null;
-  // The blocks on that date, for "Link again" on a red link.
-  onDate: (date: string) => Entry[];
-} {
-  const weeks = new Map<number, Entry[]>();
-  const onDate = (date: string) => {
+// Every subject of a timetable switched on: where a link to a switched-off
+// class is still found.
+function allOn(timetable: Timetable): Timetable {
+  return { ...timetable, subjects: timetable.subjects.withMappedExtra(() => ({ enabled: true })) };
+}
+
+// The blocks of a profile on a date, the switched-off ones too or not, each
+// week built once.
+function dayLookup(dates: SemesterDates | null) {
+  const weeks = new Map<string, Entry[]>();
+  return (profile: Profile, all: boolean, date: string): Entry[] => {
     const day = parseISO(date);
     if (Number.isNaN(day.getTime())) return [];
     const start = startOfISOWeek(day);
-    let entries = weeks.get(start.getTime());
+    const key = `${profile.name}/${all}/${start.getTime()}`;
+    let entries = weeks.get(key);
     if (!entries) {
+      const timetables = all ? profile.timetables.map(allOn) : profile.timetables;
       entries = weekEntries(timetables, start, eventsForWeek(dates, start));
-      weeks.set(start.getTime(), entries);
+      weeks.set(key, entries);
     }
     return entries.filter((entry) => entry.meeting.date === date);
   };
+}
+
+// What became of a link's Termin: in the active profile's grid (`ok`),
+// switched off there (`off`), only in another profile (`elsewhere`), or
+// nowhere (`broken`, with the active profile's blocks of the same name that
+// day: the same class first, at another time).
+export type MentionStatus =
+  | { kind: "ok"; entry: Entry }
+  | { kind: "off"; entry: Entry }
+  | { kind: "elsewhere"; entry: Entry; profile: ProfileName }
+  | { kind: "broken"; candidates: Entry[] };
+
+export function mentionResolver(
+  profiles: readonly Profile[],
+  activeName: ProfileName,
+  dates: SemesterDates | null,
+): { status: (mention: MentionTarget) => MentionStatus } {
+  const day = dayLookup(dates);
+  const active = profiles.find((profile) => profile.name === activeName);
   return {
-    entry: (mention) =>
-      onDate(mention.date).find((entry) => mentionMatches(mention, entry)) ?? null,
-    onDate,
+    status: (mention) => {
+      const find = (profile: Profile, all: boolean) =>
+        day(profile, all, mention.date).find((entry) => mentionMatches(mention, entry));
+      if (active) {
+        const on = find(active, false);
+        if (on) return { kind: "ok", entry: on };
+        const off = find(active, true);
+        if (off) return { kind: "off", entry: off };
+      }
+      for (const profile of profiles) {
+        if (profile === active) continue;
+        const there = find(profile, true);
+        if (there) return { kind: "elsewhere", entry: there, profile: profile.name };
+      }
+      const parts = labelParts(mention.label);
+      const candidates =
+        active && parts
+          ? day(active, false, mention.date)
+              .filter((entry) => labelName(entry.subject.name) === parts.name)
+              .sort(
+                (a, b) => Number(sameClass(parts, b.subject)) - Number(sameClass(parts, a.subject)),
+              )
+          : [];
+      return { kind: "broken", candidates };
+    },
   };
+}
+
+// Links whose class changed with a profile change (an edit, a catalog
+// update, a deletion): `before` and `after` are the profiles around it.
+// A link to the class in the profile edited (`relinkIn`) follows it where
+// that is clear (the one subject that changed in its timetable, on the same
+// date, at the same start or its only one that day), even when another
+// profile still holds the class as it was. A link found somewhere before and
+// nowhere after is counted `lost`. Switching off or another active profile
+// changes nothing here: a link is looked for with every subject switched on.
+export function followMentions(
+  text: string,
+  before: readonly Profile[],
+  after: readonly Profile[],
+  dates: SemesterDates | null,
+  relinkIn: ProfileName | null,
+): { text: string; moved: number; lost: number } {
+  const dayBefore = dayLookup(dates);
+  const dayAfter = dayLookup(dates);
+  const find = (
+    profile: Profile | undefined,
+    day: ReturnType<typeof dayLookup>,
+    mention: MentionTarget,
+  ) =>
+    profile
+      ? day(profile, true, mention.date).find((one) => mentionMatches(mention, one))
+      : undefined;
+  const anywhere = (
+    profiles: readonly Profile[],
+    day: ReturnType<typeof dayLookup>,
+    mention: MentionTarget,
+  ) => profiles.some((profile) => find(profile, day, mention));
+  const editedBefore = before.find((profile) => profile.name === relinkIn);
+  const editedAfter = after.find((profile) => profile.name === relinkIn);
+  let next = text;
+  let moved = 0;
+  let lost = 0;
+  // From the end, so the offsets before each link still hold.
+  for (const mention of mentionsOfText(text).reverse()) {
+    const was = find(editedBefore, dayBefore, mention);
+    if (editedBefore && editedAfter && was && !find(editedAfter, dayAfter, mention)) {
+      const successor = followed(editedBefore, was, editedAfter, dayAfter, mention);
+      if (successor) {
+        next =
+          next.slice(0, mention.start) +
+          mentionToken(successor) +
+          next.slice(mention.start + mention.text.length);
+        moved++;
+        continue;
+      }
+    }
+    if (anywhere(before, dayBefore, mention) && !anywhere(after, dayAfter, mention)) lost++;
+  }
+  return { text: next, moved, lost };
+}
+
+// The block a link's class became in its profile after the change.
+function followed(
+  before: Profile,
+  was: Entry,
+  after: Profile,
+  day: ReturnType<typeof dayLookup>,
+  mention: MentionTarget,
+): Entry | null {
+  const name = was.timetableName;
+  const old = before.timetables.find((one) => one.name === name);
+  const now = after.timetables.find((one) => one.name === name);
+  if (!old || !now) return null;
+  const index = successorIndex(old.subjects.toSubjects(), now.subjects.toSubjects(), was.index);
+  if (index === null) return null;
+  const blocks = day(after, true, mention.date).filter(
+    (entry) => entry.timetableName === name && entry.index === index,
+  );
+  return (
+    blocks.find((entry) => formatTime(entry.meeting.startTime) === mention.time) ??
+    (blocks.length === 1 ? blocks[0] : null)
+  );
+}
+
+// Where the subject at `index` went: every subject equal on both sides pairs
+// up; if what is left is this one and exactly one new subject, that is it.
+// Anything less clear (several changed at once) follows nothing.
+export function successorIndex(
+  before: readonly Subject[],
+  after: readonly Subject[],
+  index: number,
+): number | null {
+  const taken = new Set<number>();
+  const unmatched: number[] = [];
+  before.forEach((subject, i) => {
+    const j = after.findIndex((other, k) => !taken.has(k) && sameSubject(subject, other));
+    if (j === -1) unmatched.push(i);
+    else taken.add(j);
+  });
+  const fresh = after.map((_, k) => k).filter((k) => !taken.has(k));
+  return unmatched.length === 1 && unmatched[0] === index && fresh.length === 1 ? fresh[0] : null;
 }
 
 // One class at one weekday and time with every date it meets on: a row of

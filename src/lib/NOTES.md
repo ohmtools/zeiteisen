@@ -44,20 +44,23 @@ re-implements primitive logic.
   first load.
 - `notes.ts` — the notes' read view: lines, links (http(s) and `www.` only,
   trailing punctuation and unbalanced brackets cut off), `- [ ]` tasks, `# `
-  headings and links to a Termin (`@[date#hash label]`), every piece with
+  headings and links to a Termin (`@[date time label]`), every piece with
   its offset in the text; `toggleTask` changes the one box character;
   `insertLine` / `insertInline` / `opensMention` are the insert bar's and
   the picker's text edits. `notesFromFile` reads an uploaded notes file
   (UTF-8, line ends, limit).
-- `mentions.ts` — links from the notes to a Termin. `termHash` covers name,
-  kinds, group, degree program and start time (`shortHash`), not room,
-  professor or end: a room change keeps a link, another start or group
-  breaks it (red). `mentionResolver` finds a link's block one week of the
-  grid at a time (`weekEntries`, so days off and the lecture period count
-  as in the grid). The picker's rows (`seriesIn`, `pickerRows`) and its
-  query (`parseMentionQuery`: words, one date / "heute" / "morgen" /
-  weekday / "kw46", dates without a year the nearest one). In the first
-  load for the grid's marks (~5 KB gzip with notes.ts and the messages).
+- `mentions.ts` — links from the notes to a Termin. A link matches a block
+  by date, start time, name, kinds and group (`labelParts` reads the label
+  from the end: a name may hold spaces); room, professor and end are left
+  out, so a room change keeps it. `mentionResolver` gives a link's status
+  (`ok` / `off` / `elsewhere` / `broken` with candidates), one week of a
+  profile's grid at a time (`weekEntries`, so days off and the lecture
+  period count as in the grid). `followMentions` moves links along with an
+  edit (`successorIndex`: the one subject that changed) and counts those a
+  change lost. The picker's rows (`seriesIn`, `pickerRows`) and its query
+  (`parseMentionQuery`: words, one date / "heute" / "morgen" / weekday /
+  "kw46", dates without a year the nearest one). In the first load for the
+  grid's marks (~5 KB gzip with notes.ts and the messages).
 - `edit.ts` — subject editor form ↔ subject; the duplicate check, the origin
   switch and the time / date / slot rules (`parseTime`, `isIsoDate`,
   `endsAfterStart`, `REPEAT_TYPES`) live in primitives.

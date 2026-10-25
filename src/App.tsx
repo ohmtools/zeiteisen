@@ -34,7 +34,7 @@ import { useStripSharedUrl } from "@/hooks/useShareLink";
 import { Catalog, CatalogKind, degreeProgramOf } from "@/lib/primitives/catalog";
 import type { SubjectInformation } from "@/lib/primitives/meta";
 import { uniqueName } from "@/lib/primitives/name";
-import { isKnownSharedProfile } from "@/lib/primitives/profile";
+import { isKnownSharedProfile, type Profile, type ProfileName } from "@/lib/primitives/profile";
 import { Subjects, type Day } from "@/lib/primitives/subject";
 import type { TimetableName } from "@/lib/primitives/timetable";
 import { categoriesOf } from "@/lib/primitives/tree";
@@ -50,6 +50,7 @@ import {
 import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import {
   dayOfDate,
+  followMentions,
   mentionMatches,
   mentionResolver,
   mentionsOfText,
@@ -60,6 +61,7 @@ import { insertInline, insertLine } from "@/lib/notes";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
 import { transition } from "@/lib/ohmtools/motion";
+import { toast } from "@/lib/ohmtools/toast";
 import { currentStep, SHORT_QUERY, useMedia, useStep } from "@/lib/ohmtools/steps";
 import { dateLabel, shortDate } from "@/lib/subjects";
 import { dayPickedIn, defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
@@ -279,7 +281,7 @@ export default function App() {
     const done = setTimeout(() => setFlash(null), 1600);
     return () => clearTimeout(done);
   }, [flash]);
-  // Notes ↔ grid. Links in the notes name a Termin by date and hash
+  // Notes ↔ grid. Links in the notes name a Termin by date, time and class
   // (`@/lib/mentions`): the blocks they point at carry the notes' mark, a
   // press on one shows its block (which pulses), its details lead back to
   // the line.
@@ -298,8 +300,10 @@ export default function App() {
     setView("week");
     pickWeek(startOfISOWeek(date));
     pickDay(dayOfDate(mention.date));
-    const entry = mentionResolver(timetables, dates.dates).entry(mention);
-    if (entry) setBlockFlash({ key: entry.key, nonce: ++nonce.current });
+    const status = mentionResolver(profiles.profiles, profiles.activeName, dates.dates).status(
+      mention,
+    );
+    if (status.kind === "ok") setBlockFlash({ key: status.entry.key, nonce: ++nonce.current });
     // The panel covers the grid on phones and compact screens.
     if (currentStep() !== "wide") openPanel(null);
   };
@@ -319,6 +323,62 @@ export default function App() {
       setSettings(false);
     });
     editNow(editPending, notesRef.current);
+  };
+
+  // A link's class edited, updated from the catalog or deleted: links follow
+  // an edit where that is clear ("2 links updated", with Undo for the notes),
+  // and a toast counts those now pointing nowhere. Only when links are hit:
+  // nothing is said otherwise. Switching off and switching profiles keep
+  // every link (the notes show those muted), renaming touches none.
+  const following = useRef<{ before: Profile[]; relinkIn: ProfileName | null } | null>(null);
+  const notesNow = useRef(notes);
+  useEffect(() => {
+    notesNow.current = notes;
+  }, [notes]);
+  const watched =
+    <A extends unknown[], R>(change: (...args: A) => R, relink: boolean) =>
+    (...args: A): R => {
+      following.current = {
+        before: profiles.profiles,
+        relinkIn: relink ? profiles.activeName : null,
+      };
+      return change(...args);
+    };
+  useEffect(() => {
+    const pending = following.current;
+    if (!pending || pending.before === profiles.profiles) return;
+    following.current = null;
+    const old = notesNow.current;
+    const { text, moved, lost } = followMentions(
+      old,
+      pending.before,
+      profiles.profiles,
+      dates.dates,
+      pending.relinkIn,
+    );
+    if (moved > 0) {
+      setNotes(text);
+      toast.success(m.toast_mentions_moved({ count: moved }), {
+        duration: 8000,
+        action: {
+          label: m.undo(),
+          // Back to the links as they were, while nothing was typed since.
+          onClick: () => {
+            if (notesNow.current === text) setNotes(old);
+          },
+        },
+      });
+    }
+    if (lost > 0) toast.warning(m.toast_mentions_lost({ count: lost }));
+  }, [profiles.profiles, dates.dates, setNotes]);
+  // The profile changes that may hit a link, watched.
+  const watchedProfiles = {
+    ...profiles,
+    editSubjects: watched(profiles.editSubjects, true),
+    replaceTimetable: watched(profiles.replaceTimetable, true),
+    removeSubject: watched(profiles.removeSubject, false),
+    removeTimetable: watched(profiles.removeTimetable, false),
+    remove: watched(profiles.remove, false),
   };
 
   // Offline the catalog can hand over nothing, so it offers nothing.
@@ -400,7 +460,7 @@ export default function App() {
     onOpenNote: openNote,
     onMention: mentionInNotes,
   };
-  // The week's blocks a link points at; hashes only for the days links name.
+  // The week's blocks a link points at; only blocks on days links name are checked.
   const mentionedDates = new Set(mentions.map((mention) => mention.date));
   const noted = new Set(
     week === null
@@ -481,7 +541,7 @@ export default function App() {
         onOpenAdd={() => setPicking("new-profile")}
         onRename={profiles.rename}
         onDuplicate={profiles.duplicate}
-        onRemove={profiles.remove}
+        onRemove={watchedProfiles.remove}
         onOpenImport={() => setImporting(true)}
       />
     </Suspense>
@@ -545,7 +605,7 @@ export default function App() {
         onSetEnabled={profiles.setEnabled}
         onUpdate={setUpdating}
         onRename={profiles.renameTimetable}
-        onRemove={profiles.removeTimetable}
+        onRemove={watchedProfiles.removeTimetable}
         onEdit={setEditing}
         onAddTimetables={() => setPicking("add")}
         onToggleLock={profiles.toggleLock}
@@ -559,9 +619,15 @@ export default function App() {
         onChange={setNotes}
         onLeave={() => gridRef.current?.focus()}
         timetables={timetables}
+        profiles={profiles.profiles}
+        activeName={profiles.activeName}
         dates={dates.dates}
         today={now}
         onJump={jumpToMention}
+        onShowGroup={(entry) =>
+          jumpToGroup({ timetableName: entry.timetableName, index: entry.index })
+        }
+        onSelectProfile={profiles.select}
         reveal={noteReveal}
       />
     );
@@ -682,7 +748,7 @@ export default function App() {
         <Suspense fallback={null}>
           <Settings open={settings} onClose={() => openSettings(false)} {...dataProps} />
           <AppDialogs
-            profiles={profiles}
+            profiles={watchedProfiles}
             catalog={offerCatalog}
             online={online}
             picking={picking}

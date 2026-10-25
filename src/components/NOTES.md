@@ -209,19 +209,37 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   empty line the caret is on, else on a new line after it (`insertLine`);
   without a caret at the end. The buttons keep the focus off themselves
   (`preventDefault` on mousedown), so the text area keeps its caret.
-- **Links to a Termin** (user request): `@[2026-10-26#a3f91c MA3 Ue 2.1]`, a
-  concrete date plus the Termin's hash (user decision); the label is only
-  what a gone link shows. Plain text in `tt.notes.v1`, the stored shape
-  stays a string: no migration. Written only by the picker, never typed: the
-  brackets give the link a clear end in running text (user question: a space
-  cannot end it). In the view a chip in the kind's colour, "MA3 Ue Mo
-  26.10.", a press shows its block in the week view (week and phone day
-  picked, the block pulses and scrolls into view; the panel closes on phones
-  and compact screens, it covers the grid). Past dates struck through, still
-  pressable. No Termin with that hash on that date (changed, switched off,
-  removed, a day off): red and dashed; a press offers "Link again" (the
-  blocks of that day whose name the label starts with) and "Keep as text"
-  (the label), never re-linked by itself.
+- **Links to a Termin** (user request): `@[2026-10-26 09:45 MA3 Ue 2.1]`,
+  date, start time and the class in words (user decision, 2026-10-25; was
+  date + hash: a hash cannot say what no longer fits). Plain text in
+  `tt.notes.v1`, the stored shape stays a string: no migration. Written only
+  by the picker, never typed: the brackets give the link a clear end in
+  running text (user question: a space cannot end it). Looked up in the
+  active profile, then with switched-off classes, then in the other profiles
+  (the notes belong to the device, not to a profile). Four looks:
+  - in the active grid: a chip in the kind's colour, "MA3 Ue Mo 26.10.", a
+    press shows its block in the week view (week and phone day picked, the
+    block pulses and scrolls into view; the panel closes on phones and
+    compact screens, it covers the grid);
+  - switched off, or only in another profile: muted and dashed, nothing is
+    wrong with the link; a press says so with "Show in groups" or "Switch to
+    „Plan B“" (user decision: no warning on switching, tinkering is the
+    point);
+  - nowhere: red and dashed; a press says what no longer fits ("at 12:00
+    instead of 12:15" when the class is there at another time) and offers
+    "Link again" (the active grid's blocks of that name that day) and "Keep
+    as text" (the label), never re-linked by itself.
+    Past dates are struck through in every look, still pressable.
+- **Links follow their class** (user decision): App watches the profile
+  changes that can hit a link (`watched`: editing, a catalog update,
+  deleting a class, a timetable or a profile) and after each runs
+  `followMentions` on the profiles before and after. A link to the class
+  edited in the active profile follows it (same date, its new start) where
+  the change is clear, toast "1 link in the notes updated" with Undo for the
+  notes; a link found somewhere before and nowhere after: toast "1 link …
+  now points nowhere". Nothing hit, nothing said. Renaming a timetable or a
+  profile touches no link (neither is part of it); switching off and
+  switching profiles are not watched.
 - **Termin picker** (`MentionPicker`, the design's `Popup` kind popover: at
   the insert bar's "Termin", a drawer on phones). Opened by that button or
   by an `@` typed at a line start or after a space or bracket

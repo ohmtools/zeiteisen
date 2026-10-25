@@ -1,9 +1,12 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowRightLeft,
   AtSign,
   CircleAlert,
+  CircleSlash,
   Download,
   Heading,
+  Layers,
   Link2,
   SquareCheck,
   Type,
@@ -23,9 +26,12 @@ import {
   isPast,
   mentionResolver,
   mentionsIn,
+  mentionLabel,
   mentionToken,
   type MentionTarget,
 } from "@/lib/mentions";
+import { groupName } from "@/lib/primitives/group";
+import type { Profile, ProfileName } from "@/lib/primitives/profile";
 import {
   insertInline,
   insertLine,
@@ -82,9 +88,13 @@ export function NotesSection({
   onChange,
   onLeave,
   timetables,
+  profiles,
+  activeName,
   dates,
   today,
   onJump,
+  onShowGroup,
+  onSelectProfile,
   reveal,
 }: {
   ref?: React.Ref<NotesHandle>;
@@ -94,10 +104,15 @@ export function NotesSection({
   onLeave: () => void;
   // What links to a Termin are looked up in: the active profile's grid.
   timetables: readonly Timetable[];
+  // Every profile: a link whose Termin is only in another one says so.
+  profiles: readonly Profile[];
+  activeName: ProfileName;
   dates: SemesterDates | null;
   today: Date;
   // A press on a link to a Termin: the grid shows it.
   onJump: (mention: MentionTarget) => void;
+  onShowGroup: (entry: Entry) => void;
+  onSelectProfile: (profile: ProfileName) => void;
   // "Go to note" in a block's details: the line starting at `start` scrolls
   // into view and lights up.
   reveal: { start: number; nonce: number } | null;
@@ -116,8 +131,11 @@ export function NotesSection({
   const lit = reveal && reveal.nonce !== faded ? reveal.start : null;
   const lines = notesLines(notes);
   const mentions = mentionsIn(lines);
-  // One lookup per profile and dates, each week built once.
-  const resolver = useMemo(() => mentionResolver(timetables, dates), [timetables, dates]);
+  // One lookup per profiles and dates, each week built once.
+  const resolver = useMemo(
+    () => mentionResolver(profiles, activeName, dates),
+    [profiles, activeName, dates],
+  );
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -240,6 +258,8 @@ export function NotesSection({
     resolver,
     today,
     onJump,
+    onShowGroup,
+    onSelectProfile,
     onReplace: (start, length, text) =>
       onChange(notes.slice(0, start) + text + notes.slice(start + length)),
   };
@@ -486,6 +506,9 @@ export function NotesActions({
 // struck through), and what a press does.
 type Links = {
   resolver: ReturnType<typeof mentionResolver>;
+  // A switched-off Termin: its group cell; one in another profile: that one.
+  onShowGroup: (entry: Entry) => void;
+  onSelectProfile: (profile: ProfileName) => void;
   today: Date;
   onJump: (mention: MentionTarget) => void;
   // A red link linked again or kept as text: `length` characters at `start`
@@ -522,11 +545,14 @@ function Pieces({ pieces, links }: { pieces: NotesPiece[]; links: Links }) {
 const CHIP =
   "mx-px inline-flex h-5 max-w-full items-center gap-1 rounded-sm border px-1.5 align-[-0.25em] text-xs leading-none font-normal whitespace-nowrap no-underline";
 
-// A link to a Termin: a chip in its kind colour, "MA3 Ue Mon, 26.10."; a
+// A link to a Termin: a chip in its kind colour, "MA3 Ue Mo 26.10."; a
 // press shows it in the grid. Struck through once past (and still pressable,
-// for notes on an earlier class). Red and dashed when no Termin on that date
-// has its hash any more: a press offers to link it again or keep its label
-// as text, never guessed back by itself.
+// for notes on an earlier class). Its Termin switched off, or only in another
+// profile: a muted dashed chip, its press says so and offers the way there
+// (the groups, the profile); nothing is wrong with the link. Found nowhere:
+// red and dashed, its press says what no longer fits (another time) and
+// offers to link it again or keep its label as text, never guessed back by
+// itself.
 function MentionChip({
   mention,
   links,
@@ -534,54 +560,129 @@ function MentionChip({
   mention: Extract<NotesPiece, { kind: "mention" }>;
   links: Links;
 }) {
-  const entry = links.resolver.entry(mention);
-  if (!entry) return <BrokenChip mention={mention} links={links} />;
+  const status = links.resolver.status(mention);
   const past = isPast(mention.date, links.today);
+  const replace = (text: string) => links.onReplace(mention.start, mention.text.length, text);
+  const keepText = {
+    label: m.mention_keep_text(),
+    icon: <Type />,
+    run: () => replace(mention.label),
+  };
+  if (status.kind === "ok") {
+    const { entry } = status;
+    return (
+      <button
+        type="button"
+        tabIndex={-1}
+        data-start={mention.start}
+        title={m.mention_show()}
+        onClick={() => links.onJump(mention)}
+        className={cn(
+          CHIP,
+          "cursor-pointer text-foreground hover:brightness-[0.97] dark:hover:brightness-125",
+          kindClass(entry.subject.kind),
+          past && STRUCK,
+        )}
+      >
+        <b className="font-semibold">{entry.subject.name}</b>
+        <span>{entry.subject.kind.join(", ")}</span>
+        <span className="font-mono">{dayDateLabel(mention.date)}</span>
+      </button>
+    );
+  }
+  if (status.kind === "off" || status.kind === "elsewhere") {
+    const { entry } = status;
+    return (
+      <NoticeChip
+        mention={mention}
+        tone="muted"
+        past={past}
+        icon={<CircleSlash />}
+        title={status.kind === "off" ? m.mention_off_title() : m.mention_elsewhere_title()}
+        text={
+          status.kind === "off"
+            ? m.mention_off_text({ label: mention.label })
+            : m.mention_elsewhere_text({ label: mention.label, profile: status.profile })
+        }
+        actions={[
+          status.kind === "off"
+            ? {
+                label: m.details_show_group(),
+                icon: <Layers />,
+                run: () => links.onShowGroup(entry),
+              }
+            : {
+                label: m.mention_switch_profile({ profile: status.profile }),
+                icon: <ArrowRightLeft />,
+                run: () => links.onSelectProfile(status.profile),
+              },
+          keepText,
+        ]}
+      />
+    );
+  }
+  // The same class that day at another time says what changed.
+  const moved = status.candidates.find((entry) => mentionLabel(entry.subject) === mention.label);
   return (
-    <button
-      type="button"
-      tabIndex={-1}
-      data-start={mention.start}
-      title={m.mention_show()}
-      onClick={() => links.onJump(mention)}
-      className={cn(
-        CHIP,
-        "cursor-pointer text-foreground hover:brightness-[0.97] dark:hover:brightness-125",
-        kindClass(entry.subject.kind),
-        past && "line-through decoration-[1.5px] *:line-through *:decoration-[1.5px]",
-      )}
-    >
-      <b className="font-semibold">{entry.subject.name}</b>
-      <span>{entry.subject.kind.join(", ")}</span>
-      <span className="font-mono">{dayDateLabel(mention.date)}</span>
-    </button>
+    <NoticeChip
+      mention={mention}
+      tone="red"
+      past={past}
+      icon={<CircleAlert />}
+      title={m.mention_broken_title()}
+      text={
+        moved
+          ? m.mention_moved_text({
+              date: dayDateLabel(mention.date),
+              label: mention.label,
+              time: formatTime(moved.meeting.startTime),
+              old: mention.time,
+            })
+          : m.mention_broken_text({ date: dayDateLabel(mention.date) })
+      }
+      actions={[
+        ...status.candidates.map((entry) => ({
+          label: m.mention_relink(),
+          detail: `${entry.subject.kind.join(", ")}${entry.subject.group ? ` ${groupName(entry.subject.group)}` : ""} ${formatTime(entry.meeting.startTime)}`,
+          icon: <Link2 />,
+          run: () => replace(mentionToken(entry)),
+        })),
+        keepText,
+      ]}
+    />
   );
 }
 
-function BrokenChip({
+// Past dates: struck through, the chip's parts too (they are flex items).
+const STRUCK = "line-through decoration-[1.5px] *:line-through *:decoration-[1.5px]";
+
+// A dashed chip whose press explains itself: muted (the Termin is there, just
+// not shown) or red (it is gone), with what can be done about it.
+function NoticeChip({
   mention,
-  links,
+  tone,
+  past,
+  icon,
+  title,
+  text,
+  actions,
 }: {
   mention: Extract<NotesPiece, { kind: "mention" }>;
-  links: Links;
+  tone: "muted" | "red";
+  past: boolean;
+  icon: ReactNode;
+  title: string;
+  text: string;
+  actions: { label: string; detail?: string; icon: ReactNode; run: () => void }[];
 }) {
   const [open, setOpen] = useState(false);
-  // The same class on that day, by the name the label starts with.
-  const candidates = open
-    ? links.resolver
-        .onDate(mention.date)
-        .filter((entry) => mention.label.startsWith(`${entry.subject.name}`))
-    : [];
-  const replace = (text: string) => {
-    setOpen(false);
-    links.onReplace(mention.start, mention.text.length, text);
-  };
+  const red = tone === "red";
   return (
     <Popup
       kind="popover"
       open={open}
       onOpenChange={setOpen}
-      title={m.mention_broken_title()}
+      title={title}
       titleHidden
       align="start"
       className="gap-3 compact:w-80"
@@ -590,46 +691,53 @@ function BrokenChip({
           type="button"
           tabIndex={-1}
           data-start={mention.start}
-          className={cn(CHIP, "cursor-pointer border-dashed border-red bg-red/10 text-red")}
+          className={cn(
+            CHIP,
+            "cursor-pointer border-dashed",
+            red
+              ? "border-red bg-red/10 text-red"
+              : "border-muted-foreground/60 text-muted-foreground",
+            past && STRUCK,
+          )}
         >
-          <Unlink className="size-3" />
-          {mention.label && <b className="font-semibold">{mention.label}</b>}
+          {red ? <Unlink className="size-3" /> : <CircleSlash className="size-3" />}
+          <b className="font-semibold">{mention.label}</b>
           <span className="font-mono">{dayDateLabel(mention.date)}</span>
         </button>
       }
     >
       <div className="flex gap-2">
-        <CircleAlert className="mt-0.5 size-4 shrink-0 text-red" />
+        <span
+          className={cn(
+            "mt-0.5 shrink-0 [&_svg]:size-4",
+            red ? "text-red" : "text-muted-foreground",
+          )}
+        >
+          {icon}
+        </span>
         <div className="flex flex-col gap-1">
-          <p className="font-semibold">{m.mention_broken_title()}</p>
-          <p className="text-xs text-muted-foreground">
-            {m.mention_broken_text({ date: dayDateLabel(mention.date) })}
-          </p>
+          <p className="font-semibold">{title}</p>
+          <p className="text-xs text-muted-foreground">{text}</p>
         </div>
       </div>
       <div className="-mx-2 flex flex-col">
-        {candidates.map((entry) => (
+        {actions.map((action) => (
           <Button
-            key={entry.key}
+            key={action.label + (action.detail ?? "")}
             variant="ghost"
             className="justify-start gap-2 px-2"
-            onClick={() => replace(mentionToken(entry))}
+            onClick={() => {
+              setOpen(false);
+              action.run();
+            }}
           >
-            <Link2 />
-            {m.mention_relink()}
-            <span className="font-mono text-xs text-muted-foreground">
-              {entry.subject.kind.join(", ")} {formatTime(entry.meeting.startTime)}
-            </span>
+            {action.icon}
+            {action.label}
+            {action.detail && (
+              <span className="font-mono text-xs text-muted-foreground">{action.detail}</span>
+            )}
           </Button>
         ))}
-        <Button
-          variant="ghost"
-          className="justify-start gap-2 px-2"
-          onClick={() => replace(mention.label || dayDateLabel(mention.date))}
-        >
-          <Type />
-          {m.mention_keep_text()}
-        </Button>
       </div>
     </Popup>
   );

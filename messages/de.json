@@ -627,11 +627,47 @@
   "mention_noted": "Schon in den Notizen",
   "mention_show": "Im Stundenplan zeigen",
   "mention_broken_title": "Termin nicht gefunden",
-  "mention_broken_text": "Am {date} gibt es diesen Termin nicht mehr so, wie er verknüpft wurde: geändert, ausgeschaltet oder gelöscht.",
+  "mention_broken_text": "Am {date} gibt es diesen Termin nicht mehr: geändert oder gelöscht.",
   "mention_relink": "Neu verknüpfen",
   "mention_keep_text": "Als Text behalten",
   "details_notes": "In den Notizen",
   "details_to_note": "Zur Notiz",
   "details_mention": "In den Notizen erwähnen",
-  "block_noted": "In den Notizen erwähnt"
+  "block_noted": "In den Notizen erwähnt",
+  "mention_moved_text": "Am {date} ist {label} um {time} statt {old}.",
+  "mention_off_title": "Termin ausgeschaltet",
+  "mention_off_text": "{label} ist in diesem Profil ausgeschaltet.",
+  "mention_elsewhere_title": "Nicht in diesem Profil",
+  "mention_elsewhere_text": "{label} steht im Profil „{profile}“.",
+  "mention_switch_profile": "Zu „{profile}“ wechseln",
+  "toast_mentions_moved": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Link in den Notizen angepasst.",
+        "countPlural=other": "{count} Links in den Notizen angepasst."
+      }
+    }
+  ],
+  "toast_mentions_lost": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Link in den Notizen zeigt jetzt ins Leere.",
+        "countPlural=other": "{count} Links in den Notizen zeigen jetzt ins Leere."
+      }
+    }
+  ]
 }

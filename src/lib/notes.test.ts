@@ -72,25 +72,26 @@ describe("headings and links to a Termin", () => {
   });
 
   it("finds links to a Termin among text and web links", () => {
-    const text = "- [ ] Sheet 3 @[2026-10-26#a3F9_-1c MA3 Ue 1.1], see www.th-nuernberg.de";
+    const text = "- [ ] Sheet 3 @[2026-10-26 09:45 MA3 Ue 1.1], see www.th-nuernberg.de";
     const [line] = notesLines(text);
     expect(line.pieces.map((piece) => piece.kind)).toEqual(["text", "mention", "text", "link"]);
     const mention = line.pieces[1];
     expect(mention).toMatchObject({
       kind: "mention",
       date: "2026-10-26",
-      hash: "a3F9_-1c",
+      time: "09:45",
       label: "MA3 Ue 1.1",
     });
     expect(rebuilt(text)).toBe(
-      "Sheet 3 |@[2026-10-26#a3F9_-1c MA3 Ue 1.1]|, see |www.th-nuernberg.de",
+      "Sheet 3 |@[2026-10-26 09:45 MA3 Ue 1.1]|, see |www.th-nuernberg.de",
     );
   });
 
-  it("takes a link without a label, and leaves broken ones as text", () => {
-    const [line] = notesLines("@[2026-10-26#abc] @[26.10.#abc x] @[2026-10-26 x]");
-    expect(line.pieces.map((piece) => piece.kind)).toEqual(["mention", "text"]);
-    expect(line.pieces[0]).toMatchObject({ label: "" });
+  it("leaves anything else in brackets as text", () => {
+    const [line] = notesLines(
+      "@[2026-10-26 08:00] @[26.10. 08:00 x] @[2026-10-26 x] @[2026-10-26 8:00 x]",
+    );
+    expect(line.pieces.map((piece) => piece.kind)).toEqual(["text"]);
   });
 });
 
