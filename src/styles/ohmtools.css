@@ -217,6 +217,13 @@
   html {
     @apply font-sans;
   }
+  /* Every step is one viewport tall (DESIGN.md, "App shell"): the page has
+     nothing to scroll, yet iOS pulls it in its rubber band, and takes a
+     horizontal swipe for that pull. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
 }
 
 /* Floating surfaces (popovers, menus, dialogs, sheets, drawers, toasts):

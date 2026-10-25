@@ -142,15 +142,29 @@ re-implements primitive logic.
   older version that wrote it again.
 - `persist.ts` — `navigator.storage.persist()` once per page load, after the
   first real write (not the load-time rewrite: Firefox prompts).
-- `view.ts` — the app opens on Current week while today is inside the lecture
+- `view.ts` — the app opens on Current week while what is left of the shown
+  week (from today, on Sunday from the Monday ahead) reaches into the lecture
   period of the installed dates, General otherwise (user decision, not
-  persisted). The shown week and the phone's day follow "now"; a week or day the
-  user picks holds while the week (day) it was picked in lasts (`shownWeek` /
-  `shownDay`), so an app left open over the weekend shows the new week on
-  Monday. The phone's day turns to the next one at 19:00 (user decision), a day
-  pick holds until then; Sunday evening stays on the weekend list, since next
-  Monday is not in the shown week. The week is epoch ms, so what depends on it
-  is not recomputed on every tick of `useNow`.
+  persisted): the Monday before a Wednesday start opens on its week already.
+  The shown week and the phone's day follow "now"; a week or day the user
+  picks holds until the grid would move on by itself (`Picked.until`, so an
+  app left open moves on as a fresh start would). Sunday already belongs to
+  the week ahead (user decision): all Sunday the week view shows the next week
+  (`openingWeek`; `calendarWeek` is the one holding today, which "This week"
+  and today's mark go by) and the phone its Monday, so the week moves on at
+  Sunday midnight and a week pick made on Sunday holds until Saturday. One
+  looking back on Sunday only until Monday midnight, and in the week ending
+  the phone shows Sunday's own list ("Other"). The phone's day turns to the
+  next one at 19:00 (user decision), a day pick holds until the next 19:00,
+  Saturday evening's until midnight (the day turns to the Monday ahead then);
+  in a week the user picked, as long as that pick, so the day does not move
+  there with the clock. A week pick takes the day pick along. The week is
+  epoch ms, so what depends on it is not recomputed on every tick of
+  `useNow`.
+- `swipe.ts` — the grid's swipe as plain code: what counts (50px sideways,
+  1.5 times the move up or down, its first move out of a press's 10px slop
+  sideways: up or down was a scroll) and where a phone's goes (`swipeStep`,
+  across the week's ends into the next or last week).
 - `refresh.ts` — `useCatalog`'s scheduling as plain code: one refresh at a
   time, not again within a minute unless forced, a restart (mode or URL
   changed) makes the running one stale (`refreshScheduler`), `cancel` does

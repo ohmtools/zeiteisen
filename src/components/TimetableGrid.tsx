@@ -6,6 +6,8 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type Touch,
+  type TouchList,
 } from "react";
 import { cn } from "cn";
 import { getLocale, localized, m } from "@/i18n";
@@ -31,6 +33,7 @@ import { byDay, FIRST_HOUR, fitDay, LAST_HOUR, WEEKDAYS, type Entry } from "@/li
 import { isHighlighted, type Highlight } from "@/lib/link";
 import type { Step } from "@/lib/ohmtools/steps";
 import { slideIn } from "@/lib/ohmtools/motion";
+import { firstAxis, swipeDirection, swipeStep } from "@/lib/swipe";
 import { dateOf, dayName as dayLabel, shortDate } from "@/lib/subjects";
 
 // On phones the details are a drawer from the bottom, on a phone turned
@@ -48,20 +51,11 @@ export type WeekView = WeekEvents & {
   start: Date;
 };
 
-// A horizontal touch swipe on the grid moves to the previous/next day on
-// phones; where every day is shown, to the previous/next week (Current week
-// only: a tablet swiped and nothing seemed to happen).
-const SWIPE_MIN_PX = 50;
-
-// -1 back, 1 forward, 0 no swipe.
-function swipeDirection(dx: number, dy: number): -1 | 0 | 1 {
-  if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return 0;
-  return dx < 0 ? 1 : -1;
-}
-
-function swipeTarget(from: Day, direction: -1 | 1): Day {
-  const index = DAYS.indexOf(from) + direction;
-  return DAYS[Math.max(0, Math.min(DAYS.length - 1, index))];
+// The touches of `list` that went down on the grid itself: React passes on
+// those in its portals (the details' drawer, sheet or popover) too, and a
+// finger resting elsewhere on the screen is none of the grid's.
+function onGrid(list: TouchList, root: HTMLElement | null): Touch[] {
+  return Array.from(list).filter((touch) => root?.contains(touch.target as Node) ?? false);
 }
 
 // Where the grid stands, as one number that grows forward: the week (or the
@@ -94,9 +88,10 @@ type Props = {
   // The one day shown on phones; a swipe moves it.
   selectedDay: Day;
   onSelectDay: (day: Day) => void;
-  // A swipe where the whole week shows, in the week view: one week back (-1)
-  // or on (1).
-  onSwipeWeek?: (direction: -1 | 1) => void;
+  // A swipe where the whole week shows, or on a phone past either end of the
+  // week, in the week view: one week back (-1) or on (1); on a phone with the
+  // day it lands on.
+  onSwipeWeek?: (direction: -1 | 1, day?: Day) => void;
   // Blocks a link in the notes points at (by key): the notes' mark.
   noted?: ReadonlySet<string>;
   // The block a followed link points at: it pulses and scrolls into view.
@@ -120,7 +115,14 @@ export function TimetableGrid({
   const general = week === null;
   const narrow = step === "narrow";
   const brief = short;
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  // The swipe under way: its finger (or a pen), where it went down, and
+  // whether its first move went sideways.
+  const swipeStart = useRef<{
+    id: number | "pen";
+    x: number;
+    y: number;
+    sideways: boolean;
+  } | null>(null);
   // Another week or day: its day heads, columns and all-day row slide in from
   // that side, one column after the other (`data-slide` = the column).
   const rootRef = useRef<HTMLDivElement>(null);
@@ -254,40 +256,90 @@ export function TimetableGrid({
       />
     );
 
+  // The swipe's own finger among `list`, if it is there.
+  const tracked = (list: TouchList) =>
+    Array.from(list).find((touch) => touch.identifier === swipeStart.current?.id);
+  // The first move out of the slop decides: sideways may become a swipe,
+  // up or down was a scroll.
+  const move = (x: number, y: number) => {
+    const start = swipeStart.current;
+    if (!start || start.sideways) return;
+    const axis = firstAxis(x - start.x, y - start.y);
+    if (axis === "y") swipeStart.current = null;
+    if (axis === "x") swipeStart.current = { ...start, sideways: true };
+  };
+  // The finger or pen is up: a swipe changes the day or week.
+  const swipe = (x: number, y: number) => {
+    move(x, y);
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start?.sideways) return;
+    const direction = swipeDirection(x - start.x, y - start.y);
+    if (direction === 0) return;
+    // A press on a block is no outside press (`SubjectPopup`), so a swipe
+    // that starts on one closes the popup here.
+    if (!narrow) {
+      if (!onSwipeWeek) return;
+      closePopup();
+      closeAllDay();
+      onSwipeWeek(direction);
+      return;
+    }
+    const next = swipeStep(selectedDay, direction, onSwipeWeek !== undefined);
+    if (!next) return;
+    closePopup();
+    closeAllDay();
+    if (next.week === 0) onSelectDay(next.day);
+    else onSwipeWeek?.(next.week, next.day);
+  };
+
   // touch-pan-y: the browser keeps vertical scrolling, we get horizontal
-  // moves.
+  // moves. Touch events, not pointer events: iOS cancels the pointer as soon
+  // as it takes a move for a vertical scroll, even of a grid with nothing to
+  // scroll, but still ends the touch. A second finger (a pinch) is no swipe.
+  // A pen makes no touch events on Windows: its pointer events stand in,
+  // unless a touch comes with them.
   return (
     <div
       ref={rootRef}
       className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-hidden rounded-r-[10px] border border-l-0"
+      onTouchStart={(event) => {
+        const root = rootRef.current;
+        if (onGrid(event.changedTouches, root).length === 0) return;
+        const touches = onGrid(event.touches, root);
+        const touch = touches.length === 1 ? touches[0] : null;
+        swipeStart.current = touch && {
+          id: touch.identifier,
+          x: touch.clientX,
+          y: touch.clientY,
+          sideways: false,
+        };
+      }}
+      onTouchMove={(event) => {
+        const touch = tracked(event.changedTouches);
+        if (touch) move(touch.clientX, touch.clientY);
+      }}
+      onTouchEnd={(event) => {
+        const touch = tracked(event.changedTouches);
+        if (touch) swipe(touch.clientX, touch.clientY);
+      }}
+      onTouchCancel={() => {
+        swipeStart.current = null;
+      }}
       onPointerDown={(event) => {
-        if (event.pointerType === "mouse") return;
-        swipeStart.current = { x: event.clientX, y: event.clientY };
+        // A finger is already down: the pen makes touches, they decide.
+        if (event.pointerType !== "pen" || typeof swipeStart.current?.id === "number") return;
+        if (!rootRef.current?.contains(event.target as Node)) return;
+        swipeStart.current = { id: "pen", x: event.clientX, y: event.clientY, sideways: false };
+      }}
+      onPointerMove={(event) => {
+        if (swipeStart.current?.id === "pen") move(event.clientX, event.clientY);
       }}
       onPointerUp={(event) => {
-        const start = swipeStart.current;
-        swipeStart.current = null;
-        if (!start) return;
-        const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
-        if (direction === 0) return;
-        // A press on a block is no outside press (`SubjectPopup`), so a swipe
-        // that starts on one closes the popup here.
-        if (!narrow) {
-          if (!onSwipeWeek) return;
-          closePopup();
-          closeAllDay();
-          onSwipeWeek(direction);
-          return;
-        }
-        const next = swipeTarget(selectedDay, direction);
-        if (next !== selectedDay) {
-          closePopup();
-          closeAllDay();
-        }
-        onSelectDay(next);
+        if (swipeStart.current?.id === "pen") swipe(event.clientX, event.clientY);
       }}
       onPointerCancel={() => {
-        swipeStart.current = null;
+        if (swipeStart.current?.id === "pen") swipeStart.current = null;
       }}
     >
       {/* Day names (from compact on; phones name the day in the bar below),
@@ -317,7 +369,10 @@ export function TimetableGrid({
         />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pt-3 pb-2 [scrollbar-gutter:stable]">
+      {/* overflow-x-hidden: `overflow-y-auto` alone makes x auto too, and the
+          days sliding in made it scroll sideways for a moment, which took
+          the swipe. */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pt-3 pb-2 [scrollbar-gutter:stable]">
         <div
           ref={bodyRef}
           className="relative grid flex-1"

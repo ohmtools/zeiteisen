@@ -64,7 +64,16 @@ import { transition } from "@/lib/ohmtools/motion";
 import { toast } from "@/lib/ohmtools/toast";
 import { currentStep, SHORT_QUERY, useMedia, useStep } from "@/lib/ohmtools/steps";
 import { dateLabel, shortDate } from "@/lib/subjects";
-import { dayPickedIn, defaultView, shownDay, shownWeek, type Picked } from "@/lib/view";
+import {
+  calendarWeek,
+  current,
+  dayPick,
+  defaultView,
+  shownDay,
+  shownWeek,
+  weekPick,
+  type Picked,
+} from "@/lib/view";
 
 // Everything but the shell and the grid comes from one deferred chunk (see
 // `components/deferred`): rendering any of these on the first render starts
@@ -86,25 +95,32 @@ export default function App() {
   const step = useStep();
   const short = useMedia(SHORT_QUERY);
   // The week the week view shows and the one day of the phone grid: what the
-  // user picked while that week (day) lasts, else the current one.
+  // user picked while the pick holds, else the current one.
   const [pickedWeek, setPickedWeek] = useState<Picked<number> | null>(null);
   const weekTime = shownWeek(pickedWeek, now);
   // One Date per shown week: the compiler would build a new one on every tick
   // of `now`, and with it the week's events and blocks.
   const weekStart = useMemo(() => new Date(weekTime), [weekTime]);
   const [pickedDay, setPickedDay] = useState<Picked<Day> | null>(null);
-  const day = shownDay(pickedDay, now);
+  const day = shownDay(pickedDay, now, weekTime);
   // The clock read on the click (an event handler may), so the handlers do not
-  // change, and re-render the grid, on every tick.
-  const pickWeek = (next: Date) =>
-    setPickedWeek({ value: next.getTime(), pickedIn: shownWeek(null, new Date()) });
-  const pickDay = (next: Day) => setPickedDay({ value: next, pickedIn: dayPickedIn(new Date()) });
+  // change, and re-render the grid, on every tick. A week pick takes the
+  // phone's day pick along (or `nextDay`, where a swipe lands): in another
+  // week it holds as long as the week pick.
+  const pickWeek = (next: Date, nextDay?: Day) => {
+    const at = new Date();
+    const week = weekPick(next.getTime(), at);
+    setPickedWeek(week);
+    const value = nextDay ?? current(pickedDay, at);
+    if (value !== null) setPickedDay(dayPick(value, week, at));
+  };
+  const pickDay = (next: Day) => setPickedDay(dayPick(next, pickedWeek, new Date()));
   // "Today" drops both picks: week and day follow the clock again.
   const pickToday = () => {
     setPickedWeek(null);
     setPickedDay(null);
   };
-  const atToday = weekTime === shownWeek(null, now) && day === shownDay(null, now);
+  const atToday = weekTime === shownWeek(null, now) && day === shownDay(null, now, weekTime);
   // Where the global dates came from, plus the settings' switch.
   const sources = useCatalogSources();
   const dates = useSemesterDates(sources);
@@ -439,7 +455,7 @@ export default function App() {
     weekFilterMatches(entry.subject.repeat, filter),
   );
   if (view === "week") {
-    const containsToday = shownWeek(null, now) === weekTime;
+    const containsToday = calendarWeek(now) === weekTime;
     const today = dayOf(now);
     const events = eventsForWeek(dates.dates, weekStart);
     week = {
@@ -724,7 +740,7 @@ export default function App() {
               // "Elements by step"); the buttons stay.
               onSwipeWeek={
                 view === "week" && step !== "wide"
-                  ? (direction) => pickWeek(addWeeks(weekStart, direction))
+                  ? (direction, nextDay) => pickWeek(addWeeks(weekStart, direction), nextDay)
                   : undefined
               }
             />

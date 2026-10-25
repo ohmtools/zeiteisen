@@ -69,9 +69,12 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - `WeekNav` stays one row: ‹ · relative label ("This week", "In 4 weeks";
   opens the week picker) with "CW 43 · 19.–25.10." · today (icon only,
   user decision: back to this week and the phone's default day, disabled
-  while both are shown) · ›. The picker is a month with week numbers, the
-  shown week a band, today red, and "This week" under a divider (user
-  request); `Popup kind="popover"`, a drawer on phones.
+  while both are shown; on Sunday the week ahead, `src/lib/NOTES.md`) · ›.
+  The label stays the calendar's: on Sunday the opening week reads "Next
+  week". The picker is a month with week numbers, the shown week a band,
+  today red, and "This week" under a divider (user request; the calendar
+  week, so on Sunday the way back to the one ending, on a phone to Sunday's
+  own list); `Popup kind="popover"`, a drawer on phones.
 - General view: "All weeks | Even weeks | Odd weeks" takes the week nav's
   place and height; on `short` screens "All | Even | Odd" (one header row
   holds it only with less in each part, the design's rule). It filters G and U only (user decision): G1, G2, U1 and
@@ -324,8 +327,23 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   decision).
 - A horizontal touch swipe changes the day on phones, the week on compact
   screens (Current week only); never on wide ones (the design: no swipe
-  gestures there), the buttons do it everywhere. The overlay is `pointer-events-none` so swipes work; a
-  pointer that moved > 10px is a swipe, not a click.
+  gestures there), the buttons do it everywhere. On phones in Current week a
+  swipe past "Other" goes on to next week's Monday, one before Monday back
+  to last week's "Other" (user request), the day held as long as the week
+  (`src/lib/NOTES.md`); General stops at either end. The overlay is
+  `pointer-events-none` so swipes work; a pointer that moved > 10px is a
+  swipe, not a click. Read from touch events, not pointer events: iOS
+  cancels the pointer once it takes the move for a vertical scroll (it often
+  did, user report), but still ends the touch. So a touch whose first move
+  went up or down is a scroll, however it ends (`src/lib/swipe.ts`), and only
+  fingers that went down on the grid count: React passes on the touches in
+  its portals (the details' drawer, sheet, popover) too, and a thumb resting
+  on the bar below blocked every swipe. A pen makes no touch events on
+  Windows: its pointer events stand in, unless touches come with them. The
+  hour box is `overflow-x-hidden`: with `overflow-y-auto` alone the days
+  sliding in made it scroll sideways for a moment, which ate the swipe. The
+  page itself never bounces (the design's stylesheet, DESIGN.md "App shell"):
+  one viewport tall, yet iOS pulled it in its rubber band.
 - Details (user decision: names NO timetable): kind badges in their colours
   and the group, the full name with the code under it, time with rhythm and
   "on now", lecturer, room with building, "Map" and "Campus", "In the notes"
