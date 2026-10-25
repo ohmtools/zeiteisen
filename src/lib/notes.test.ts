@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { notesFromFile, notesLines, toggleTask } from "@/lib/notes";
+import {
+  insertInline,
+  insertLine,
+  notesFromFile,
+  notesLines,
+  opensMention,
+  toggleTask,
+} from "@/lib/notes";
 
 function rebuilt(text: string): string {
   // Every piece sits at its `start`: the view maps clicks back by it.
@@ -50,6 +57,75 @@ describe("notesLines", () => {
     expect(text[done.task!.at]).toBe("x");
     expect(done.pieces.map((piece) => piece.kind)).toEqual(["text", "link"]);
     expect(plain.task).toBeNull();
+  });
+});
+
+describe("headings and links to a Termin", () => {
+  it("reads # lines as headings, without the marks", () => {
+    const [h1, h3, plain, empty] = notesLines("# Exams\n### Lab\n#nope\n# ");
+    expect(h1.heading).toBe(true);
+    expect(h1.pieces).toEqual([{ kind: "text", start: 2, text: "Exams" }]);
+    expect(h3.heading).toBe(true);
+    expect(plain.heading).toBe(false);
+    expect(empty.heading).toBe(true);
+    expect(empty.pieces).toEqual([]);
+  });
+
+  it("finds links to a Termin among text and web links", () => {
+    const text = "- [ ] Sheet 3 @[2026-10-26#a3F9_-1c MA3 Ue 1.1], see www.th-nuernberg.de";
+    const [line] = notesLines(text);
+    expect(line.pieces.map((piece) => piece.kind)).toEqual(["text", "mention", "text", "link"]);
+    const mention = line.pieces[1];
+    expect(mention).toMatchObject({
+      kind: "mention",
+      date: "2026-10-26",
+      hash: "a3F9_-1c",
+      label: "MA3 Ue 1.1",
+    });
+    expect(rebuilt(text)).toBe(
+      "Sheet 3 |@[2026-10-26#a3F9_-1c MA3 Ue 1.1]|, see |www.th-nuernberg.de",
+    );
+  });
+
+  it("takes a link without a label, and leaves broken ones as text", () => {
+    const [line] = notesLines("@[2026-10-26#abc] @[26.10.#abc x] @[2026-10-26 x]");
+    expect(line.pieces.map((piece) => piece.kind)).toEqual(["mention", "text"]);
+    expect(line.pieces[0]).toMatchObject({ label: "" });
+  });
+});
+
+describe("insertLine", () => {
+  it("uses the empty line the caret is on", () => {
+    expect(insertLine("a\n\nb", 2, "- [ ] ")).toEqual({ text: "a\n- [ ] \nb", caret: 8 });
+    expect(insertLine("", 0, "# ")).toEqual({ text: "# ", caret: 2 });
+  });
+
+  it("adds a line after the caret's line", () => {
+    expect(insertLine("ab\ncd", 1, "- [ ] ")).toEqual({ text: "ab\n- [ ] \ncd", caret: 9 });
+    expect(insertLine("ab", 2, "# ")).toEqual({ text: "ab\n# ", caret: 5 });
+  });
+});
+
+describe("insertInline", () => {
+  it("replaces the typed @, spaced from the words around it", () => {
+    expect(insertInline("Exam @", 5, "@[x]", 1)).toEqual({ text: "Exam @[x] ", caret: 10 });
+    expect(insertInline("Exam @ ok", 5, "@[x]", 1)).toEqual({ text: "Exam @[x] ok", caret: 9 });
+  });
+
+  it("puts a space before it after a word", () => {
+    expect(insertInline("Exam", 4, "@[x]")).toEqual({ text: "Exam @[x] ", caret: 10 });
+    expect(insertInline("(", 1, "@[x]")).toEqual({ text: "(@[x] ", caret: 6 });
+  });
+});
+
+describe("opensMention", () => {
+  it("opens at a line start, after a space or a bracket only", () => {
+    expect(opensMention("@", 0)).toBe(true);
+    expect(opensMention("a\n@", 2)).toBe(true);
+    expect(opensMention("Exam @", 5)).toBe(true);
+    expect(opensMention("(@", 1)).toBe(true);
+    expect(opensMention("name@th.de", 4)).toBe(false);
+    expect(opensMention("a b", 1)).toBe(false);
   });
 });
 

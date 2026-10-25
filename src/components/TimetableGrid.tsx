@@ -1,4 +1,12 @@
-import { lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { cn } from "cn";
 import { getLocale, localized, m } from "@/i18n";
 import {
@@ -89,6 +97,10 @@ type Props = {
   // A swipe where the whole week shows, in the week view: one week back (-1)
   // or on (1).
   onSwipeWeek?: (direction: -1 | 1) => void;
+  // Blocks a link in the notes points at (by key): the notes' mark.
+  noted?: ReadonlySet<string>;
+  // The block a followed link points at: it pulses and scrolls into view.
+  flash?: { key: string; nonce: number } | null;
 };
 
 export function TimetableGrid({
@@ -102,6 +114,8 @@ export function TimetableGrid({
   selectedDay,
   onSelectDay,
   onSwipeWeek,
+  noted,
+  flash = null,
 }: Props) {
   const general = week === null;
   const narrow = step === "narrow";
@@ -115,6 +129,16 @@ export function TimetableGrid({
       slideIn(element, direction, { delay: Number(element.dataset.slide) * 24 });
     }
   });
+  // A followed link: its block into view once it is on screen.
+  useEffect(() => {
+    if (!flash) return;
+    const frame = requestAnimationFrame(() =>
+      rootRef.current
+        ?.querySelector("[data-flash]")
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [flash]);
   // The subject under the mouse: its other blocks get a faint ring.
   const [hovered, setHovered] = useState<string | null>(null);
   // The hour grid's size: how wide a day column is (lanes narrower than
@@ -143,6 +167,9 @@ export function TimetableGrid({
     point: { x: number; y: number };
     block: HTMLElement;
     keyboard: boolean;
+    // Closed by an action that moves on elsewhere (the notes): the focus
+    // stays where that action put it instead of going back to the block.
+    stay?: boolean;
   } | null>(null);
   const popupEntries = popup
     ? popup.keys
@@ -155,7 +182,8 @@ export function TimetableGrid({
       : popup!.keys.length === 1
         ? { kind: "details", entry: popupEntries[0] }
         : { kind: "list", entries: popupEntries };
-  const closePopup = () => setPopup((shown) => shown && { ...shown, open: false });
+  const closePopup = (stay = false) =>
+    setPopup((shown) => shown && { ...shown, open: false, stay });
   const openKey = popup?.open ? popup.keys.join("+") : null;
   // A press on the open block closes the popup, as a trigger's would; on any
   // other block it moves there.
@@ -341,6 +369,8 @@ export function TimetableGrid({
                       related={related(shown.entry)}
                       onHover={setHovered}
                       expanded={openKey === shown.entry.key}
+                      noted={noted?.has(shown.entry.key)}
+                      flashing={flash?.key === shown.entry.key}
                       onPress={press([shown.entry.key])}
                     />
                   ) : (
@@ -384,6 +414,8 @@ export function TimetableGrid({
                     related={related(entry)}
                     onHover={setHovered}
                     expanded={openKey === entry.key}
+                    noted={noted?.has(entry.key)}
+                    flashing={flash?.key === entry.key}
                     onPress={press([entry.key])}
                   />
                 ))}
@@ -409,7 +441,7 @@ export function TimetableGrid({
           <DetailsSheet
             open={popup?.open === true && content !== null}
             side={short ? "right" : "bottom"}
-            onClose={closePopup}
+            onClose={() => closePopup()}
           >
             {details}
           </DetailsSheet>
@@ -429,6 +461,7 @@ export function TimetableGrid({
           point={popup?.point ?? { x: 0, y: 0 }}
           block={popup?.block ?? null}
           keyboard={popup?.keyboard ?? false}
+          stay={popup?.stay === true}
           onClose={closePopup}
         >
           {details}

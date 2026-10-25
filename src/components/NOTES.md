@@ -183,9 +183,11 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   profile file; the backup holds it). At most `MAX_NOTES_LENGTH` characters
   (1,000,000, user decision), a count shows from 90% on.
 - Two faces of the same text (user decision): a read view where http(s) and
-  `www.` links open in a new tab and `- [ ]` / `- [x]` lines (GitHub's task
-  syntax, `*` too, indented too) are checkboxes that tick the text itself
-  (`@/lib/notes`); the text area while editing. No edit or save button (user
+  `www.` links open in a new tab, `- [ ]` / `- [x]` lines (GitHub's task
+  syntax, `*` too, indented too) are checkboxes that tick the text itself,
+  `# ` lines (up to `###`) are headings and links to a Termin are chips
+  (`@/lib/notes`, `@/lib/mentions`); the text area while editing, where all
+  of it is the plain text it is stored as. No edit or save button (user
   decision): every keystroke is saved. Tab onto the view opens the text area
   with the caret at the end (links and checkboxes are out of the Tab order,
   they would vanish under it); a click on the view's text
@@ -193,11 +195,51 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   piece carries its offset as `data-start`); a drag selection stays a
   selection for copying. Leaving the text area returns to the view. Empty
   notes are the text area alone (its placeholder explains links, tasks and
-  N). The view copies the text area's box and type so no line moves. The
+  N). The view copies the text area's box and type so no line moves;
+  headings keep the text's size for it, bold only (the design had them
+  larger). The
   text area sits inside the panel's padding like everything else, the same
   space left, right and below (user request; a negative margin to line its
   text up with the hint shifted it left only, `w-full` kept its width). No
   underline on either, focused or not (user decision).
+- **Insert bar** (design "Zeiteisen Notizen", 2026-10-25): "Task", "Heading",
+  "Termin" (ghost buttons with labels): on top of the panel from compact on
+  (user decision: not at the bottom on desktop), at the bottom on phones
+  within thumb reach, 44px. Task and heading put `- [ ] ` / `# ` on the
+  empty line the caret is on, else on a new line after it (`insertLine`);
+  without a caret at the end. The buttons keep the focus off themselves
+  (`preventDefault` on mousedown), so the text area keeps its caret.
+- **Links to a Termin** (user request): `@[2026-10-26#a3f91c MA3 Ue 2.1]`, a
+  concrete date plus the Termin's hash (user decision); the label is only
+  what a gone link shows. Plain text in `tt.notes.v1`, the stored shape
+  stays a string: no migration. Written only by the picker, never typed: the
+  brackets give the link a clear end in running text (user question: a space
+  cannot end it). In the view a chip in the kind's colour, "MA3 Ue Mo
+  26.10.", a press shows its block in the week view (week and phone day
+  picked, the block pulses and scrolls into view; the panel closes on phones
+  and compact screens, it covers the grid). Past dates struck through, still
+  pressable. No Termin with that hash on that date (changed, switched off,
+  removed, a day off): red and dashed; a press offers "Link again" (the
+  blocks of that day whose name the label starts with) and "Keep as text"
+  (the label), never re-linked by itself.
+- **Termin picker** (`MentionPicker`, the design's `Popup` kind popover: at
+  the insert bar's "Termin", a drawer on phones). Opened by that button or
+  by an `@` typed at a line start or after a space or bracket
+  (`opensMention`; inside a word, an e-mail address, it stays a character).
+  What is searched goes into the picker's own field, never into the note:
+  the typed `@` is replaced by the finished link on a pick, kept with the
+  caret after it on leaving. Step 1: a row per class and weekday time of
+  the active profile's grid (`seriesIn`, the lecture period widened to every
+  listed date), a press (or Enter on the first, highlighted row) links its
+  next date; a date ("9.11"), "heute"/"morgen", a weekday ("mi") or a week
+  ("kw46") in the field narrows to those dates. Step 2, the calendar at a
+  row's end: every date of the class, a month per line; past ones muted AND
+  struck through with a line of their own (user decision: `line-through`
+  alone vanished in grey two-digit numbers), the next one ringed, those
+  already linked with the notes' icon. Same two steps on every step (user
+  decision). From the bar without a caret the link goes on a line of its
+  own at the end. "Pick in the timetable" was designed and dropped (user
+  decision: too much).
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the
@@ -216,6 +258,11 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   `resizes-content` for the notes' sake.
 
 ## Grid
+
+- A block a link in the notes points at carries the notes' icon (the
+  header's `StickyNote`) top right, week view only: a link names a date.
+  App works it out per render for the shown week, hashing only blocks on
+  dates some link names.
 
 - 08:00–19:00 (user decision, was 20:00), Mon–Fri plus **Other** as a sixth
   column of the same width (weekend events, `other` classes, SH1/SH2 and
@@ -263,10 +310,17 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   pointer that moved > 10px is a swipe, not a click.
 - Details (user decision: names NO timetable): kind badges in their colours
   and the group, the full name with the code under it, time with rhythm and
-  "on now", lecturer, room with building, "Map" and "Campus", "Module
-  description" (only with a degree file, opens `SubjectInfoDialog`), note,
-  "on request"; then "Switch class off", "Edit class" (both hidden while
+  "on now", lecturer, room with building, "Map" and "Campus", "In the notes"
+  (week view: each line linking to the block, its heading under it, the
+  block's own link left out of the words; "Go to note" opens the notes
+  scrolled to the line, lit for a moment), "Module description" (only with
+  a degree file, opens `SubjectInfoDialog`), note, "on request"; then
+  "Mention in the notes" (week view, nothing linking yet: a new task at the
+  end with the link, caret after it; not locked, the notes are no part of
+  the profile), "Switch class off", "Edit class" (both hidden while
   locked; editing asks first for a catalog timetable) and "Show in groups".
+  Both notes actions close the popup without handing the focus back to the
+  block (`stay`): it would take the keys meant for the text area.
   The open block gets a light border. A popover on iPad and desktop, opened
   where the pointer clicked (Enter / Space, or a click with `detail` 0: beside
   the block); a drawer on phones, a sheet on `short` screens (`DetailsSheet`,

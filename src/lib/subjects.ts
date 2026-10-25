@@ -12,7 +12,7 @@ import {
   type Time,
 } from "@/lib/primitives/subject";
 import { getLocale, localized, m } from "@/i18n";
-import { DAYS } from "@/lib/primitives/week";
+import { DAYS, dayOf } from "@/lib/primitives/week";
 import {
   degreeTableOf,
   infoEntry,
@@ -95,6 +95,13 @@ export function dateLabel(date: string): string {
     day: "numeric",
     month: "numeric",
   }).format(parseISO(date));
+}
+
+// "Mo 26.10." / "Mon 10/26": a date with its weekday, short, the way the
+// grid's day heads read (links to a Termin in the notes, the Termin picker).
+export function dayDateLabel(date: string): string {
+  const day = parseISO(date);
+  return `${dayName(dayOf(day))} ${shortDate(day)}`;
 }
 
 // "21.10." / "10/21": a weekday's date in the week view.

@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { addWeeks, startOfISOWeek } from "date-fns";
+import { addWeeks, parseISO, startOfISOWeek } from "date-fns";
 import { CalendarDays, Plus } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
@@ -40,6 +40,7 @@ import type { TimetableName } from "@/lib/primitives/timetable";
 import { categoriesOf } from "@/lib/primitives/tree";
 import { dayOf, eventsForWeek } from "@/lib/primitives/week";
 import {
+  type Entry,
   generalEntries,
   nextWeekWithEntries,
   weekEntries,
@@ -47,6 +48,15 @@ import {
   type WeekFilter,
 } from "@/lib/layout";
 import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
+import {
+  dayOfDate,
+  mentionMatches,
+  mentionResolver,
+  mentionsOfText,
+  mentionToken,
+  type MentionTarget,
+} from "@/lib/mentions";
+import { insertInline, insertLine } from "@/lib/notes";
 import { payloadFromLocation } from "@/lib/share";
 import { sameHighlight, type Highlight, type SubjectRef } from "@/lib/link";
 import { transition } from "@/lib/ohmtools/motion";
@@ -222,13 +232,11 @@ export default function App() {
   // the end. Escape in them goes back to the grid. Before the deferred chunk
   // has arrived the notes are not there yet: the caret waits for them.
   const notesRef = useRef<NotesHandle | null>(null);
-  const editPending = useRef(false);
+  // Edit as soon as the notes are there: at the end (`true`) or at a caret.
+  const editPending = useRef<boolean | number>(false);
   const notesHandle = (handle: NotesHandle | null) => {
     notesRef.current = handle;
-    if (handle && editPending.current) {
-      editPending.current = false;
-      handle.edit();
-    }
+    editNow(editPending, handle);
   };
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -246,10 +254,7 @@ export default function App() {
         setHighlight(null);
       });
       // Already on screen, no new handle came: edit now.
-      if (editPending.current && notesRef.current) {
-        editPending.current = false;
-        notesRef.current.edit();
-      }
+      editNow(editPending, notesRef.current);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -274,6 +279,48 @@ export default function App() {
     const done = setTimeout(() => setFlash(null), 1600);
     return () => clearTimeout(done);
   }, [flash]);
+  // Notes ↔ grid. Links in the notes name a Termin by date and hash
+  // (`@/lib/mentions`): the blocks they point at carry the notes' mark, a
+  // press on one shows its block (which pulses), its details lead back to
+  // the line.
+  const mentions = useMemo(() => mentionsOfText(notes), [notes]);
+  const [blockFlash, setBlockFlash] = useState<{ key: string; nonce: number } | null>(null);
+  useEffect(() => {
+    if (!blockFlash) return;
+    const done = setTimeout(() => setBlockFlash(null), 1600);
+    return () => clearTimeout(done);
+  }, [blockFlash]);
+  const [noteReveal, setNoteReveal] = useState<{ start: number; nonce: number } | null>(null);
+  // Tells one flash or reveal of the same block or line from the next.
+  const nonce = useRef(0);
+  const jumpToMention = (mention: MentionTarget) => {
+    const date = parseISO(mention.date);
+    setView("week");
+    pickWeek(startOfISOWeek(date));
+    pickDay(dayOfDate(mention.date));
+    const entry = mentionResolver(timetables, dates.dates).entry(mention);
+    if (entry) setBlockFlash({ key: entry.key, nonce: ++nonce.current });
+    // The panel covers the grid on phones and compact screens.
+    if (currentStep() !== "wide") openPanel(null);
+  };
+  const openNote = (start: number) => {
+    openPanel("notes");
+    setNoteReveal({ start, nonce: ++nonce.current });
+  };
+  // "Mention in the notes": a new task at the end linking to the block, the
+  // caret after the link to say what it is about.
+  const mentionInNotes = (entry: Entry) => {
+    const line = insertLine(notes, notes.length, "- [ ] ");
+    const next = insertInline(line.text, line.caret, mentionToken(entry));
+    setNotes(next.text);
+    editPending.current = next.caret;
+    flushSync(() => {
+      openPanel("notes");
+      setSettings(false);
+    });
+    editNow(editPending, notesRef.current);
+  };
+
   // Offline the catalog can hand over nothing, so it offers nothing.
   const offerCatalog = online ? catalog : Catalog.empty;
   const categoryHighlight = categoryLit(
@@ -349,7 +396,24 @@ export default function App() {
     onEdit: (entry) => setEditing({ name: entry.timetableName, index: entry.index }),
     onJump: (entry) => jumpToGroup({ timetableName: entry.timetableName, index: entry.index }),
     onInfo: setSubjectInfo,
+    mentionsOf: (entry) => mentions.filter((mention) => mentionMatches(mention, entry)),
+    onOpenNote: openNote,
+    onMention: mentionInNotes,
   };
+  // The week's blocks a link points at; hashes only for the days links name.
+  const mentionedDates = new Set(mentions.map((mention) => mention.date));
+  const noted = new Set(
+    week === null
+      ? []
+      : entries
+          .filter(
+            (entry) =>
+              entry.meeting.date !== null &&
+              mentionedDates.has(entry.meeting.date) &&
+              mentions.some((mention) => mentionMatches(mention, entry)),
+          )
+          .map((entry) => entry.key),
+  );
 
   // Over an empty grid: no timetables yet, or a week without classes and
   // where the next ones are.
@@ -494,6 +558,11 @@ export default function App() {
         notes={notes}
         onChange={setNotes}
         onLeave={() => gridRef.current?.focus()}
+        timetables={timetables}
+        dates={dates.dates}
+        today={now}
+        onJump={jumpToMention}
+        reveal={noteReveal}
       />
     );
 
@@ -582,6 +651,8 @@ export default function App() {
               actions={actions}
               selectedDay={day}
               onSelectDay={pickDay}
+              noted={noted}
+              flash={blockFlash}
               // Swipes change the week where a finger may be the pointer:
               // phones and compact screens, never wide ones (DESIGN.md,
               // "Elements by step"); the buttons stay.
@@ -729,6 +800,15 @@ function Welcome({
       </div>
     </div>
   );
+}
+
+// The edit waiting for the notes, once they are on screen: at the end
+// (`true`) or at a caret.
+function editNow(pending: { current: boolean | number }, handle: NotesHandle | null) {
+  const at = pending.current;
+  if (at === false || !handle) return;
+  pending.current = false;
+  handle.edit(at === true ? undefined : at);
 }
 
 // A bare N (or Shift+N) typed outside anything that takes text or keys of

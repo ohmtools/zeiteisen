@@ -1,16 +1,23 @@
-// The notes' read view: plain text cut into lines, each line into text and
-// links, `- [ ]` / `- [x]` lines into tasks. Every piece carries its `start`
-// in the text, so a click on the view puts the caret at the very character
-// in the text area, and ticking a task changes exactly one character.
+// The notes' read view: plain text cut into lines, each line into text,
+// links and links to a Termin, `- [ ]` / `- [x]` lines into tasks, `# `
+// lines into headings. Every piece carries its `start` in the text, so a
+// click on the view puts the caret at the very character in the text area,
+// and ticking a task changes exactly one character.
 
 export type NotesPiece =
   | { kind: "text"; start: number; text: string }
-  | { kind: "link"; start: number; text: string; href: string };
+  | { kind: "link"; start: number; text: string; href: string }
+  // `@[2026-10-26#a3f91c MA3 Ue]`: the Termin on that date whose hash
+  // (`termHash`) it is; the label after it is only what the link shows
+  // when the Termin is gone.
+  | { kind: "mention"; start: number; text: string; date: string; hash: string; label: string };
 
 export type NotesLine = {
   start: number;
   // A task line: `at` is the index of the box character (" " or "x").
   task: { done: boolean; at: number } | null;
+  // A `# ` line (up to three `#`): a heading, its pieces without the marks.
+  heading: boolean;
   // Whitespace before a task's dash, kept so nested tasks stay indented.
   indent: string;
   pieces: NotesPiece[];
@@ -18,6 +25,12 @@ export type NotesLine = {
 
 // GitHub's task list syntax, with `*` or `-`.
 const TASK = /^(\s*)[-*] \[([ xX])\] /;
+
+// Markdown's headings; one look for all three levels.
+const HEADING = /^#{1,3} /;
+
+// A link to a Termin: date, hash and an optional label, brackets around.
+const MENTION = /@\[(\d{4}-\d{2}-\d{2})#([\w-]+)(?: ([^\]\n]*))?\]/g;
 
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)
 // stays text.
@@ -33,11 +46,20 @@ export function notesLines(text: string): NotesLine[] {
       lines.push({
         start,
         task: { done: box !== " ", at: start + prefix.length - 3 },
+        heading: false,
         indent,
-        pieces: linkPieces(line.slice(prefix.length), start + prefix.length),
+        pieces: inlinePieces(line.slice(prefix.length), start + prefix.length),
       });
     } else {
-      lines.push({ start, task: null, indent: "", pieces: linkPieces(line, start) });
+      const heading = HEADING.exec(line);
+      const skip = heading ? heading[0].length : 0;
+      lines.push({
+        start,
+        task: null,
+        heading: heading !== null,
+        indent: "",
+        pieces: inlinePieces(line.slice(skip), start + skip),
+      });
     }
     start += line.length + 1;
   }
@@ -50,6 +72,27 @@ export function toggleTask(text: string, at: number): string {
   const box = text[at];
   if (box !== " " && box !== "x" && box !== "X") return text;
   return text.slice(0, at) + (box === " " ? "x" : " ") + text.slice(at + 1);
+}
+
+// Links to a Termin first, web links in the text between them.
+function inlinePieces(text: string, start: number): NotesPiece[] {
+  const pieces: NotesPiece[] = [];
+  let last = 0;
+  for (const match of text.matchAll(MENTION)) {
+    const at = match.index;
+    if (at > last) pieces.push(...linkPieces(text.slice(last, at), start + last));
+    pieces.push({
+      kind: "mention",
+      start: start + at,
+      text: match[0],
+      date: match[1],
+      hash: match[2],
+      label: (match[3] ?? "").trim(),
+    });
+    last = at + match[0].length;
+  }
+  if (last < text.length) pieces.push(...linkPieces(text.slice(last), start + last));
+  return pieces;
 }
 
 function linkPieces(text: string, start: number): NotesPiece[] {
@@ -96,6 +139,48 @@ function hrefOf(link: string): string | null {
   } catch {
     return null;
   }
+}
+
+// The insert bar's "Task" and "Heading": `prefix` on the empty line the
+// caret is on, else on a new line after the caret's line. The caret goes
+// after the prefix.
+export function insertLine(
+  text: string,
+  at: number,
+  prefix: string,
+): { text: string; caret: number } {
+  const lineStart = text.lastIndexOf("\n", at - 1) + 1;
+  const found = text.indexOf("\n", at);
+  const lineEnd = found === -1 ? text.length : found;
+  if (text.slice(lineStart, lineEnd).trim() === "") {
+    const next = text.slice(0, lineStart) + prefix + text.slice(lineEnd);
+    return { text: next, caret: lineStart + prefix.length };
+  }
+  const next = text.slice(0, lineEnd) + "\n" + prefix + text.slice(lineEnd);
+  return { text: next, caret: lineEnd + 1 + prefix.length };
+}
+
+// A link to a Termin put in at `at`, replacing `replace` characters there
+// (the typed `@`): a space before it unless a line, a space or a bracket
+// comes first, a space after it unless one follows. The caret goes after it.
+export function insertInline(
+  text: string,
+  at: number,
+  token: string,
+  replace = 0,
+): { text: string; caret: number } {
+  const before = text.slice(0, at);
+  const after = text.slice(at + replace);
+  const inserted =
+    (before === "" || /[\s(]$/.test(before) ? "" : " ") + token + (/^\s/.test(after) ? "" : " ");
+  return { text: before + inserted + after, caret: before.length + inserted.length };
+}
+
+// Whether the `@` just typed at `at` starts a link to a Termin: at the
+// start of a line, after a space or a bracket. Inside a word (an e-mail
+// address) it stays a character.
+export function opensMention(text: string, at: number): boolean {
+  return text[at] === "@" && (at === 0 || /[\s(]/.test(text[at - 1]));
 }
 
 // An uploaded notes file (the download, or any plain text) as notes: UTF-8
