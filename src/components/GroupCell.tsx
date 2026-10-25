@@ -46,9 +46,14 @@ export function GroupCell({
 }: CellProps) {
   const name = group.group ? groupName(group.group) : m.tree_no_group();
   const ref = useRef<HTMLButtonElement>(null);
+  // Smooth on the overview already shown; a jump when the panel or the
+  // overview has just opened (the cell mounts flashing).
+  const shown = useRef(false);
   useEffect(() => {
+    const fresh = !shown.current;
+    shown.current = true;
     if (!flashing) return;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = fresh || matchMedia("(prefers-reduced-motion: reduce)").matches;
     ref.current?.scrollIntoView({ block: "center", behavior: still ? "auto" : "smooth" });
   }, [flashing]);
 

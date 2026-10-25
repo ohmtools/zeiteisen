@@ -9,9 +9,12 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 
 - Full width, no max-width container. **Every step is exactly one viewport
   tall, the page never scrolls** (user decision): the grid, the panels and
-  the phone pages scroll inside themselves. Three steps (`@/lib/media`, the
-  `compact:` / `wide:` / `short:` variants in `index.css`), the same content in
-  other containers (user decision):
+  the phone pages scroll inside themselves. Every region that scrolls is
+  `relative` (design rule): an absolute child without a positioned ancestor
+  (`sr-only` text) would escape it and make the document taller. The root
+  sets `text-sm`, so text without a size of its own is 14px. Three steps
+  (`@/lib/media`, the `compact:` / `wide:` / `short:` variants in
+  `index.css`), the same content in other containers (user decision):
   - **Narrow** (below 40rem: phones upright, Split View): header with the
     profile and lock, groups, notes, settings; the grid shows one day; at the
     bottom (`BottomBar`, within thumb reach, user decision) the view tabs,
@@ -236,7 +239,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   keyboard focus (`:focus-visible`) on a group cell keeps its blocks and dims
   all others — a class toggle, no re-layout; so does an open category view.
   "Show in groups" opens the groups panel on its overview, scrolls to the cell
-  and flashes it.
+  and flashes it: smoothly when the overview was already shown, at once when
+  it has just opened (the cell mounts flashing).
 - Hovering a block with the mouse gives every block of the same subject name
   (across timetables) a faint ring (user decision: subtle, nothing dimmed).
 - Screen readers: a block in the hour grid carries its day (or date) and time

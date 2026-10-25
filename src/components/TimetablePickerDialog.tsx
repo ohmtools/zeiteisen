@@ -259,7 +259,7 @@ export function TimetablePickerDialog({
             // however many versions exist. Grouped: new rows first, then the
             // catalog by folder, then the other profiles' copies. Rows the
             // profile holds itself only block, they are not listed.
-            <div className="-mx-2 flex max-h-[20rem] flex-col gap-3 overflow-y-auto px-2">
+            <div className="relative -mx-2 flex max-h-[20rem] flex-col gap-3 overflow-y-auto px-2">
               {sectionsOf(rows, query).map((section) => (
                 <section key={section.key} className="flex flex-col">
                   {section.title && (

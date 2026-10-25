@@ -52,7 +52,7 @@ export function OwnDegreesDialog({
           <DialogTitle>{m.degrees_manage_title()}</DialogTitle>
           <DialogDescription>{m.degrees_manage_text()}</DialogDescription>
         </DialogHeader>
-        <ul className="flex max-h-72 flex-col divide-y overflow-y-auto">
+        <ul className="relative flex max-h-72 flex-col divide-y overflow-y-auto">
           {files.map((file) => (
             <li key={file.name} className="flex items-center gap-2 py-2">
               <div className="flex min-w-0 flex-1 flex-col">
@@ -141,7 +141,7 @@ export function DegreeNamesDialog({
           <DialogTitle>{m.degree_names_title()}</DialogTitle>
           <DialogDescription>{m.degree_names_text()}</DialogDescription>
         </DialogHeader>
-        <div className="flex max-h-80 flex-col gap-4 overflow-y-auto">
+        <div className="relative flex max-h-80 flex-col gap-4 overflow-y-auto">
           {files.map((file, i) => (
             <div key={i} className="flex flex-col gap-2">
               <Label htmlFor={`degree-name-${i}`}>{m.degree_name_label({ file: file.name })}</Label>

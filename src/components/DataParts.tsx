@@ -35,7 +35,7 @@ export function DataPartsList({
 }) {
   return (
     <>
-      <ul className="flex flex-col divide-y overflow-y-auto">
+      <ul className="relative flex flex-col divide-y overflow-y-auto">
         {dataParts.map((part) => (
           <li key={part} className="flex items-start gap-3 py-2">
             <Checkbox

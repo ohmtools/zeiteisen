@@ -166,7 +166,7 @@ function SubjectEditor({
       </DialogHeader>
 
       <form
-        className="-mr-4 flex min-h-0 flex-col gap-4 overflow-y-auto pr-4"
+        className="relative -mr-4 flex min-h-0 flex-col gap-4 overflow-y-auto pr-4"
         onSubmit={(event) => {
           event.preventDefault();
           save();

@@ -60,7 +60,7 @@ export function ShareWarningDialog({ open, profile, catalog, onOpenChange, onCop
 // catalog refresh or an edit while open.
 function OutsideList({ profile, catalog }: { profile: Profile; catalog: Catalog }) {
   return (
-    <ul className="flex max-h-[18rem] flex-col gap-2 overflow-y-auto pr-2 text-sm">
+    <ul className="relative flex max-h-[18rem] flex-col gap-2 overflow-y-auto pr-2 text-sm">
       {timetablesOutsideCatalog(profile, catalog).map((timetable) => (
         <li key={timetable.name} className="flex items-center justify-between gap-2">
           <span className="min-w-0 truncate">{timetable.name}</span>

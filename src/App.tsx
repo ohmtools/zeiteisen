@@ -457,7 +457,7 @@ export default function App() {
     <OverridesContext value={overrides}>
       {/* Every step is exactly one viewport tall, the page never scrolls:
           the grid, the sidebar and the pages scroll inside themselves. */}
-      <div className="flex h-dvh flex-col overflow-hidden">
+      <div className="flex h-dvh flex-col overflow-hidden text-sm">
         <h1 className="sr-only">{m.app_title()}</h1>
 
         {page ? (

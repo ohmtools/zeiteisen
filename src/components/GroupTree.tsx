@@ -245,7 +245,7 @@ export function GroupTree({
         onBack={narrow ? onClose : undefined}
         onClose={narrow ? undefined : onClose}
       />
-      <div className="flex min-h-0 flex-1 flex-col divide-y overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)] compact:px-6">
+      <div className="relative flex min-h-0 flex-1 flex-col divide-y overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)] compact:px-6">
         {locked && (
           <div className="flex flex-col gap-3 pt-2 pb-6">
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -614,7 +614,7 @@ function CategoryView({
         onBack={onBack}
         onClose={narrow ? undefined : onClose}
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] compact:px-6">
+      <div className="relative flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] compact:px-6">
         <div className="flex flex-col gap-2">
           <span id={id} className="text-sm font-medium">
             {m.tree_groups()}

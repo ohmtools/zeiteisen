@@ -29,7 +29,7 @@ const SHOW_COUNT_FROM = MAX_NOTES_LENGTH * 0.9;
 // text area's padding), so switching between them moves no line. Neither has
 // the input's underline (user decision).
 const VIEW =
-  "min-h-0 flex-1 cursor-text overflow-y-auto rounded-lg border border-transparent px-2.5 py-2 text-base whitespace-pre-wrap wrap-break-word outline-none md:text-sm";
+  "relative min-h-0 flex-1 cursor-text overflow-y-auto rounded-lg border border-transparent px-2.5 py-2 text-base whitespace-pre-wrap wrap-break-word outline-none md:text-sm";
 
 export type NotesHandle = {
   // Puts the caret at the end (the N shortcut).
