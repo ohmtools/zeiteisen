@@ -165,13 +165,22 @@ export default function App() {
 
   // Groups or notes: open beside the grid on wide screens (groups
   // at first, user decision: they are what the app is for), else closed until
-  // asked for. Not persisted.
+  // asked for. Not persisted. A first visit has no groups yet: the sidebar
+  // waits until the welcome brought a timetable in.
   const [panel, setPanel] = useState<Panel | null>(() =>
-    currentStep() === "wide" ? "groups" : null,
+    currentStep() === "wide" && !welcome ? "groups" : null,
   );
   // The panel the container shows: the open one, or while a sheet slides
   // out the one that was open.
   const [shownPanel, setShownPanel] = useState<Panel>(panel ?? "groups");
+  const [wasWelcome, setWasWelcome] = useState(welcome);
+  if (wasWelcome !== welcome) {
+    setWasWelcome(welcome);
+    if (!welcome && panel === null && step === "wide") {
+      setPanel("groups");
+      setShownPanel("groups");
+    }
+  }
   // The groups panel's category view, if one is open (`GroupTree`).
   const [category, setCategory] = useState<CategoryRef | null>(null);
   // The group cell lighting its blocks in the grid (tree ↔ grid, below).

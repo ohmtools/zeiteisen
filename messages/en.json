@@ -557,5 +557,8 @@
   "undo": "Undo",
   "toast_profile_removed": "Profile “{name}” deleted.",
   "toast_subject_removed": "Class removed from “{timetable}”.",
-  "toast_notes_replaced": "Notes replaced by {file}."
+  "toast_notes_replaced": "Notes replaced by {file}.",
+  "filter_all_short": "All",
+  "filter_even_short": "Even",
+  "filter_odd_short": "Odd"
 }

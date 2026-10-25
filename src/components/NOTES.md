@@ -43,7 +43,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
     in landscape, desktops; a laptop with about 650px under the browser's
     bars is compact): the week beside a 340px sidebar, **closable** (user
     decision; was always there). It opens on the groups (user decision),
-    elsewhere panels start closed. Not persisted.
+    elsewhere panels start closed; a first visit has no groups yet, so the
+    sidebar opens once the welcome brought a timetable in. Not persisted.
   - Panels are groups and notes only. **The settings are an area** (user
     decision, room for more settings later; was a panel): a dialog on wide
     screens beside whatever panel is open, a page on phones and compact
@@ -72,7 +73,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   shown week a band, today red, and "This week" under a divider (user
   request); `Popup kind="popover"`, a drawer on phones.
 - General view: "All weeks | Even weeks | Odd weeks" takes the week nav's
-  place and height. It filters G and U only (user decision): G1, G2, U1 and
+  place and height; on `short` screens "All | Even | Odd" (one header row
+  holds it only with less in each part, the design's rule). It filters G and U only (user decision): G1, G2, U1 and
   U2 stay and show their code, SH1/SH2 and listed dates stay in Other.
 - **No boxes** (user decision): sections are split by divider lines. One
   spacing unit (24px, 16px on phones) around every divider — change the

@@ -557,5 +557,8 @@
   "undo": "Rückgängig",
   "toast_profile_removed": "Profil „{name}“ gelöscht.",
   "toast_subject_removed": "Termin aus „{timetable}“ gelöscht.",
-  "toast_notes_replaced": "Notizen durch {file} ersetzt."
+  "toast_notes_replaced": "Notizen durch {file} ersetzt.",
+  "filter_all_short": "Alle",
+  "filter_even_short": "Gerade",
+  "filter_odd_short": "Ungerade"
 }

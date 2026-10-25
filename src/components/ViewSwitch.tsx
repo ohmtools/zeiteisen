@@ -2,6 +2,7 @@ import { cn } from "cn";
 import { m } from "@/i18n";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WEEK_FILTERS, type WeekFilter } from "@/lib/layout";
+import { SHORT_QUERY, useMedia } from "@/lib/ohmtools/steps";
 
 // "Week | General", the views behind tabs (`Views`, App).
 export type View = "week" | "general";
@@ -20,6 +21,15 @@ const FILTER_LABEL: Record<WeekFilter, () => string> = {
   odd: m.filter_odd,
 };
 
+// A phone turned sideways: one header row holds profile, views, filter and
+// buttons only with less in each part (the design's `short:` rule), "All |
+// Even | Odd"; the tab list still says "Weeks".
+const FILTER_SHORT: Record<WeekFilter, () => string> = {
+  all: m.filter_all_short,
+  even: m.filter_even_short,
+  odd: m.filter_odd_short,
+};
+
 // The general view's "All weeks | Even weeks | Odd weeks", in the week nav's
 // place and height. It filters G and U only (`weekFilterMatches`).
 export function WeekFilterSwitch({
@@ -31,6 +41,7 @@ export function WeekFilterSwitch({
   onChange: (filter: WeekFilter) => void;
   className?: string;
 }) {
+  const labels = useMedia(SHORT_QUERY) ? FILTER_SHORT : FILTER_LABEL;
   return (
     <Tabs
       value={value}
@@ -42,7 +53,7 @@ export function WeekFilterSwitch({
       <TabsList aria-label={m.filter_label()} className={LIST}>
         {WEEK_FILTERS.map((filter) => (
           <TabsTrigger key={filter} value={filter} className={TRIGGER}>
-            {FILTER_LABEL[filter]()}
+            {labels[filter]()}
           </TabsTrigger>
         ))}
       </TabsList>
