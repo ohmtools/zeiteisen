@@ -5,7 +5,10 @@ import {
   initialState,
   removedState,
   renamedState,
+  restoredState,
   syncedState,
+  withTimetableBack,
+  withTimetableRestored,
   type ProfilesState,
 } from "@/lib/profileState";
 
@@ -85,5 +88,72 @@ describe("removedState", () => {
     const locked = state("A", { ...a, locked: true });
     expect(removedState(locked, "A")).toBe(locked);
     expect(names(removedState(state("B", b), "B"))).toEqual([m.profile_default()]);
+  });
+});
+
+describe("restoredState (undo a deleted profile)", () => {
+  it("brings back the state before when nothing changed since", () => {
+    const before = state("B", a, b);
+    const after = removedState(before, "B");
+    expect(restoredState(after, before, after, "B")).toBe(before);
+  });
+
+  it("drops the fresh default that deleting the last profile started", () => {
+    const before = state("A", a);
+    const after = removedState(before, "A");
+    expect(names(restoredState(after, before, after, "A"))).toEqual(["A"]);
+  });
+
+  it("puts the profile back at its place and keeps the active one after other changes", () => {
+    const before = state("A", a, b, profile("C", []));
+    const after = removedState(before, "B");
+    const later = { ...after, profiles: [...after.profiles, profile("D", [])], active: "D" };
+    const back = restoredState(later, before, after, "B");
+    expect(names(back)).toEqual(["A", "B", "C", "D"]);
+    expect(back.active).toBe("D");
+  });
+
+  it("leaves it gone when its name is taken by now", () => {
+    const before = state("A", a, b);
+    const after = removedState(before, "B");
+    const later = { ...after, profiles: [...after.profiles, profile("b", [])] };
+    expect(restoredState(later, before, after, "B")).toBe(later);
+  });
+});
+
+describe("withTimetableBack (undo a removed timetable)", () => {
+  const one = timetable("BEI3", [subject("M1")]);
+  const two = timetable("BEI4", []);
+
+  it("puts the timetable back at its place", () => {
+    const removed = profile("P", [two]);
+    expect(withTimetableBack(removed, one, 0).timetables.map((t) => t.name)).toEqual([
+      "BEI3",
+      "BEI4",
+    ]);
+  });
+
+  it("refuses while locked or with the name taken in any case", () => {
+    const locked = { ...profile("P", [two]), locked: true };
+    expect(withTimetableBack(locked, one, 0)).toBe(locked);
+    const taken = profile("P", [timetable("bei3", [])]);
+    expect(withTimetableBack(taken, one, 0)).toBe(taken);
+  });
+});
+
+describe("withTimetableRestored (undo a deleted class)", () => {
+  const before = timetable("BEI3", [subject("M1"), subject("M2")], {
+    origin: { kind: "catalog", path: "timetables/BEI3.json" },
+  });
+  const after = before.subjects.withRemoved(1);
+  const edited = profile("P", [{ ...before, subjects: after, origin: { kind: "local" } }]);
+
+  it("brings back the timetable as it was, origin included", () => {
+    expect(withTimetableRestored(edited, before, after).timetables[0]).toBe(before);
+  });
+
+  it("changes nothing once the timetable was edited again", () => {
+    const again = profile("P", [{ ...before, subjects: after.withRemoved(0) }]);
+    expect(withTimetableRestored(again, before, after)).toBe(again);
   });
 });

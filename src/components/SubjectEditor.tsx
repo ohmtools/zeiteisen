@@ -26,6 +26,7 @@ export function SubjectEditor({
   locked,
   onClose,
   onSave,
+  onDelete,
   onAddEmpty,
 }: {
   request: EditRequest | null;
@@ -36,6 +37,7 @@ export function SubjectEditor({
   locked: boolean;
   onClose: () => void;
   onSave: (name: TimetableName, subjects: Subjects<TimetableSubjectExtra>) => void;
+  onDelete: (name: TimetableName, index: number) => void;
   // Creates an empty timetable; its name, or `null` when the profile refused.
   onAddEmpty: () => TimetableName | null;
 }) {
@@ -88,6 +90,9 @@ export function SubjectEditor({
         }}
         onSave={(subjects) => {
           if (taken) onSave(taken.request.name, subjects);
+        }}
+        onDelete={(index) => {
+          if (taken) onDelete(taken.request.name, index);
         }}
       />
 

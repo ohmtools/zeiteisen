@@ -211,6 +211,9 @@ export function ImportDialog({
       title={m.import_title()}
       description={shared ? m.import_review_text() : m.import_text()}
       closeLabel={m.panel_close()}
+      backLabel={m.panel_back()}
+      // Phones: a page of its own, the import has two steps.
+      page
       footer={
         <>
           <Button

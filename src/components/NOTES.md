@@ -130,7 +130,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   profile", "Import…"; then the active profile's exports. Duplicate copies
   the active profile (another row's is picked first), unlocked, under a name
   asked with "Name 2" suggested; it works while locked. A taken name is
-  refused, never suffixed.
+  refused, never suffixed. Delete asks nothing: the toast offers "Undo"
+  (`restoredState`), which also drops the fresh default that deleting the
+  last profile started.
 - Exports (`.ics` | Link | `.profile`) live in the profile menu and work
   while locked. **Never in the header** (user decision): up there they would
   imply global state like the dates, which never leave the device. ICS over
@@ -149,9 +151,20 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   menu or popover at its trigger, a centred dialog or question, destructive
   buttons red next to "Cancel". Leaving without choosing (a swipe down, a
   press outside, Esc, the close button) runs the popup's Cancel; a dialog
-  without a Cancel does nothing then and shows no swipe handle. The grid's
+  without a Cancel does nothing then and shows no swipe handle. On phones
+  the long or multi-step dialogs (subject editor, import, timetable
+  picker) are pages of their own (`page`), over the groups page too, their
+  back arrow runs Cancel. Over a dialog only another dialog or a question:
+  the export's dates are the device's date fields, the subject editor's
+  multi-date month opens in place (`Expand`). The grid's
   details are the one exception to `Popup` (one popover for the whole grid,
   at the pointer, below): `DetailsSheet` with the design's `PhoneDrawer`.
+- **Undo before questions** (the design's): what can be brought back is
+  removed at once and the toast offers "Undo" for 8 s — a profile, a
+  timetable, a class (the timetable as it was, catalog origin included,
+  while nothing changed it since) and notes replaced by an upload. Questions
+  stay for what cannot be undone: "Delete data…", loading a backup, a
+  catalog timetable turning local.
 - Own file extensions, JSON inside (user decision, so users tell the files
   apart): `.timetable`, `.profile`, `.backup`, `.degree`; the pickers accept
   only their own. Downloads go out as `application/octet-stream` so no browser
@@ -190,9 +203,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - Download: `zeiteisen-notes-<date>.txt` (localized), `text/plain`.
 - Upload: any `.txt` (`notesFromFile`): UTF-8 only, BOM dropped, CRLF made
   `\n`; not text or over `MAX_NOTES_LENGTH` = a toast, nothing changes. It
-  REPLACES the notes (no merging); with notes there that differ, an alert
-  dialog asks first and offers "Save current notes first", like the backup
-  restore. Plain text has no schema, so no zod here.
+  REPLACES the notes (no merging); with notes there that differ, the toast
+  offers "Undo" (while nothing was typed since) instead of a question first
+  (the design's undo before questions; was a question with "Save current
+  notes first"). Plain text has no schema, so no zod here.
 - The on-screen keyboard covers the page instead of resizing it
   (`interactive-widget=resizes-visual` in `index.html`, the design's rule:
   the keyboard never changes the step); the browser keeps the caret in
@@ -280,7 +294,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 
 - A panel (`GroupTree`). Overview: one section per timetable (numeric name
   order): name with update (red dot: an update waits; opens `UpdateDialog`),
-  pen (`TimetableDialog`: name and "Remove timetable…", asked first) and
+  pen (`TimetableDialog`: name and "Remove timetable", at once with "Undo"
+  in the toast) and
   download; under it one status line (user decision): "Own timetable · no
   updates", "From the catalog · current / outdated / catalog unreachable /
   catalog ignored" (a refused update counts as current). Then "Classes

@@ -3,6 +3,7 @@ import { parseISO } from "date-fns";
 import { AlertTriangle, CalendarPlus, CalendarRange, Trash2 } from "lucide-react";
 import { cn } from "cn";
 import { m } from "@/i18n";
+import { Expand } from "@/components/ohmtools/expand";
 import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,7 +38,7 @@ import {
   type SubjectDraft,
   type Suggestions,
 } from "@/lib/edit";
-import { dayName, kindName, repeatTypeName, subjectLabel, subjectName } from "@/lib/subjects";
+import { dayName, kindName, repeatTypeName, subjectName } from "@/lib/subjects";
 
 // What the editor works on: a subject of the timetable by index, or a new one.
 export type SubjectTarget = { timetable: Timetable; index: number | null };
@@ -47,8 +48,10 @@ type Props = {
   // Every timetable on the device: the suggestions are learnt from them.
   library: readonly Timetable[];
   onOpenChange: (open: boolean) => void;
-  // The timetable's subjects after the edit, addition or deletion.
+  // The timetable's subjects after the edit or addition.
   onSave: (subjects: Subjects<TimetableSubjectExtra>) => void;
+  // Deletes the edited class: no question, the toast offers "Undo".
+  onDelete: (index: number) => void;
 };
 
 const KINDS = Object.values(Kind);
@@ -57,7 +60,7 @@ const KINDS = Object.values(Kind);
 // on phones). It never saves a subject the timetable already holds in exactly
 // that form. That any change ends a catalog timetable's catalog updates was
 // asked about before it opened, in `SubjectEditor`.
-export function SubjectDialog({ target, library, onOpenChange, onSave }: Props) {
+export function SubjectDialog({ target, library, onOpenChange, onSave, onDelete }: Props) {
   // The last target stays while the dialog closes, so it leaves with its
   // content.
   const [shown, setShown] = useState(target);
@@ -72,6 +75,7 @@ export function SubjectDialog({ target, library, onOpenChange, onSave }: Props) 
       library={library}
       onClose={() => onOpenChange(false)}
       onSave={onSave}
+      onDelete={onDelete}
     />
   );
 }
@@ -83,6 +87,7 @@ function SubjectEditor({
   library,
   onClose,
   onSave,
+  onDelete,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -90,13 +95,13 @@ function SubjectEditor({
   library: readonly Timetable[];
   onClose: () => void;
   onSave: (subjects: Subjects<TimetableSubjectExtra>) => void;
+  onDelete: (index: number) => void;
 }) {
   const { timetable, index } = target;
   const original = index === null ? null : timetable.subjects.getSubject(index);
   const [draft, setDraft] = useState<SubjectDraft>(() => draftOf(original ?? undefined));
   // Field problems show once the user tried to save, not while they type.
   const [tried, setTried] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const id = useId();
 
   const result = subjectOfDraft(draft);
@@ -145,15 +150,21 @@ function SubjectEditor({
       title={index === null ? m.subject_add_title() : m.subject_edit_title()}
       description={m.subject_dialog_text({ timetable: timetable.name })}
       closeLabel={m.panel_close()}
+      backLabel={m.panel_back()}
+      // Phones: a page of its own, the form is longer than a screen.
+      page
       // Taller than the screen: header and footer stay, the form scrolls.
       className="compact:grid-rows-[auto_minmax(0,1fr)_auto]"
       footer={
         <>
-          {original !== null && (
+          {index !== null && (
             <Button
               variant="ghost"
               className="text-destructive compact:mr-auto"
-              onClick={() => setDeleting(true)}
+              onClick={() => {
+                onDelete(index);
+                onClose();
+              }}
             >
               <Trash2 data-icon="inline-start" />
               {m.subject_delete()}
@@ -318,25 +329,6 @@ function SubjectEditor({
           {duplicate && <Notice destructive>{m.subject_error_duplicate()}</Notice>}
         </div>
       )}
-
-      {/* Inside the dialog, so it stands over it as its nested popup. */}
-      <Popup
-        kind="question"
-        open={deleting}
-        onOpenChange={setDeleting}
-        title={m.subject_delete_title()}
-        description={m.subject_delete_text({
-          subject: original ? subjectLabel(original) : "",
-          timetable: timetable.name,
-        })}
-        action={m.subject_delete_confirm()}
-        onAction={() => {
-          if (index !== null) onSave(timetable.subjects.withRemoved(index));
-          setDeleting(false);
-          onClose();
-        }}
-        cancel={m.cancel()}
-      />
     </Popup>
   );
 }
@@ -619,37 +611,27 @@ function DatesEditor({
             {PROBLEM_TEXT[problem]()}
           </p>
         ))}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => onChange([...dates, nextDate(draft, new Date())])}
-        >
-          <CalendarPlus data-icon="inline-start" />
-          {dates.length === 0 ? m.subject_add_date() : m.subject_next_date()}
-        </Button>
-        <Popup
-          kind="popover"
-          trigger={
-            <Button type="button" variant="secondary" size="sm">
-              <CalendarRange data-icon="inline-start" />
-              {m.subject_pick_dates()}
-            </Button>
-          }
-          title={m.subject_pick_dates()}
-          titleHidden
-          align="start"
-          className="w-auto gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
-        >
-          <LazyCalendar
-            mode="multiple"
-            selected={valid}
-            defaultMonth={valid[valid.length - 1]}
-            onSelect={(picked) => onChange(withDates(draft, picked ?? []))}
-          />
-        </Popup>
-      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="self-start"
+        onClick={() => onChange([...dates, nextDate(draft, new Date())])}
+      >
+        <CalendarPlus data-icon="inline-start" />
+        {dates.length === 0 ? m.subject_add_date() : m.subject_next_date()}
+      </Button>
+      {/* Many dates at once: a month opening in place (`Expand`), not a
+          popover, which would stand over the dialog (DESIGN.md, "Popups"). */}
+      <Expand title={m.subject_pick_dates()} icon={<CalendarRange data-icon="inline-start" />}>
+        <LazyCalendar
+          mode="multiple"
+          selected={valid}
+          defaultMonth={valid[valid.length - 1]}
+          onSelect={(picked) => onChange(withDates(draft, picked ?? []))}
+          className="p-0"
+        />
+      </Expand>
     </div>
   );
 }

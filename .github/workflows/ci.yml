@@ -16,6 +16,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - name: Follows the ohmtools design (theme, copied components, no uppercase)
+        # Pinned: a newer design changes the copies, `ohmtools-design add` then.
+        run: |
+          shopt -s globstar
+          npx --yes github:ohmtools/design#43f7f0f check index.html src/index.css src/styles/ohmtools.css components.json src/components/**/*.tsx src/lib/ohmtools/*.ts
       - run: npm test
       - run: npm run build
       - name: Committed skill schemas match the primitives

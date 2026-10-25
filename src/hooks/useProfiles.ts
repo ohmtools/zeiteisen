@@ -6,7 +6,10 @@ import {
   initialState,
   removedState,
   renamedState,
+  restoredState,
   syncedState,
+  withTimetableBack,
+  withTimetableRestored,
   type ProfilesState,
 } from "@/lib/profileState";
 import { toast } from "@/lib/ohmtools/toast";
@@ -76,11 +79,11 @@ export function useProfiles() {
 
   const active = profileByName(state.profiles, state.active);
 
-  // Everything that writes the active profile; locked profiles refuse it, so
-  // callers do not have to check.
-  const update = (change: (profile: Profile) => Profile) =>
+  // Writes the profile `name` (the active one by default); locked profiles
+  // refuse it, so callers do not have to check.
+  const update = (change: (profile: Profile) => Profile, name?: ProfileName) =>
     setState((previous) => {
-      const profile = profileByName(previous.profiles, previous.active);
+      const profile = profileByName(previous.profiles, name ?? previous.active);
       if (!profile || profile.locked) return previous;
       const next = change(profile);
       if (next === profile) return previous;
@@ -136,13 +139,29 @@ export function useProfiles() {
       update((profile) => addTimetables(profile, cleanSources(sources)));
       return true;
     },
+    // Removing asks nothing: the toast offers "Undo" (DESIGN.md, undo before
+    // questions), which puts the timetable back in the profile it left.
     removeTimetable: (name: TimetableName) => {
       // The toast is fired here, not inside the updater: an updater may run
       // twice and would then report the removal twice.
-      if (timetableByName(active, name) && !active?.locked) {
-        toast.success(m.toast_timetable_removed({ name }));
-      }
+      const removed = timetableByName(active, name);
+      if (!active || !removed || active.locked) return;
+      const index = active.timetables.indexOf(removed);
       update((profile) => removeTimetable(profile, name));
+      undoToast(m.toast_timetable_removed({ name }), () =>
+        update((profile) => withTimetableBack(profile, removed, index), active.name),
+      );
+    },
+    // A class deleted from a timetable, with "Undo": the timetable as it was
+    // (a catalog one turned local by the deletion becomes a catalog one again).
+    removeSubject: (name: TimetableName, index: number) => {
+      const before = timetableByName(active, name);
+      if (!active || !before || active.locked) return;
+      const after = before.subjects.withRemoved(index);
+      update((profile) => editSubjects(profile, name, after));
+      undoToast(m.toast_subject_removed({ timetable: name }), () =>
+        update((profile) => withTimetableRestored(profile, before, after), active.name),
+      );
     },
     renameTimetable: (from: TimetableName, to: string) =>
       update((profile) => renameTimetable(profile, from, to)),
@@ -159,8 +178,17 @@ export function useProfiles() {
     rename: (from: ProfileName, to: string) =>
       setState((previous) => renamedState(previous, from, to)),
     // Deleting a profile deletes its timetables with it: they belong to it.
-    // Deleting the last one starts a fresh, empty default.
-    remove: (name: ProfileName) => setState((previous) => removedState(previous, name)),
+    // Deleting the last one starts a fresh, empty default. Asks nothing: the
+    // toast offers "Undo".
+    remove: (name: ProfileName) => {
+      const before = state;
+      const after = removedState(before, name);
+      if (after === before) return;
+      setState(after);
+      undoToast(m.toast_profile_removed({ name }), () =>
+        setState((current) => restoredState(current, before, after, name)),
+      );
+    },
     // Lock applies to the profile, not to the live selection: a locked profile
     // keeps everything it stores — its timetables included — until unlocked.
     toggleLock: () =>
@@ -182,4 +210,10 @@ function cleanSources(sources: readonly TimetableSource[]): TimetableSource[] {
 
 function replace(profiles: Profile[], old: Profile, next: Profile): Profile[] {
   return profiles.map((one) => (one === old ? next : one));
+}
+
+// What can be brought back is not asked about first (DESIGN.md, "Popups"):
+// it happens, and the toast offers "Undo" for a while longer than usual.
+function undoToast(message: string, undo: () => void) {
+  toast.success(message, { duration: 8000, action: { label: m.undo(), onClick: undo } });
 }

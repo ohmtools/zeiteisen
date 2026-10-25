@@ -15,7 +15,7 @@ export function PanelHeader({
   onClose,
   closeLabel = "Close",
 }: {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   actions?: ReactNode;
   onBack?: () => void;

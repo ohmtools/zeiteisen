@@ -2,7 +2,6 @@ import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
-import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -177,8 +176,9 @@ export function NotesSection({
 }
 
 // The notes panel's header buttons: upload (a `.txt` that replaces the
-// notes, asked first when notes would be lost) and download. Kept from taking
-// the focus: they leave the text area as it is.
+// notes; when notes are lost, the toast offers "Undo" instead of a question
+// first) and download. Kept from taking the focus: they leave the text area
+// as it is.
 export function NotesActions({
   notes,
   onChange,
@@ -187,8 +187,11 @@ export function NotesActions({
   onChange: (notes: string) => void;
 }) {
   const uploadInput = useRef<HTMLInputElement>(null);
-  // An uploaded file waiting for "Replace", while there are notes to lose.
-  const [replacing, setReplacing] = useState<{ file: string; text: string } | null>(null);
+  // The notes as they are now, for an "Undo" clicked later.
+  const current = useRef(notes);
+  useEffect(() => {
+    current.current = notes;
+  }, [notes]);
   const count = new Intl.NumberFormat(getLocale());
 
   const downloadNotes = () =>
@@ -211,7 +214,18 @@ export function NotesActions({
     } else if (notes === "" || notes === read.text) {
       onChange(read.text);
     } else {
-      setReplacing({ file: file.name, text: read.text });
+      // Undo brings the old notes back while nothing was typed since.
+      const old = notes;
+      onChange(read.text);
+      toast.success(m.toast_notes_replaced({ file: file.name }), {
+        duration: 8000,
+        action: {
+          label: m.undo(),
+          onClick: () => {
+            if (current.current === read.text) onChange(old);
+          },
+        },
+      });
     }
   };
 
@@ -249,28 +263,6 @@ export function NotesActions({
           if (file) void onUpload(file);
         }}
       />
-      <Popup
-        kind="question"
-        open={replacing !== null}
-        onOpenChange={(open) => {
-          if (!open) setReplacing(null);
-        }}
-        title={m.notes_upload_title()}
-        description={m.notes_upload_text({ file: replacing?.file ?? "" })}
-        action={m.notes_upload_confirm()}
-        destructive
-        onAction={() => {
-          if (replacing) onChange(replacing.text);
-          setReplacing(null);
-        }}
-        cancel={m.cancel()}
-      >
-        {/* The way back, should the file turn out to be the wrong one. */}
-        <Button variant="secondary" onClick={downloadNotes}>
-          <Download data-icon="inline-start" />
-          {m.notes_download_first()}
-        </Button>
-      </Popup>
     </>
   );
 }

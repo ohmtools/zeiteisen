@@ -49,7 +49,6 @@ export function ProfileMenu({
   // The profile a dialog is about, by name.
   const [renaming, setRenaming] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState<string | null>(null);
-  const [removing, setRemoving] = useState<string | null>(null);
   const active = profileByName(profiles, activeName);
   const source = duplicating === null ? undefined : profileByName(profiles, duplicating);
   // A dialog takes over from the menu.
@@ -98,7 +97,7 @@ export function ProfileMenu({
             <RowAction
               label={m.profile_delete_named({ name: profile.name })}
               disabled={profile.locked}
-              onClick={then(() => setRemoving(profile.name))}
+              onClick={then(() => onRemove(profile.name))}
             >
               <Trash2 />
             </RowAction>
@@ -167,23 +166,6 @@ export function ProfileMenu({
         onSubmit={(name) => {
           if (duplicating !== null) onDuplicate(duplicating, name);
         }}
-      />
-
-      <Popup
-        kind="question"
-        open={removing !== null}
-        onOpenChange={(next) => {
-          if (!next) setRemoving(null);
-        }}
-        title={m.profile_delete_title({ name: removing ?? "" })}
-        description={m.profile_delete_text()}
-        action={m.profile_delete_confirm()}
-        destructive
-        onAction={() => {
-          if (removing !== null) onRemove(removing);
-          setRemoving(null);
-        }}
-        cancel={m.cancel()}
       />
     </>
   );

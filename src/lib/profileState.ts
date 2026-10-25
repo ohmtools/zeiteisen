@@ -1,6 +1,8 @@
 import { m } from "@/i18n";
 import { nameTaken, profileByName, type Profile, type ProfileName } from "@/lib/primitives/profile";
-import { normalizeName, uniqueName } from "@/lib/primitives/name";
+import { normalizeName, sameName, uniqueName } from "@/lib/primitives/name";
+import type { Subjects } from "@/lib/primitives/subject";
+import type { Timetable, TimetableSubjectExtra } from "@/lib/primitives/timetable";
 
 // The state `useProfiles` holds, and how it moves. `active` is the active
 // profile's name: names are unique on the device, so the name is the address.
@@ -70,4 +72,45 @@ export function removedState(state: ProfilesState, name: ProfileName): ProfilesS
   const profiles = state.profiles.filter((one) => one !== profile);
   if (profiles.length === 0) return withDefault({ ...state, profiles });
   return { profiles, active: state.active === name ? profiles[0].name : state.active };
+}
+
+// Undo of `removedState` (the toast's "Undo", DESIGN.md: undo before
+// questions). Nothing changed since: the state before, as it was. Else the
+// profile goes back to its place and the active one stays, unless its name
+// is taken by now.
+export function restoredState(
+  state: ProfilesState,
+  before: ProfilesState,
+  after: ProfilesState,
+  name: ProfileName,
+): ProfilesState {
+  if (state.profiles === after.profiles) return before;
+  const profile = profileByName(before.profiles, name);
+  if (!profile || nameTaken(state.profiles, name)) return state;
+  const profiles = [...state.profiles];
+  profiles.splice(Math.min(before.profiles.indexOf(profile), profiles.length), 0, profile);
+  return { ...state, profiles };
+}
+
+// Undo of a removed timetable: back at its place in the profile, unless the
+// profile is locked by now or another timetable took the name (in any case).
+export function withTimetableBack(profile: Profile, timetable: Timetable, index: number): Profile {
+  if (profile.locked || profile.timetables.some((one) => sameName(one.name, timetable.name))) {
+    return profile;
+  }
+  const timetables = [...profile.timetables];
+  timetables.splice(Math.min(index, timetables.length), 0, timetable);
+  return { ...profile, timetables };
+}
+
+// Undo of a subject edit (a deleted class): the timetable as it was, origin
+// and refusals too, while it still holds exactly the subjects the edit left.
+export function withTimetableRestored(
+  profile: Profile,
+  before: Timetable,
+  after: Subjects<TimetableSubjectExtra>,
+): Profile {
+  const held = profile.timetables.find((one) => one.name === before.name);
+  if (profile.locked || !held || held.subjects !== after) return profile;
+  return { ...profile, timetables: profile.timetables.map((one) => (one === held ? before : one)) };
 }

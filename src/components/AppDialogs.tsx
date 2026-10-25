@@ -57,6 +57,7 @@ export function AppDialogs({
         locked={profiles.locked}
         onClose={() => onEditingChange(null)}
         onSave={profiles.editSubjects}
+        onDelete={profiles.removeSubject}
         onAddEmpty={onAddEmpty}
       />
 

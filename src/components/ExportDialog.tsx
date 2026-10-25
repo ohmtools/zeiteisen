@@ -1,56 +1,37 @@
 import { useState } from "react";
-import { addMonths, isBefore, startOfDay } from "date-fns";
-import { CalendarDays } from "lucide-react";
-import { getLocale, m } from "@/i18n";
+import { addMonths, isBefore, parseISO, startOfDay } from "date-fns";
+import { m } from "@/i18n";
 import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
-import { LazyCalendar } from "@/components/LazyCalendar";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import type { DateRange } from "@/lib/primitives/occurrence";
-
-function dateLabel(date: Date): string {
-  return new Intl.DateTimeFormat(getLocale(), { dateStyle: "medium" }).format(date);
-}
+import { isIsoDate } from "@/lib/primitives/subject";
+import { isoDay } from "@/lib/primitives/week";
 
 type PickerProps = {
+  id: string;
   label: string;
   value: Date;
   onChange: (date: Date) => void;
 };
 
-function DatePicker({ label, value, onChange }: PickerProps) {
-  const [open, setOpen] = useState(false);
-
+// The device's own date field, like the subject editor's dates: a calendar
+// popover would stand over the dialog, and over a popup only a dialog or a
+// question may (DESIGN.md, "Popups"). A cleared field keeps the last date.
+function DatePicker({ id, label, value, onChange }: PickerProps) {
   return (
     <Field>
-      <FieldLabel>{label}</FieldLabel>
-      {/* A popover, on phones a second drawer over the dialog's. */}
-      <Popup
-        kind="popover"
-        trigger={
-          <Button variant="secondary" className="justify-start">
-            <CalendarDays data-icon="inline-start" />
-            {dateLabel(value)}
-          </Button>
-        }
-        open={open}
-        onOpenChange={setOpen}
-        title={label}
-        titleHidden
-        align="start"
-        className="w-auto gap-0 p-0 pb-[env(safe-area-inset-bottom)]"
-      >
-        <LazyCalendar
-          mode="single"
-          defaultMonth={value}
-          selected={value}
-          className="mx-auto"
-          onDayClick={(day) => {
-            onChange(startOfDay(day));
-            setOpen(false);
-          }}
-        />
-      </Popup>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Input
+        id={id}
+        type="date"
+        className="font-mono"
+        value={isoDay(value)}
+        onChange={(event) => {
+          if (isIsoDate(event.target.value)) onChange(startOfDay(parseISO(event.target.value)));
+        }}
+      />
     </Field>
   );
 }
@@ -96,8 +77,8 @@ export function ExportDialog({ open, onOpenChange, onExport }: Props) {
       }
     >
       <div className="flex flex-col gap-4">
-        <DatePicker label={m.export_start()} value={start} onChange={setStart} />
-        <DatePicker label={m.export_end()} value={end} onChange={setEnd} />
+        <DatePicker id="export-start" label={m.export_start()} value={start} onChange={setStart} />
+        <DatePicker id="export-end" label={m.export_end()} value={end} onChange={setEnd} />
         {invalid && <p className="text-sm text-destructive">{m.export_invalid()}</p>}
       </div>
     </Popup>

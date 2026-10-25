@@ -199,6 +199,9 @@ export function TimetablePickerDialog({
       title={mode === "add" ? m.picker_add_title() : m.picker_new_title()}
       description={mode === "add" ? m.picker_add_text() : m.picker_new_text()}
       closeLabel={m.panel_close()}
+      backLabel={m.panel_back()}
+      // Phones: a page of its own, the list is longer than a screen.
+      page
       className="compact:max-w-[min(36rem,calc(100%-2rem))]"
       footer={
         <>
