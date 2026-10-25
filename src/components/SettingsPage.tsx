@@ -78,11 +78,11 @@ export function SettingsDialog({
     >
       <DialogContent
         showCloseButton={false}
-        className="flex h-[min(35rem,calc(100dvh-1.5rem))] gap-0 overflow-hidden p-0 compact:max-w-[min(47.5rem,calc(100%-2rem-env(safe-area-inset-left)-env(safe-area-inset-right)))] compact:p-0"
+        className="flex h-[min(45rem,calc(100dvh-3rem))] gap-0 overflow-hidden p-0 short:h-[calc(100dvh-1.5rem)] compact:max-w-[min(62.5rem,calc(100%-3rem-env(safe-area-inset-left)-env(safe-area-inset-right)))] compact:p-0"
       >
         <nav
           aria-label={m.tab_settings()}
-          className="flex w-54 shrink-0 flex-col gap-0.5 overflow-y-auto border-r px-3 py-5 short:w-46 short:px-2 short:py-3"
+          className="flex w-60 shrink-0 flex-col gap-0.5 overflow-y-auto border-r px-3 py-5 short:w-46 short:px-2 short:py-3"
         >
           <DialogTitle className="mb-3.5 px-2.5 pt-1.5 text-base leading-6 font-semibold short:mb-2">
             {m.tab_settings()}

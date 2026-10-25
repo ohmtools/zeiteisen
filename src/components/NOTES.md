@@ -57,9 +57,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   pages, bottom bar and sheets (`viewport-fit=cover` in `index.html`).
 - Settings (`SettingsPage.tsx`; design on the canvas "Zeiteisen
   Einstellungen"): five sections, the same on every step (user decision).
-  From compact on `SettingsDialog`: a dialog of up to 760×560 (a short
-  landscape screen: its height less 12px each side, inside the safe areas),
-  the sections on the left (216px, 184px on `short`), the picked one on the
+  From compact on `SettingsDialog`: a dialog of up to 1000×720 (user
+  decision, was 760×560; 24px off the screen's edges below that, on a short
+  landscape screen 12px above and below, inside the safe areas), the
+  sections on the left (240px, 184px on `short`), the picked one on the
   right under its title with the close button, scrolling inside; it opens
   on "General" and keeps the last section while the app runs. On phones
   `SettingsPage`: a page listing the sections, each row with what is set
