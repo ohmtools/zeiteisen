@@ -15,8 +15,14 @@
    not more: an iPad 10 in landscape leaves about 700px under the browser's
    toolbar and tab strip, short laptops about 650px, and both should get the
    sidebar. `compact:` holds on `wide:` screens too, like Tailwind's
-   breakpoints. `lg:` / `md:` stay for what only cares about width. */
-@custom-variant compact (@media (width >= 40rem), (height < 600px) and (orientation: landscape));
+   breakpoints. `lg:` / `md:` stay for what only cares about width.
+   `compact` in the block form: Tailwind 4.3 drops everything after the
+   comma of a media query list in the one-line form. */
+@custom-variant compact {
+  @media (width >= 40rem), (height < 600px) and (orientation: landscape) {
+    @slot;
+  }
+}
 @custom-variant wide (@media (width >= 64rem) and (height >= 600px));
 /* A phone turned sideways (or any short landscape window): a lower header,
    every second hour label, the details as a sheet from the right. */
