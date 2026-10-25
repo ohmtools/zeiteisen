@@ -271,8 +271,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   often did, user report), but still ends the touch. The hour box is
   `overflow-x-hidden`: with `overflow-y-auto` alone the days sliding in
   made it scroll sideways for a moment, which ate the swipe. The page
-  itself has `overscroll-behavior: none` (`src/index.css`): one viewport
-  tall, yet iOS pulled it in its rubber band.
+  itself never bounces (the design's stylesheet, DESIGN.md "App shell"):
+  one viewport tall, yet iOS pulled it in its rubber band.
 - Details (user decision: names NO timetable): kind badges in their colours
   and the group, the full name with the code under it, time with rhythm and
   "on now", lecturer, room with building, "Map" and "Campus", "Module
