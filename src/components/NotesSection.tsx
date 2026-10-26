@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import {
@@ -96,7 +97,7 @@ type LinkTarget = { from: number; to: number } | null;
 // area with the caret there, leaving it turns it back. Every keystroke is
 // saved (`useNotes`): there is no edit or save button. Empty notes are the
 // text area alone. The insert bar adds a task, a heading, a link with its
-// own text (`LinkDialog`) or a link to a Termin (`MentionPicker`, also
+// own text (`LinkPopover`) or a link to a Termin (`MentionPicker`, also
 // opened by an `@` typed at a word's start): on top from compact on, at the
 // bottom on phones within thumb reach, there right above the keyboard. The
 // body of a panel (`Panel`: sidebar, sheet or page; user decision, was a
@@ -147,7 +148,7 @@ export function NotesSection({
   const showTextarea = editing || notes === "";
   const [picking, setPicking] = useState<Target | null>(null);
   const [linking, setLinking] = useState<{ target: LinkTarget; label: string } | null>(null);
-  // A fresh dialog per opening, its fields filled anew.
+  // Fresh fields per opening, filled anew.
   const [linkKey, setLinkKey] = useState(0);
   // The keyboard covers the page on phones: the insert bar goes above it.
   const keyboard = useKeyboardInset(narrow && editing);
@@ -271,7 +272,7 @@ export function NotesSection({
     setLinking(null);
     apply(result);
   };
-  // Leaving the link dialog: the caret (or selection) where it was.
+  // Leaving the link popup: the caret (or selection) where it was.
   const cancelLink = () => {
     const target = linking?.target ?? null;
     setLinking(null);
@@ -377,10 +378,19 @@ export function NotesSection({
         <Heading />
         {m.notes_insert_heading()}
       </Button>
-      <Button variant="ghost" className={barButton} onMouseDown={keepFocus} onClick={openLink}>
-        <Link />
-        {m.notes_insert_link()}
-      </Button>
+      <LinkPopover
+        trigger={
+          <Button variant="ghost" className={barButton} onMouseDown={keepFocus}>
+            <Link />
+            {m.notes_insert_link()}
+          </Button>
+        }
+        open={linking !== null}
+        onOpenChange={(open) => (open ? openLink() : cancelLink())}
+        formKey={linkKey}
+        label={linking?.label ?? ""}
+        onInsert={insertNamedLink}
+      />
       <MentionPicker
         trigger={
           <Button variant="ghost" className={barButton} onMouseDown={keepFocus}>
@@ -398,13 +408,6 @@ export function NotesSection({
         today={today}
         mentions={mentions}
         onPick={pick}
-      />
-      <LinkDialog
-        key={linkKey}
-        open={linking !== null}
-        label={linking?.label ?? ""}
-        onCancel={cancelLink}
-        onInsert={insertNamedLink}
       />
     </div>
   );
@@ -498,18 +501,48 @@ export function NotesSection({
 }
 
 // "Link" in the insert bar: a link with its own text, `[text](url)`. The
-// text starts as the selection; without one the address stands alone. A
-// task with an end (the design's dialog, a drawer on phones): only "Insert"
-// puts it in, leaving it changes nothing.
-function LinkDialog({
+// text starts as the selection; without one the address stands alone. Like
+// the Termin picker (user request): a popover at the insert bar's button, a
+// drawer on phones (the design's `Popup`). Only "Insert" puts it in, leaving
+// it changes nothing. The drawer stays mounted between openings, so it
+// slides in (a dialog keyed per opening mounted open and only slid out);
+// `formKey` gives each opening fresh fields.
+function LinkPopover({
+  trigger,
   open,
+  onOpenChange,
+  formKey,
   label,
-  onCancel,
   onInsert,
 }: {
+  trigger: ReactElement<Record<string, unknown>>;
   open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formKey: number;
   label: string;
-  onCancel: () => void;
+  onInsert: (label: string, url: string) => void;
+}) {
+  return (
+    <Popup
+      kind="popover"
+      trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
+      title={m.notes_link_title()}
+      titleHidden
+      align="start"
+      className="gap-3 compact:w-80"
+    >
+      <LinkForm key={formKey} label={label} onInsert={onInsert} />
+    </Popup>
+  );
+}
+
+function LinkForm({
+  label,
+  onInsert,
+}: {
+  label: string;
   onInsert: (label: string, url: string) => void;
 }) {
   const narrow = useStep() === "narrow";
@@ -525,74 +558,62 @@ function LinkDialog({
     else setChecked(true);
   };
 
+  // Enter goes from the text on to the address, there it inserts. With its
+  // text given, the focus starts on the address. Phones keep the keyboard
+  // down until a field is tapped (the drawer's own way on touch).
   return (
-    <Popup
-      kind="dialog"
-      open={open}
-      // Leaving it runs `onCancel`, the only way it closes besides "Insert".
-      onOpenChange={() => {}}
-      onCancel={onCancel}
-      title={m.notes_link_title()}
-      closeLabel={m.panel_close()}
-      // With its text given, on to the address. Phones keep the keyboard
-      // down until a field is tapped (the drawer's own way on touch).
-      initialFocus={label !== "" && !narrow ? urlRef : undefined}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onCancel}>
-            {m.cancel()}
-          </Button>
-          <Button disabled={checked && !valid} onClick={insert}>
-            {m.notes_link_insert()}
-          </Button>
-        </>
-      }
-    >
-      {/* Enter goes from the text on to the address, there it inserts. */}
-      <div className="flex flex-col gap-4">
-        <Field>
-          <FieldLabel htmlFor={`${id}-text`}>{m.notes_link_text()}</FieldLabel>
-          <Input
-            id={`${id}-text`}
-            value={text}
-            enterKeyHint="next"
-            className={cn(narrow && "h-11")}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              urlRef.current?.focus();
-            }}
-          />
-          <FieldDescription>{m.notes_link_text_hint()}</FieldDescription>
-        </Field>
-        <Field data-invalid={checked && !valid}>
-          <FieldLabel htmlFor={`${id}-url`}>{m.notes_link_url()}</FieldLabel>
-          <Input
-            ref={urlRef}
-            id={`${id}-url`}
-            type="url"
-            inputMode="url"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="done"
-            placeholder="https://…"
-            aria-invalid={checked && !valid}
-            className={cn("font-mono", narrow && "h-11")}
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            onBlur={() => setChecked(url.trim() !== "")}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              insert();
-            }}
-          />
-          {checked && !valid && <FieldError>{m.notes_link_invalid()}</FieldError>}
-        </Field>
-      </div>
-    </Popup>
+    <>
+      <Field>
+        <FieldLabel htmlFor={`${id}-text`}>{m.notes_link_text()}</FieldLabel>
+        <Input
+          id={`${id}-text`}
+          autoFocus={!narrow && label === ""}
+          value={text}
+          enterKeyHint="next"
+          className={cn(narrow && "h-11")}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            urlRef.current?.focus();
+          }}
+        />
+        <FieldDescription>{m.notes_link_text_hint()}</FieldDescription>
+      </Field>
+      <Field data-invalid={checked && !valid}>
+        <FieldLabel htmlFor={`${id}-url`}>{m.notes_link_url()}</FieldLabel>
+        <Input
+          ref={urlRef}
+          id={`${id}-url`}
+          autoFocus={!narrow && label !== ""}
+          type="url"
+          inputMode="url"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          placeholder="https://…"
+          aria-invalid={checked && !valid}
+          className={cn("font-mono", narrow && "h-11")}
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          onBlur={() => setChecked(url.trim() !== "")}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            insert();
+          }}
+        />
+        {checked && !valid && <FieldError>{m.notes_link_invalid()}</FieldError>}
+      </Field>
+      <Button
+        disabled={checked && !valid}
+        className={cn("compact:self-end", narrow && "h-11")}
+        onClick={insert}
+      >
+        {m.notes_link_insert()}
+      </Button>
+    </>
   );
 }
 

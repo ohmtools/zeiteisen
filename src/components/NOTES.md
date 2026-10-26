@@ -222,19 +222,24 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   themselves (`preventDefault` on mousedown), so the text area keeps its
   caret.
 - **Link with its own text** (user request, 2026-10-26): "Link" opens a
-  dialog (`Popup kind="dialog"`, a drawer on phones) with "Text" (the
-  selection, if any) and "Address" (`https://` added when no scheme is
-  typed; anything but http(s) refused, `linkHref`). "Insert" writes
+  popover at its button like "Termin" (`Popup kind="popover"`, a drawer on
+  phones; user request: a centred dialog looked unlike the Termin picker)
+  with "Text" (the selection, if any) and "Address" (`https://` added when
+  no scheme is typed; anything but http(s) refused, `linkHref`). "Insert" writes
   `[text](url)` in place of the selection, or at the caret, spaced like a
   Termin link (`insertLink`); without text the bare address; without a
   caret on a line of its own at the end. Brackets in the text turn round,
   in the address they are escaped, so the link always ends where it should.
   Plain text, the stored shape stays a string: no migration. Hand-typed
   addresses may hold one level of brackets (Wikipedia's).
+  Leaving it (Esc, a press outside, a swipe down) changes nothing and puts
+  the caret back. The `Popup` stays mounted and only its fields are keyed
+  per opening: a popup keyed per opening mounts already open, and its
+  drawer then only slid out, never in (user report).
 - **Popups from the notes open without the keyboard on phones** (user
   report): the text area's keyboard stayed up as the Termin picker took the
   focus, and the drawer then filled the screen above its own search field.
-  Opening the picker or the link dialog on phones blurs the text area, and
+  Opening the picker or the link popup on phones blurs the text area, and
   neither autofocuses a field there (the drawer's own way on touch); a tap
   on a field brings the keyboard, the drawer lifted above it.
 - **Links to a Termin** (user request): `@[2026-10-26 09:45 MA3 Ue 2.1]`,
