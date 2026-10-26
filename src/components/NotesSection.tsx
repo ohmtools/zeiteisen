@@ -40,7 +40,6 @@ import { kindClass } from "@/lib/kinds";
 import {
   isEvery,
   isPast,
-  labelParts,
   lastDay,
   mentionResolver,
   namesClass,
@@ -48,6 +47,7 @@ import {
   mentionLabel,
   isOne,
   mentionToken,
+  partsFor,
   withLabel,
   type MentionTarget,
 } from "@/lib/mentions";
@@ -795,7 +795,7 @@ function MentionChip({
     const { entry } = status;
     // A link to every Termin shows its label as written (it may name only a
     // part: `@[MA3]`), coloured by the kind it names, neutral without one.
-    const parts = isOne(mention) ? null : labelParts(mention.label);
+    const parts = isOne(mention) ? null : partsFor(mention.label, entry.subject);
     const kinds = parts ? (parts.kinds ?? []) : entry.subject.kind;
     return (
       <button

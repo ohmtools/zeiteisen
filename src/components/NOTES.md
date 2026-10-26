@@ -358,7 +358,10 @@ label]`, several as `@[day day … time? label]` (the time when they share
   case, `SU,Ue` or two words) the kinds, the other words the name in their
   order (`@[Ue 2026-11-05+ ma3]`). One time, group, `+` and `-` at most.
   A name that is all kind codes ("S SU") is read from the end as the
-  picker writes it; a name word shaped like a kind or group reads as one.
+  picker writes it. A label also reads in the picker's order from the end
+  (`labelReadings`; a link fits a class when either reading does): a name
+  with a word shaped like a kind or group ("WF Robotik", "Physik 1.1")
+  keeps the links the picker wrote for it, released ones included.
   A link followed after an edit is written back in the picker's order.
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has

@@ -16,6 +16,7 @@ import { DAYS, dayOf, eventsForWeek, isoDay, isoWeek } from "@/lib/primitives/we
 import { weekEntries, type Entry } from "@/lib/layout";
 import {
   labelParts,
+  labelReadings,
   notesLines,
   type LabelParts,
   type MentionFields,
@@ -137,13 +138,13 @@ export function mentionMatches(
   mention: MentionTarget,
   entry: Pick<Entry, "subject" | "meeting">,
 ): boolean {
-  const parts = labelParts(mention.label);
-  if (parts === null) return false;
-  if (!isOne(mention)) return fits(parts, entry.subject) && inSpan(mention, entry.meeting);
+  if (!isOne(mention)) {
+    return fitting(mention.label, entry.subject) !== undefined && inSpan(mention, entry.meeting);
+  }
   return (
     entry.meeting.date === mention.days[0] &&
     formatTime(entry.meeting.startTime) === mention.time &&
-    sameClass(parts, entry.subject)
+    namesClass(mention.label, entry.subject)
   );
 }
 
@@ -154,8 +155,18 @@ function sameName(subject: Subject, parts: LabelParts): boolean {
 
 // Whether a label (in any order and case) names exactly this class.
 export function namesClass(label: string, subject: Subject): boolean {
-  const parts = labelParts(label);
-  return parts !== null && sameClass(parts, subject);
+  return labelReadings(label).some((parts) => sameClass(parts, subject));
+}
+
+// The reading of a label (`labelReadings`) that fits this class, if one does.
+function fitting(label: string, subject: Subject): LabelParts | undefined {
+  return labelReadings(label).find((parts) => fits(parts, subject));
+}
+
+// The parts a label names, read the way that fits `subject` where one does:
+// what a chip shows.
+export function partsFor(label: string, subject: Subject): LabelParts | null {
+  return fitting(label, subject) ?? labelReadings(label)[0] ?? null;
 }
 
 // A link to one Termin: the very class (its kinds in any order), no group
@@ -195,7 +206,7 @@ function labelLike(parts: LabelParts, subject: Subject): string {
   ]
     .filter((part) => part !== null)
     .join(" ");
-  return labelParts(shaped) ? shaped : mentionLabel(subject);
+  return fitting(shaped, subject) ? shaped : mentionLabel(subject);
 }
 
 export type Mention = Extract<NotesPiece, { kind: "mention" }> & {
@@ -333,12 +344,13 @@ export function mentionResolver(
         const there = find(profile, true);
         if (there) return { kind: "elsewhere", entry: there, profile: profile.name };
       }
-      const parts = labelParts(mention.label);
+      const readings = labelReadings(mention.label);
+      const sameNamed = (entry: Entry) => readings.some((parts) => sameName(entry.subject, parts));
       if (!isOne(mention)) {
         const named = new Map<string, Entry[]>();
-        if (active && parts) {
+        if (active) {
           for (const entry of classes(active, false)) {
-            if (!sameName(entry.subject, parts)) continue;
+            if (!sameNamed(entry)) continue;
             const label = mentionLabel(entry.subject);
             named.set(label, [...(named.get(label) ?? []), entry]);
           }
@@ -346,14 +358,12 @@ export function mentionResolver(
         const candidates = [...named.values()].map((entries) => nextOf(entries, today)!);
         return { kind: "broken", candidates };
       }
-      const candidates =
-        active && parts
-          ? day(active, false, mention.days[0])
-              .filter((entry) => sameName(entry.subject, parts))
-              .sort(
-                (a, b) => Number(sameClass(parts, b.subject)) - Number(sameClass(parts, a.subject)),
-              )
-          : [];
+      const exact = (entry: Entry) => Number(namesClass(mention.label, entry.subject));
+      const candidates = active
+        ? day(active, false, mention.days[0])
+            .filter(sameNamed)
+            .sort((a, b) => exact(b) - exact(a))
+        : [];
       return { kind: "broken", candidates };
     },
   };
@@ -407,7 +417,7 @@ export function followMentions(
       if (editedBefore && editedAfter && was && !classIn(editedAfter, mention.label)) {
         const successor = followedClass(was, editedAfter);
         if (successor) {
-          replace(mention, withLabel(mention, labelLike(labelParts(mention.label)!, successor)));
+          replace(mention, withLabel(mention, labelLike(was.parts, successor)));
           continue;
         }
       }
@@ -429,16 +439,19 @@ export function followMentions(
   return { text: next, moved, lost };
 }
 
-// Where a class a label names is in a profile, switched off or not.
+// Where a class a label names is in a profile, switched off or not, and the
+// label's reading that names it.
 function classIn(
   profile: Profile | undefined,
   label: string,
-): { timetable: Timetable; index: number } | null {
-  const parts = labelParts(label);
-  if (!profile || !parts) return null;
+): { timetable: Timetable; index: number; parts: LabelParts } | null {
+  if (!profile) return null;
   for (const timetable of profile.timetables) {
-    const index = timetable.subjects.toSubjects().findIndex((subject) => fits(parts, subject));
-    if (index !== -1) return { timetable, index };
+    const subjects = timetable.subjects.toSubjects();
+    for (const [index, subject] of subjects.entries()) {
+      const parts = fitting(label, subject);
+      if (parts) return { timetable, index, parts };
+    }
   }
   return null;
 }

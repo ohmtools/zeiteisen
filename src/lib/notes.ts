@@ -104,6 +104,23 @@ function fromEnd(label: string): LabelParts | null {
   return { name: words.join(" "), kinds, group };
 }
 
+// Every way a label reads, each once: in any order (`labelParts`) and in
+// the picker's order from the end, the one way links were read before the
+// words could stand anywhere. A name holding a word shaped like a kind or
+// a group ("WF Robotik", "Physik 1.1") reads as written in the latter, so
+// the links the picker wrote for it keep their class. Empty: no label.
+export function labelReadings(label: string): LabelParts[] {
+  const readings: LabelParts[] = [];
+  for (const parts of [labelParts(label), fromEnd(label)]) {
+    if (parts && !readings.some((one) => sameParts(one, parts))) readings.push(parts);
+  }
+  return readings;
+}
+
+function sameParts(a: LabelParts, b: LabelParts): boolean {
+  return a.name === b.name && a.group === b.group && String(a.kinds) === String(b.kinds);
+}
+
 // What a link's brackets hold, word by word in any order: dates (as many as
 // wanted; a sign right after one: from / up to it, one of each), a start
 // time ("9:45" too, one), the rest the label, which has to read as one. A
@@ -133,7 +150,7 @@ export function mentionFields(content: string): MentionFields | null {
     }
   }
   const label = rest.join(" ");
-  if (labelParts(label) === null) return null;
+  if (labelReadings(label).length === 0) return null;
   if (time !== null && days.length === 0 && from === null && until === null) return null;
   return { label, days, from, until, time };
 }

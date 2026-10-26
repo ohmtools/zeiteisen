@@ -12,6 +12,7 @@ import {
   mentionsOfText,
   mentionToken,
   parseMentionQuery,
+  partsFor,
   pickedTokens,
   pickerRange,
   pickerRows,
@@ -313,6 +314,33 @@ describe("hand-typed links in any order", () => {
 
   it("keep a name of kind codes read from the end", () => {
     expect(labelParts("S SU")).toEqual({ name: "S", kinds: ["SU"], group: null });
+  });
+
+  it("keep the class of a name with words shaped like kinds or a group", () => {
+    const robotics = subject("WF Robotik 1.1", { kind: ["WF"], group: { category: 2, index: 1 } });
+    const elective = subject("WF Robotik", { kind: ["WF"] });
+    const profiles = [profile("Main", [timetable("BEI3", [robotics, elective])])];
+    const resolver = mentionResolver(profiles, "Main", DATES, TODAY);
+    // Links the picker wrote, read from the end as before.
+    const [one, every, other] = mentionsOfText(
+      `@[2026-10-26 08:00 WF Robotik 1.1 WF 2.1] @[${mentionLabel(robotics)}] @[${mentionLabel(elective)}]`,
+    );
+    expect(resolver.status(one)).toMatchObject({ kind: "ok", entry: { subject: robotics } });
+    expect(resolver.status(every)).toMatchObject({ kind: "ok", entry: { subject: robotics } });
+    expect(resolver.status(other)).toMatchObject({ kind: "ok", entry: { subject: elective } });
+    expect(partsFor(every.label, robotics)).toEqual({
+      name: "WF Robotik 1.1",
+      kinds: ["WF"],
+      group: "2.1",
+    });
+    const regrouped = [
+      profile("Main", [
+        timetable("BEI3", [{ ...robotics, group: { category: 2, index: 2 } }, elective]),
+      ]),
+    ];
+    expect(followMentions(every.text, profiles, regrouped, DATES, "Main").text).toBe(
+      "@[WF Robotik 1.1 WF 2.2]",
+    );
   });
 });
 

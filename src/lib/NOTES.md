@@ -54,8 +54,9 @@ re-implements primitive logic.
   the picker's text edits. `notesFromFile` reads an uploaded notes file
   (UTF-8, line ends, limit).
 - `mentions.ts` — links from the notes to a Termin. A link matches a block
-  by date, start time, name, kinds and group (`labelParts` reads the label
-  from the end: a name may hold spaces); room, professor and end are left
+  by date, start time, name, kinds and group (`labelReadings`: the words
+  in any order, or from the end as the picker writes them, a name may hold
+  spaces; either reading fitting is enough); room, professor and end are left
   out, so a room change keeps it; a link to every Termin matches by the
   parts its label gives (`fits`: kinds named among the class's, any case),
   any date or those in its span (`inSpan`);
