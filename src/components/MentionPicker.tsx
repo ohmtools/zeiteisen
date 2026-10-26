@@ -1,5 +1,5 @@
 import { use, useState, type ReactElement } from "react";
-import { CalendarDays, ChevronLeft, StickyNote } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, StickyNote } from "lucide-react";
 import { parseISO } from "date-fns";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
@@ -14,14 +14,18 @@ import type { Timetable } from "@/lib/primitives/timetable";
 import type { Entry } from "@/lib/layout";
 import { kindClass } from "@/lib/kinds";
 import {
+  datesByLabel,
   isPast,
+  mentionLabel,
   mentionMatches,
+  mentionToken,
   parseMentionQuery,
+  pickedTokens,
   pickerRange,
   pickerRows,
+  pickKey,
   seriesIn,
   type Mention,
-  type Series,
 } from "@/lib/mentions";
 import { dayDateLabel, dayName, kindNames, subjectName, timeRangeLabel } from "@/lib/subjects";
 import { useStep } from "@/lib/ohmtools/steps";
@@ -30,10 +34,14 @@ import { useStep } from "@/lib/ohmtools/steps";
 // at the insert bar's button, a drawer on phones (the design's `Popup`). Its
 // own field takes what is typed, never the note: only the finished link goes
 // into the text, so a link has a clear end however many words were searched.
-// Step 1: a row per class and time, a press links its next date; a date,
-// weekday or week typed into the field narrows to those dates. Step 2 (the
-// calendar at a row's end): every date of the class, a month per line, past
-// ones struck through.
+// Several Termine at once (user request, was one per press and a tab
+// "Every date"): a press picks or unpicks, "Insert" writes the links, one
+// per class (`pickedTokens`). Step 1: a row per class and time, a press
+// picks its next date; a date, weekday or week typed into the field narrows
+// to those dates. Step 2 (the calendar at a row's end): every date of the
+// class, a month per line, past ones struck through, "Pick all" for the
+// whole class (`@[MA3 Ue 2.1]`, whose press shows the next). Enter with
+// nothing picked inserts the first row at once.
 export function MentionPicker({
   trigger,
   open,
@@ -52,7 +60,8 @@ export function MentionPicker({
   today: Date;
   // The links already in the notes: their dates carry the notes' mark.
   mentions: readonly Mention[];
-  onPick: (entry: Entry) => void;
+  // The links' text: to one Termin, several, or every Termin of a class.
+  onPick: (token: string) => void;
 }) {
   return (
     <Popup
@@ -89,16 +98,19 @@ function PickerBody({
   dates: SemesterDates | null;
   today: Date;
   mentions: readonly Mention[];
-  onPick: (entry: Entry) => void;
+  onPick: (token: string) => void;
 }) {
   const overrides = use(OverridesContext);
   const narrow = useStep() === "narrow";
   const [query, setQuery] = useState("");
-  const [shown, setShown] = useState<Series | null>(null);
+  // The class whose dates step 2 shows, by its label.
+  const [shown, setShown] = useState<string | null>(null);
+  const [picked, setPicked] = useState<ReadonlyMap<string, Entry>>(new Map());
   // Built once per opening: every week of the period, a few dozen at most.
   const [series] = useState(() =>
     seriesIn(timetables, dates, pickerRange(timetables, dates, today)),
   );
+  const [byLabel] = useState(() => datesByLabel(series));
   const parsed = parseMentionQuery(query, today);
   // What the words match: code and full name, kinds as codes and words,
   // group, room and professor.
@@ -113,18 +125,48 @@ function PickerBody({
       meeting.professor,
     ].join(" ");
   const rows = pickerRows(series, parsed, haystack, today);
+  // Dates a link names carry the notes' mark.
   const noted = (entry: Entry) => mentions.some((mention) => mentionMatches(mention, entry));
+  const isPicked = (entry: Entry) => picked.has(pickKey(entry));
+  const pick = (entries: readonly Entry[], on: boolean) =>
+    setPicked((was) => {
+      const next = new Map(was);
+      for (const entry of entries) {
+        if (on) next.set(pickKey(entry), entry);
+        else next.delete(pickKey(entry));
+      }
+      return next;
+    });
+  const toggle = (entry: Entry) => pick([entry], !isPicked(entry));
+  const insert = () => onPick(pickedTokens([...picked.values()], series).join(" "));
 
-  if (shown) {
+  const bar = (
+    <div className="-mx-4 flex items-center gap-2 border-t px-4 pt-3 compact:-mx-2.5 compact:px-2.5">
+      <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+        {picked.size === 0 ? m.mention_picked_none() : m.mention_picked({ count: picked.size })}
+      </p>
+      <Button disabled={picked.size === 0} className={cn(narrow && "h-11")} onClick={insert}>
+        {m.mention_insert()}
+      </Button>
+    </div>
+  );
+
+  const all = shown === null ? undefined : byLabel.get(shown);
+  if (all) {
     return (
-      <DatesStep
-        series={shown}
-        today={today}
-        narrow={narrow}
-        noted={noted}
-        onBack={() => setShown(null)}
-        onPick={onPick}
-      />
+      <>
+        <DatesStep
+          dates={all}
+          today={today}
+          narrow={narrow}
+          noted={noted}
+          isPicked={isPicked}
+          onBack={() => setShown(null)}
+          onToggle={toggle}
+          onPickAll={(on) => pick(all, on)}
+        />
+        {bar}
+      </>
     );
   }
 
@@ -152,9 +194,10 @@ function PickerBody({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key !== "Enter" || rows.length === 0) return;
+          if (event.key !== "Enter") return;
           event.preventDefault();
-          onPick(rows[0].entry);
+          if (picked.size > 0) insert();
+          else if (rows.length > 0) onPick(mentionToken(rows[0].entry));
         }}
         className={cn(narrow && "h-11")}
       />
@@ -164,28 +207,25 @@ function PickerBody({
           {rows.map(({ series: one, entry, exact }, i) => (
             <div
               key={`${one.key}/${entry.meeting.date}`}
-              className={cn("flex items-center rounded-md", i === 0 && "bg-accent")}
+              className={cn(
+                "flex items-center rounded-md",
+                i === 0 && picked.size === 0 && "bg-accent",
+              )}
             >
               <Button
                 variant="ghost"
+                aria-pressed={isPicked(entry)}
                 className={cn(
                   "h-auto flex-1 justify-start gap-2.5 px-2 text-left",
                   narrow ? "min-h-13 py-1.5" : "min-h-11 py-1",
                 )}
-                onClick={() => onPick(entry)}
+                onClick={() => toggle(entry)}
               >
-                <KindDot entry={entry} />
+                {/* No kind dot here: beside the box it read as a second one;
+                    the row names the kind. */}
+                <PickMark on={isPicked(entry)} />
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate">
-                    <b className="font-semibold">{entry.subject.name}</b>{" "}
-                    <span className="font-normal">{entry.subject.kind.join(", ")}</span>
-                    {entry.subject.group && (
-                      <span className="font-normal text-muted-foreground">
-                        {" "}
-                        {groupName(entry.subject.group)}
-                      </span>
-                    )}
-                  </span>
+                  <ClassName entry={entry} />
                   <span className="truncate font-mono text-xs font-normal text-muted-foreground">
                     {exact
                       ? [
@@ -206,50 +246,61 @@ function PickerBody({
                   {exact ? formatTime(entry.meeting.startTime) : dayDateLabel(entry.meeting.date!)}
                 </span>
               </Button>
-              {!exact && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn("text-muted-foreground", narrow && "size-11")}
-                  aria-label={m.mention_other_date()}
-                  title={m.mention_other_date()}
-                  onClick={() => setShown(one)}
-                >
-                  <CalendarDays />
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("text-muted-foreground", narrow && "size-11")}
+                aria-label={m.mention_other_date()}
+                title={m.mention_other_date()}
+                onClick={() => setShown(mentionLabel(entry.subject))}
+              >
+                <CalendarDays />
+              </Button>
             </div>
           ))}
         </div>
       )}
       {series.length > 0 && <p className="text-xs text-muted-foreground">{m.mention_hint()}</p>}
+      {bar}
     </>
   );
 }
 
-// Every date of one class, a month per line: past ones muted and struck
-// through, the next one ringed, those already in the notes marked.
+// Every date of one class (all its weekdays and times), a month per line:
+// past ones muted and struck through, the next one ringed, those already in
+// the notes marked, the picked ones filled. "Pick all" picks or unpicks the
+// whole class.
 function DatesStep({
-  series,
+  dates,
   today,
   narrow,
   noted,
+  isPicked,
   onBack,
-  onPick,
+  onToggle,
+  onPickAll,
 }: {
-  series: Series;
+  dates: readonly Entry[];
   today: Date;
   narrow: boolean;
   noted: (entry: Entry) => boolean;
+  isPicked: (entry: Entry) => boolean;
   onBack: () => void;
-  onPick: (entry: Entry) => void;
+  onToggle: (entry: Entry) => void;
+  onPickAll: (on: boolean) => void;
 }) {
-  const { entry } = series;
+  const entry = dates[0];
   const month = new Intl.DateTimeFormat(getLocale(), { month: "short" });
   const day = new Intl.DateTimeFormat(getLocale(), { day: "numeric" });
-  const next = series.dates.find(({ meeting }) => !isPast(meeting.date!, today));
+  const next = dates.find(({ meeting }) => !isPast(meeting.date!, today));
+  const allPicked = dates.every(isPicked);
+  const times = [
+    ...new Set(
+      dates.map(({ meeting }) => `${dayName(meeting.day)} ${formatTime(meeting.startTime)}`),
+    ),
+  ];
   const months: { name: string; dates: Entry[] }[] = [];
-  for (const one of series.dates) {
+  for (const one of dates) {
     const name = month.format(parseISO(one.meeting.date!));
     if (months.at(-1)?.name === name) months.at(-1)!.dates.push(one);
     else months.push({ name, dates: [one] });
@@ -268,45 +319,55 @@ function DatesStep({
           <ChevronLeft />
         </Button>
         <KindDot entry={entry} />
-        <span className="min-w-0 flex-1 truncate">
-          <b className="font-semibold">{entry.subject.name}</b> {entry.subject.kind.join(", ")}{" "}
-          <span className="font-mono text-xs text-muted-foreground">
-            {dayName(entry.meeting.day)} {formatTime(entry.meeting.startTime)}
+        <span className="flex min-w-0 flex-1 flex-col">
+          <ClassName entry={entry} />
+          <span className="truncate font-mono text-xs text-muted-foreground">
+            {[...times, m.mention_dates({ count: dates.length })].join(" · ")}
           </span>
         </span>
-        <span className="shrink-0 text-xs text-muted-foreground">
-          {m.mention_dates({ count: series.dates.length })}
-        </span>
       </div>
+      <Button
+        variant="ghost"
+        className={cn("-mx-2 justify-start gap-2.5 px-2", narrow && "h-11")}
+        aria-pressed={allPicked}
+        onClick={() => onPickAll(!allPicked)}
+      >
+        <PickMark on={allPicked} />
+        {m.mention_all()}
+      </Button>
       <div className="flex flex-col gap-1.5">
-        {months.map(({ name, dates }) => (
-          <div key={name + dates[0].meeting.date} className="flex items-center gap-2">
+        {months.map(({ name, dates: inMonth }) => (
+          <div key={name + inMonth[0].meeting.date} className="flex items-center gap-2">
             <span className="w-9 shrink-0 font-mono text-xs text-muted-foreground">{name}</span>
             <div className="grid flex-1 grid-cols-5 gap-1">
-              {dates.map((one) => {
+              {inMonth.map((one) => {
                 const past = isPast(one.meeting.date!, today);
                 const isNext = one === next;
                 const inNotes = noted(one);
+                const on = isPicked(one);
                 return (
                   <Button
-                    key={one.meeting.date}
+                    key={pickKey(one)}
                     variant="ghost"
+                    aria-pressed={on}
                     className={cn(
                       "relative px-0 font-mono font-normal",
                       narrow ? "h-11" : "h-8",
                       past && "text-muted-foreground",
                       isNext && "ring-[1.5px] ring-foreground ring-inset",
                       !past && !isNext && "bg-accent",
+                      on &&
+                        "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
                     )}
                     aria-label={[
-                      dayDateLabel(one.meeting.date!),
+                      `${dayDateLabel(one.meeting.date!)} ${formatTime(one.meeting.startTime)}`,
                       past ? m.mention_past() : null,
                       isNext ? m.mention_next_date() : null,
                       inNotes ? m.mention_noted() : null,
                     ]
                       .filter(Boolean)
                       .join(", ")}
-                    onClick={() => onPick(one)}
+                    onClick={() => onToggle(one)}
                   >
                     {day.format(parseISO(one.meeting.date!))}.
                     {/* Struck through, not only greyed (user decision): a
@@ -332,6 +393,34 @@ function DatesStep({
         ))}
       </div>
     </>
+  );
+}
+
+// Whether a row is picked: a box, filled with a tick when it is.
+function PickMark({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-4 shrink-0 items-center justify-center rounded-[4px] border",
+        on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/60",
+      )}
+    >
+      {on && <Check className="size-3!" strokeWidth={3} />}
+    </span>
+  );
+}
+
+// "MA3 Ue 2.1": name, kinds, group.
+function ClassName({ entry }: { entry: Entry }) {
+  return (
+    <span className="truncate">
+      <b className="font-semibold">{entry.subject.name}</b>{" "}
+      <span className="font-normal">{entry.subject.kind.join(", ")}</span>
+      {entry.subject.group && (
+        <span className="font-normal text-muted-foreground"> {groupName(entry.subject.group)}</span>
+      )}
+    </span>
   );
 }
 

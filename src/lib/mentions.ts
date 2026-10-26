@@ -6,7 +6,6 @@ import type { Profile, ProfileName } from "@/lib/primitives/profile";
 import {
   Day,
   formatTime,
-  Kind,
   kindLabel,
   minutesOf,
   sameSubject,
@@ -15,19 +14,93 @@ import {
 import { enabledSubjects, type Timetable } from "@/lib/primitives/timetable";
 import { DAYS, dayOf, eventsForWeek, isoDay, isoWeek } from "@/lib/primitives/week";
 import { weekEntries, type Entry } from "@/lib/layout";
-import { notesLines, type NotesLine, type NotesPiece } from "@/lib/notes";
+import {
+  labelParts,
+  labelReadings,
+  notesLines,
+  type LabelParts,
+  type MentionFields,
+  type NotesLine,
+  type NotesPiece,
+} from "@/lib/notes";
 
 // Links from the notes to a Termin: `@[2026-10-26 09:45 MA3 Ue 2.1]`, the
-// date, the start time and the class (name, kinds, group) in words. Readable
+// date, the start time and the class (name, kinds, group) in words; or to
+// every Termin of a class, `@[MA3 Ue 2.1]` (user request), which shows its
+// next one. Readable
 // in the text area, and when its Termin is gone the app can say what no
 // longer fits (another time, switched off, in another profile). Plain text in
 // `tt.notes.v1`, so the notes stay a string. Was a hash of the same fields
 // (user decision, 2026-10-25: a hash tells nothing once it no longer fits).
 
-// What a link points at.
-export type MentionTarget = { date: string; time: string; label: string };
+// What a link points at (`MentionFields`): one Termin, a date and a time
+// alone (the picker's); every Termin of the class, no date at all (the
+// picker's "Every date"); else, typed by hand only, the Termine fitting the
+// label on the days named, from / up to a day, or both.
+export type MentionTarget = MentionFields;
 
-const KINDS = new Set<string>(Object.values(Kind));
+export { labelParts };
+
+// A link to one Termin.
+type OneTarget = MentionTarget & { days: [string]; time: string; from: null; until: null };
+
+export function isOne<T extends MentionTarget>(mention: T): mention is T & OneTarget {
+  return (
+    mention.days.length === 1 &&
+    mention.time !== null &&
+    mention.from === null &&
+    mention.until === null
+  );
+}
+
+// A link to every Termin of what its label names, whatever the date.
+export function isEvery(mention: MentionTarget): boolean {
+  return mention.days.length === 0 && mention.from === null && mention.until === null;
+}
+
+// The text of a link like `mention` (one Termin aside), naming `label`.
+export function withLabel(mention: MentionTarget, label: string): string {
+  const dates = [
+    ...mention.days,
+    mention.from && `${mention.from}+`,
+    mention.until && `${mention.until}-`,
+    mention.time,
+  ];
+  return `@[${[...dates, label].filter(Boolean).join(" ")}]`;
+}
+
+// Whether a block lies in a link's dates: any for every Termin; else one
+// of the days named (at its time, if given), or in the span: from a day on,
+// up to one, or between the two; from after up to (`@[2026-12-01+
+// 2026-11-01- …]`) is the two ends, outside the gap. On a bound day the
+// time bounds the start. The general view's blocks have no date.
+function inSpan(mention: MentionTarget, meeting: Entry["meeting"]): boolean {
+  if (isEvery(mention)) return true;
+  if (meeting.date === null) return false;
+  const { date } = meeting;
+  const start = formatTime(meeting.startTime);
+  if (mention.days.includes(date) && (mention.time === null || start === mention.time)) return true;
+  const { from, until, time } = mention;
+  const after =
+    from !== null && (date > from || (date === from && (time === null || start >= time)));
+  const before =
+    until !== null && (date < until || (date === until && (time === null || start <= time)));
+  if (from !== null && until !== null) return from <= until ? after && before : after || before;
+  return after || before;
+}
+
+// The last day a link can name, `null` when it runs on without end: past
+// once that day is.
+export function lastDay(mention: MentionTarget): string | null {
+  const { days, from, until } = mention;
+  if (isEvery(mention) || (from !== null && (until === null || from > until))) return null;
+  return (
+    [...days, until]
+      .filter((day) => day !== null)
+      .sort()
+      .at(-1) ?? null
+  );
+}
 
 // A name as a label holds it: one space between words, no brackets.
 function labelName(name: string): string {
@@ -48,43 +121,92 @@ export function mentionLabel(subject: Subject): string {
     .join(" ");
 }
 
-// The label back in its parts, read from the end (a name may hold spaces):
-// a group like "2.1", the kinds ("SU,Ue"), the name. `null` when it reads as
-// none.
-export function labelParts(label: string): { name: string; kinds: string; group: string } | null {
-  const words = label.trim().split(/ +/);
-  const group = words.length > 2 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : "";
-  const kinds = words.pop();
-  if (!kinds || words.length === 0 || !kinds.split(",").every((kind) => KINDS.has(kind)))
-    return null;
-  return { name: words.join(" "), kinds, group };
-}
-
 // The text a link to this Termin on its date is written as.
 export function mentionToken(entry: Entry): string {
   return `@[${entry.meeting.date} ${formatTime(entry.meeting.startTime)} ${mentionLabel(entry.subject)}]`;
 }
 
-// Whether the link points at this block: date, start, name, kinds, group.
+// The text a link to every Termin of this class is written as.
+export function classToken(subject: Subject): string {
+  return `@[${mentionLabel(subject)}]`;
+}
+
+// Whether the link points at this block: date, start, name, kinds, group; a
+// link to every Termin at each block its label fits (the general view's
+// too), a bound one at those in its span.
 export function mentionMatches(
   mention: MentionTarget,
   entry: Pick<Entry, "subject" | "meeting">,
 ): boolean {
-  const parts = labelParts(mention.label);
+  if (!isOne(mention)) {
+    return fitting(mention.label, entry.subject) !== undefined && inSpan(mention, entry.meeting);
+  }
   return (
-    parts !== null &&
-    entry.meeting.date === mention.date &&
+    entry.meeting.date === mention.days[0] &&
     formatTime(entry.meeting.startTime) === mention.time &&
-    sameClass(parts, entry.subject)
+    namesClass(mention.label, entry.subject)
   );
 }
 
-function sameClass(parts: { name: string; kinds: string; group: string }, subject: Subject) {
+// Names compare in any case ("ma3" is "MA3"), like the kinds.
+function sameName(subject: Subject, parts: LabelParts): boolean {
+  return labelName(subject.name).toLowerCase() === parts.name.toLowerCase();
+}
+
+// Whether a label (in any order and case) names exactly this class.
+export function namesClass(label: string, subject: Subject): boolean {
+  return labelReadings(label).some((parts) => sameClass(parts, subject));
+}
+
+// The reading of a label (`labelReadings`) that fits this class, if one does.
+function fitting(label: string, subject: Subject): LabelParts | undefined {
+  return labelReadings(label).find((parts) => fits(parts, subject));
+}
+
+// The parts a label names, read the way that fits `subject` where one does:
+// what a chip shows.
+export function partsFor(label: string, subject: Subject): LabelParts | null {
+  return fitting(label, subject) ?? labelReadings(label)[0] ?? null;
+}
+
+// A link to one Termin: the very class (its kinds in any order), no group
+// being one too.
+function sameClass(parts: LabelParts, subject: Subject) {
   return (
-    labelName(subject.name) === parts.name &&
-    kindLabel(subject.kind) === parts.kinds &&
-    (subject.group ? groupName(subject.group) : "") === parts.group
+    sameName(subject, parts) &&
+    parts.kinds !== null &&
+    parts.kinds.length === subject.kind.length &&
+    parts.kinds.every((kind) => subject.kind.includes(kind)) &&
+    (subject.group ? groupName(subject.group) : "") === (parts.group ?? "")
   );
+}
+
+// A link to every Termin: the parts its label names, the others any, in any
+// case. Kinds named are among the class's (user decision: `@[MA3 Ue]` takes
+// "MA3 SU,Ue" too), a missing group is left open: `@[MA3]` every MA3,
+// `@[MA3 Ue]` everything of MA3 with Ue, `@[MA3 2.1]` its group 2.1 of every
+// kind (user request: typed by hand only, nowhere offered or explained in
+// the app). The picker's whole labels follow the same rule.
+function fits(parts: LabelParts, subject: Subject) {
+  return (
+    sameName(subject, parts) &&
+    (parts.kinds === null || parts.kinds.every((kind) => subject.kind.includes(kind))) &&
+    (parts.group === null ||
+      (subject.group !== undefined && groupName(subject.group) === parts.group))
+  );
+}
+
+// A label naming the same parts as `parts` for `subject`: where a link to
+// every Termin goes when its class changes.
+function labelLike(parts: LabelParts, subject: Subject): string {
+  const shaped = [
+    labelName(subject.name),
+    parts.kinds !== null ? kindLabel(parts.kinds) : null,
+    parts.group !== null && subject.group ? groupName(subject.group) : null,
+  ]
+    .filter((part) => part !== null)
+    .join(" ");
+  return fitting(shaped, subject) ? shaped : mentionLabel(subject);
 }
 
 export type Mention = Extract<NotesPiece, { kind: "mention" }> & {
@@ -148,10 +270,45 @@ function dayLookup(dates: SemesterDates | null) {
   };
 }
 
+// Every dated block of a profile, the switched-off ones too or not, in the
+// days the picker offers (`pickerRange`), in order: where a link to every
+// Termin of a class finds its next one. Built once per profile.
+function classLookup(dates: SemesterDates | null, today: Date) {
+  const built = new Map<string, Entry[]>();
+  return (profile: Profile, all: boolean): Entry[] => {
+    const key = `${profile.name}/${all}`;
+    let entries = built.get(key);
+    if (!entries) {
+      const timetables = all ? profile.timetables.map(allOn) : profile.timetables;
+      entries = seriesIn(timetables, dates, pickerRange(timetables, dates, today))
+        .flatMap((series) => series.dates)
+        .sort(byDate);
+      built.set(key, entries);
+    }
+    return entries;
+  };
+}
+
+// Dated blocks in time order.
+function byDate(a: Entry, b: Entry): number {
+  return (
+    a.meeting.date!.localeCompare(b.meeting.date!) ||
+    minutesOf(a.meeting.startTime) - minutesOf(b.meeting.startTime)
+  );
+}
+
+// The next block of those (today's included), else the last one.
+export function nextOf(entries: readonly Entry[], today: Date): Entry | undefined {
+  const from = isoDay(today);
+  return entries.find(({ meeting }) => meeting.date! >= from) ?? entries.at(-1);
+}
+
 // What became of a link's Termin: in the active profile's grid (`ok`),
 // switched off there (`off`), only in another profile (`elsewhere`), or
 // nowhere (`broken`, with the active profile's blocks of the same name that
-// day: the same class first, at another time).
+// day: the same class first, at another time). A link to every Termin of a
+// class stands for its next one; broken, its candidates are the active
+// grid's classes of that name, each by its next Termin.
 export type MentionStatus =
   | { kind: "ok"; entry: Entry }
   | { kind: "off"; entry: Entry }
@@ -162,13 +319,20 @@ export function mentionResolver(
   profiles: readonly Profile[],
   activeName: ProfileName,
   dates: SemesterDates | null,
+  today: Date,
 ): { status: (mention: MentionTarget) => MentionStatus } {
   const day = dayLookup(dates);
+  const classes = classLookup(dates, today);
   const active = profiles.find((profile) => profile.name === activeName);
   return {
     status: (mention) => {
       const find = (profile: Profile, all: boolean) =>
-        day(profile, all, mention.date).find((entry) => mentionMatches(mention, entry));
+        isOne(mention)
+          ? day(profile, all, mention.days[0]).find((entry) => mentionMatches(mention, entry))
+          : nextOf(
+              classes(profile, all).filter((entry) => mentionMatches(mention, entry)),
+              today,
+            );
       if (active) {
         const on = find(active, false);
         if (on) return { kind: "ok", entry: on };
@@ -180,15 +344,26 @@ export function mentionResolver(
         const there = find(profile, true);
         if (there) return { kind: "elsewhere", entry: there, profile: profile.name };
       }
-      const parts = labelParts(mention.label);
-      const candidates =
-        active && parts
-          ? day(active, false, mention.date)
-              .filter((entry) => labelName(entry.subject.name) === parts.name)
-              .sort(
-                (a, b) => Number(sameClass(parts, b.subject)) - Number(sameClass(parts, a.subject)),
-              )
-          : [];
+      const readings = labelReadings(mention.label);
+      const sameNamed = (entry: Entry) => readings.some((parts) => sameName(entry.subject, parts));
+      if (!isOne(mention)) {
+        const named = new Map<string, Entry[]>();
+        if (active) {
+          for (const entry of classes(active, false)) {
+            if (!sameNamed(entry)) continue;
+            const label = mentionLabel(entry.subject);
+            named.set(label, [...(named.get(label) ?? []), entry]);
+          }
+        }
+        const candidates = [...named.values()].map((entries) => nextOf(entries, today)!);
+        return { kind: "broken", candidates };
+      }
+      const exact = (entry: Entry) => Number(namesClass(mention.label, entry.subject));
+      const candidates = active
+        ? day(active, false, mention.days[0])
+            .filter(sameNamed)
+            .sort((a, b) => exact(b) - exact(a))
+        : [];
       return { kind: "broken", candidates };
     },
   };
@@ -196,6 +371,8 @@ export function mentionResolver(
 
 // Links whose class changed with a profile change (an edit, a catalog
 // update, a deletion): `before` and `after` are the profiles around it.
+// A link to every Termin of a class (bound or not) looks for the class
+// alone (any time, any date) and follows it as a class.
 // A link to the class in the profile edited (`relinkIn`) follows it where
 // that is clear (the one subject that changed in its timetable, on the same
 // date, at the same start or its only one that day), even when another
@@ -214,32 +391,46 @@ export function followMentions(
   const find = (
     profile: Profile | undefined,
     day: ReturnType<typeof dayLookup>,
-    mention: MentionTarget,
+    mention: OneTarget,
   ) =>
     profile
-      ? day(profile, true, mention.date).find((one) => mentionMatches(mention, one))
+      ? day(profile, true, mention.days[0]).find((one) => mentionMatches(mention, one))
       : undefined;
   const anywhere = (
     profiles: readonly Profile[],
     day: ReturnType<typeof dayLookup>,
-    mention: MentionTarget,
+    mention: OneTarget,
   ) => profiles.some((profile) => find(profile, day, mention));
   const editedBefore = before.find((profile) => profile.name === relinkIn);
   const editedAfter = after.find((profile) => profile.name === relinkIn);
   let next = text;
   let moved = 0;
   let lost = 0;
+  const replace = (mention: Mention, token: string) => {
+    next = next.slice(0, mention.start) + token + next.slice(mention.start + mention.text.length);
+    moved++;
+  };
   // From the end, so the offsets before each link still hold.
   for (const mention of mentionsOfText(text).reverse()) {
+    if (!isOne(mention)) {
+      const was = classIn(editedBefore, mention.label);
+      if (editedBefore && editedAfter && was && !classIn(editedAfter, mention.label)) {
+        const successor = followedClass(was, editedAfter);
+        if (successor) {
+          replace(mention, withLabel(mention, labelLike(was.parts, successor)));
+          continue;
+        }
+      }
+      const somewhere = (profiles: readonly Profile[]) =>
+        profiles.some((profile) => classIn(profile, mention.label));
+      if (somewhere(before) && !somewhere(after)) lost++;
+      continue;
+    }
     const was = find(editedBefore, dayBefore, mention);
     if (editedBefore && editedAfter && was && !find(editedAfter, dayAfter, mention)) {
       const successor = followed(editedBefore, was, editedAfter, dayAfter, mention);
       if (successor) {
-        next =
-          next.slice(0, mention.start) +
-          mentionToken(successor) +
-          next.slice(mention.start + mention.text.length);
-        moved++;
+        replace(mention, mentionToken(successor));
         continue;
       }
     }
@@ -248,13 +439,42 @@ export function followMentions(
   return { text: next, moved, lost };
 }
 
+// Where a class a label names is in a profile, switched off or not, and the
+// label's reading that names it.
+function classIn(
+  profile: Profile | undefined,
+  label: string,
+): { timetable: Timetable; index: number; parts: LabelParts } | null {
+  if (!profile) return null;
+  for (const timetable of profile.timetables) {
+    const subjects = timetable.subjects.toSubjects();
+    for (const [index, subject] of subjects.entries()) {
+      const parts = fitting(label, subject);
+      if (parts) return { timetable, index, parts };
+    }
+  }
+  return null;
+}
+
+// The subject a class became in its profile after the change.
+function followedClass(
+  was: { timetable: Timetable; index: number },
+  after: Profile,
+): Subject | null {
+  const now = after.timetables.find((one) => one.name === was.timetable.name);
+  if (!now) return null;
+  const subjects = now.subjects.toSubjects();
+  const index = successorIndex(was.timetable.subjects.toSubjects(), subjects, was.index);
+  return index === null ? null : subjects[index];
+}
+
 // The block a link's class became in its profile after the change.
 function followed(
   before: Profile,
   was: Entry,
   after: Profile,
   day: ReturnType<typeof dayLookup>,
-  mention: MentionTarget,
+  mention: OneTarget,
 ): Entry | null {
   const name = was.timetableName;
   const old = before.timetables.find((one) => one.name === name);
@@ -262,7 +482,7 @@ function followed(
   if (!old || !now) return null;
   const index = successorIndex(old.subjects.toSubjects(), now.subjects.toSubjects(), was.index);
   if (index === null) return null;
-  const blocks = day(after, true, mention.date).filter(
+  const blocks = day(after, true, mention.days[0]).filter(
     (entry) => entry.timetableName === name && entry.index === index,
   );
   return (
@@ -468,6 +688,46 @@ export function pickerRows(
       entry: one.dates.find(({ meeting }) => meeting.date! >= from) ?? one.dates.at(-1)!,
       exact: false,
     }));
+}
+
+// A picked Termin: its block on its date (a block's key repeats weekly).
+export function pickKey(entry: Entry): string {
+  return `${entry.key}@${entry.meeting.date}`;
+}
+
+// The dates of every class in the picker by its label, in order: what "All"
+// picks, and what tells a pick of all of them.
+export function datesByLabel(series: readonly Series[]): Map<string, Entry[]> {
+  const found = new Map<string, Entry[]>();
+  for (const one of series) {
+    const label = mentionLabel(one.entry.subject);
+    found.set(label, [...(found.get(label) ?? []), ...one.dates]);
+  }
+  for (const dates of found.values()) dates.sort(byDate);
+  return found;
+}
+
+// The links for the Termine picked, one per class (by label, in the
+// picker's order): one Termin as ever (`@[date time label]`); every date
+// of the class in the picker, more than one, as the class
+// (`@[label]`); else its days (`@[day day … label]`), with the time when
+// they share one.
+export function pickedTokens(picked: readonly Entry[], series: readonly Series[]): string[] {
+  const keys = new Set(picked.map(pickKey));
+  const tokens: string[] = [];
+  for (const [label, all] of datesByLabel(series)) {
+    const mine = all.filter((entry) => keys.has(pickKey(entry)));
+    if (mine.length === 0) continue;
+    if (mine.length === 1) tokens.push(mentionToken(mine[0]));
+    else if (mine.length === all.length) tokens.push(classToken(mine[0].subject));
+    else {
+      const days = [...new Set(mine.map((entry) => entry.meeting.date!))];
+      const times = new Set(mine.map((entry) => formatTime(entry.meeting.startTime)));
+      const time = times.size === 1 ? [...times] : [];
+      tokens.push(`@[${[...days, ...time, label].join(" ")}]`);
+    }
+  }
+  return tokens;
 }
 
 // Whether a date lies before today: past Termine are struck through.

@@ -267,13 +267,15 @@ export function SubjectBlock({
 
 // Blocks a column too narrow for every lane gathers (`fitDay`): dashed, the
 // codes one under the other, "+n" for those that do not fit. A press lists
-// them (`CollectedList`).
+// them (`CollectedList`). A followed link naming one of them pulses it like
+// a block of its own.
 export function CollectedBlock({
   entries,
   place,
   rows,
   dimmed,
   expanded,
+  flashing = false,
   onPress,
 }: {
   entries: Entry[];
@@ -282,6 +284,7 @@ export function CollectedBlock({
   rows: number;
   dimmed: boolean;
   expanded: boolean;
+  flashing?: boolean;
   onPress: Press;
 }) {
   const press = usePress(onPress);
@@ -295,11 +298,13 @@ export function CollectedBlock({
       {...press}
       aria-expanded={expanded}
       aria-label={m.grid_collected({ subjects: entries.map((e) => e.subject.name).join(", ") })}
+      data-flash={flashing ? "" : undefined}
       className={cn(
         "pointer-events-auto absolute z-[2] flex cursor-pointer flex-col overflow-hidden rounded-sm border border-dashed border-muted-foreground/50 bg-surface px-2 py-1 text-left text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
         BLOCK_MOTION,
         dimmed && "opacity-30",
         expanded && "outline-2 -outline-offset-1 outline-foreground",
+        flashing && "z-[3] ring-2 ring-foreground motion-safe:animate-pulse",
       )}
       style={placeStyle(place)}
     >
@@ -492,8 +497,9 @@ export function SubjectDetails({
       onClose(stay);
       run();
     };
-  // Links name a date: the general view has none to link or look up.
-  const mentions = meeting.date !== null && !general ? (actions.mentionsOf?.(entry) ?? []) : [];
+  // The general view has no date: only links to every Termin of a class
+  // point at its blocks, and "Mention in the notes" (a date) is not offered.
+  const mentions = actions.mentionsOf?.(entry) ?? [];
   const canMention = meeting.date !== null && !general && actions.onMention !== undefined;
 
   return (

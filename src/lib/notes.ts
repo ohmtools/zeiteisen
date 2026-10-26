@@ -1,3 +1,5 @@
+import { Kind } from "@/lib/primitives/subject";
+
 // The notes' read view: plain text cut into lines, each line into text,
 // links (bare or `[text](url)`) and links to a Termin, `- [ ]` / `- [x]` lines into tasks, `# `
 // lines into headings. Every piece carries its `start` in the text, so a
@@ -11,7 +13,23 @@ export type NotesPiece =
   | { kind: "link"; start: number; text: string; href: string }
   // `@[2026-10-26 09:45 MA3 Ue 2.1]`: the Termin on that date at that start
   // time whose name, kinds and group the label spells (`@/lib/mentions`).
-  | { kind: "mention"; start: number; text: string; date: string; time: string; label: string };
+  // `@[MA3 Ue 2.1]`, without date and time: every Termin of that class.
+  // Hand-typed only: several dates, `+` / `-` right after one for from /
+  // up to it (`@[2026-10-26+ 2026-12-01- MA3]`), a date without time for
+  // the whole day, the parts in any order (`@[Ue 2026-10-26+ ma3]`).
+  | ({ kind: "mention"; start: number; text: string } & MentionFields);
+
+// What a link names: the label (the words that are neither date nor time,
+// as written), the days named alone (in order, each once), the day it runs
+// from (`+`) and up to (`-`), and a start time (on the days named alone:
+// the Termin then; on a bound day: from / up to then).
+export type MentionFields = {
+  label: string;
+  days: string[];
+  from: string | null;
+  until: string | null;
+  time: string | null;
+};
 
 export type NotesLine = {
   start: number;
@@ -30,8 +48,112 @@ const TASK = /^(\s*)[-*] \[([ xX])\] /;
 // Markdown's headings; one look for all three levels.
 const HEADING = /^#{1,3} /;
 
-// A link to a Termin: date, start time and label, brackets around.
-const MENTION = /@\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) ([^\]\n]+)\]/g;
+// A link to a Termin: date, start time and label, brackets around; without
+// date and time a link to every Termin of the class; a sign after the date:
+// every Termin from / up to it, the time optional. Read word by word
+// (`mentionFields`), so in any order.
+const MENTION = /@\[([^\]\n]+)\]/g;
+const DATE = /^(\d{4}-\d{2}-\d{2})([+-])?$/;
+const TIME = /^(\d{1,2}):(\d{2})$/;
+const GROUP = /^\d+\.\d+$/;
+
+// The kinds by their code in any case ("ue", "UE" are `Ue`).
+const KINDS = new Map<string, Kind>(Object.values(Kind).map((kind) => [kind.toLowerCase(), kind]));
+
+// "SU,Ue" in any case as kinds; `null` when a part is none.
+function kindsOf(word: string): Kind[] | null {
+  const kinds = word.split(",").map((one) => KINDS.get(one.toLowerCase()));
+  return kinds.every((kind) => kind !== undefined) ? kinds : null;
+}
+
+// A link's label in its parts, the words in any order (user request): a
+// group like "2.1", kinds ("SU,Ue", any case; several such words add up),
+// the other words the name, in their order. `null` for a part not there.
+// Without kinds the name is one word, so `@[…]` around words stays text.
+// A name that is all kind codes ("S SU") reads from the end, the way the
+// picker writes it. `null` when it reads as none.
+export type LabelParts = { name: string; kinds: Kind[] | null; group: string | null };
+
+export function labelParts(label: string): LabelParts | null {
+  let kinds: Kind[] | null = null;
+  let group: string | null = null;
+  const name: string[] = [];
+  for (const word of label.trim().split(/\s+/)) {
+    const named = kindsOf(word);
+    if (GROUP.test(word)) {
+      if (group !== null) return null;
+      group = word;
+    } else if (named) {
+      kinds = [...(kinds ?? []), ...named.filter((kind) => !kinds?.includes(kind))];
+    } else if (word !== "") {
+      name.push(word);
+    }
+  }
+  if (name.length === 0) return fromEnd(label);
+  if (kinds === null && name.length > 1) return null;
+  return { name: name.join(" "), kinds, group };
+}
+
+// The picker's order, name kinds group, read from the end.
+function fromEnd(label: string): LabelParts | null {
+  const words = label.trim().split(/\s+/);
+  const group = words.length > 1 && GROUP.test(words.at(-1)!) ? words.pop()! : null;
+  const kinds = words.length > 1 ? kindsOf(words.at(-1)!) : null;
+  if (kinds) words.pop();
+  if (words.length === 0 || words[0] === "" || (kinds === null && words.length > 1)) return null;
+  return { name: words.join(" "), kinds, group };
+}
+
+// Every way a label reads, each once: in any order (`labelParts`) and in
+// the picker's order from the end, the one way links were read before the
+// words could stand anywhere. A name holding a word shaped like a kind or
+// a group ("WF Robotik", "Physik 1.1") reads as written in the latter, so
+// the links the picker wrote for it keep their class. Empty: no label.
+export function labelReadings(label: string): LabelParts[] {
+  const readings: LabelParts[] = [];
+  for (const parts of [labelParts(label), fromEnd(label)]) {
+    if (parts && !readings.some((one) => sameParts(one, parts))) readings.push(parts);
+  }
+  return readings;
+}
+
+function sameParts(a: LabelParts, b: LabelParts): boolean {
+  return a.name === b.name && a.group === b.group && String(a.kinds) === String(b.kinds);
+}
+
+// What a link's brackets hold, word by word in any order: dates (as many as
+// wanted; a sign right after one: from / up to it, one of each), a start
+// time ("9:45" too, one), the rest the label, which has to read as one. A
+// time needs a date. `null`: no link, the text stays as typed.
+export function mentionFields(content: string): MentionFields | null {
+  const days: string[] = [];
+  let from: string | null = null;
+  let until: string | null = null;
+  let time: string | null = null;
+  const rest: string[] = [];
+  for (const word of content.trim().split(/\s+/)) {
+    const day = DATE.exec(word);
+    const clock = TIME.exec(word);
+    if (day && day[2] === "+") {
+      if (from !== null) return null;
+      from = day[1];
+    } else if (day && day[2] === "-") {
+      if (until !== null) return null;
+      until = day[1];
+    } else if (day) {
+      if (!days.includes(day[1])) days.push(day[1]);
+    } else if (clock) {
+      if (time !== null) return null;
+      time = `${clock[1].padStart(2, "0")}:${clock[2]}`;
+    } else {
+      rest.push(word);
+    }
+  }
+  const label = rest.join(" ");
+  if (labelReadings(label).length === 0) return null;
+  if (time !== null && days.length === 0 && from === null && until === null) return null;
+  return { label, days, from, until, time };
+}
 
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)
 // stays text.
@@ -85,16 +207,14 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
   const pieces: NotesPiece[] = [];
   let last = 0;
   for (const match of text.matchAll(MENTION)) {
+    // Only a label makes a link (a whole one, or hand-typed a part:
+    // `@[MA3]`, `@[MA3 Ue]`, `@[MA3 2.1]`): `@[…]` typed around anything
+    // else stays text.
+    const fields = mentionFields(match[1]);
+    if (!fields) continue;
     const at = match.index;
     if (at > last) pieces.push(...namedLinkPieces(text.slice(last, at), start + last));
-    pieces.push({
-      kind: "mention",
-      start: start + at,
-      text: match[0],
-      date: match[1],
-      time: match[2],
-      label: match[3].trim(),
-    });
+    pieces.push({ kind: "mention", start: start + at, text: match[0], ...fields });
     last = at + match[0].length;
   }
   if (last < text.length) pieces.push(...namedLinkPieces(text.slice(last), start + last));

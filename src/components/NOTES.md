@@ -185,9 +185,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   on desktop). Plain text in `tt.notes.v1`, never shared (no link, no
   profile file; the backup holds it). At most `MAX_NOTES_LENGTH` characters
   (1,000,000, user decision), a count shows from 90% on.
-- Under the panel's header one muted line: on this device only, never in a
-  link or a profile file. Nothing more (user decision, 2026-10-26: the
-  syntax help was dropped; the insert bar shows what there is).
+- Right under the panel's header one muted line: on this device only, never
+  in a link or a profile file. Nothing more (user decision, 2026-10-26: the
+  syntax help was dropped; the insert bar shows what there is). The insert
+  bar below it, right above the text (user request, 2026-10-26).
 - Two faces of the same text (user decision): a read view where http(s) and
   `www.` links open in a new tab, `[text](url)` (Markdown's, user request)
   shows its text alone as the link, `- [ ]` / `- [x]` lines (GitHub's task
@@ -212,8 +213,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - **Insert bar** (design "Zeiteisen Notizen", 2026-10-25): "Task", "Heading",
   "Link", "Termin" (ghost buttons, 44px, four equal columns with the label
   under the icon on every step: side by side the German labels overran the
-  340px sidebar and the 380px sheet): on top of the panel from compact on
-  (user decision: not at the bottom on desktop), at the bottom on phones
+  340px sidebar and the 380px sheet): from compact on above the text, under
+  the hint (user decisions: not at the bottom on desktop; right above the
+  text field, 2026-10-26), at the bottom on phones
   within thumb reach, there **right above the keyboard** (user report: the
   keyboard covered it; `useKeyboardInset` lifts it by what the keyboard
   covers, the text area gets shorter). Task and heading put `- [ ] ` / `# `
@@ -222,19 +224,24 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   themselves (`preventDefault` on mousedown), so the text area keeps its
   caret.
 - **Link with its own text** (user request, 2026-10-26): "Link" opens a
-  dialog (`Popup kind="dialog"`, a drawer on phones) with "Text" (the
-  selection, if any) and "Address" (`https://` added when no scheme is
-  typed; anything but http(s) refused, `linkHref`). "Insert" writes
+  popover at its button like "Termin" (`Popup kind="popover"`, a drawer on
+  phones; user request: a centred dialog looked unlike the Termin picker)
+  with "Text" (the selection, if any) and "Address" (`https://` added when
+  no scheme is typed; anything but http(s) refused, `linkHref`). "Insert" writes
   `[text](url)` in place of the selection, or at the caret, spaced like a
   Termin link (`insertLink`); without text the bare address; without a
   caret on a line of its own at the end. Brackets in the text turn round,
   in the address they are escaped, so the link always ends where it should.
   Plain text, the stored shape stays a string: no migration. Hand-typed
   addresses may hold one level of brackets (Wikipedia's).
+  Leaving it (Esc, a press outside, a swipe down) changes nothing and puts
+  the caret back. The `Popup` stays mounted and only its fields are keyed
+  per opening: a popup keyed per opening mounts already open, and its
+  drawer then only slid out, never in (user report).
 - **Popups from the notes open without the keyboard on phones** (user
   report): the text area's keyboard stayed up as the Termin picker took the
   focus, and the drawer then filled the screen above its own search field.
-  Opening the picker or the link dialog on phones blurs the text area, and
+  Opening the picker or the link popup on phones blurs the text area, and
   neither autofocuses a field there (the drawer's own way on touch); a tap
   on a field brings the keyboard, the drawer lifted above it.
 - **Links to a Termin** (user request): `@[2026-10-26 09:45 MA3 Ue 2.1]`,
@@ -246,9 +253,13 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   active profile, then with switched-off classes, then in the other profiles
   (the notes belong to the device, not to a profile). Four looks:
   - in the active grid: a chip in the kind's colour, "MA3 Ue Mo 26.10.", a
-    press shows its block in the week view (week and phone day picked, the
-    block pulses and scrolls into view; the panel closes on phones and
-    compact screens, it covers the grid);
+    press makes every block on screen it names pulse (user request; the
+    shown week, on phones the shown day; in the general view the class's
+    blocks; a collected block holding one of them pulses as a whole), the
+    first scrolls into view. Only when its Termin (for a link
+    to several, a class, days or a span: its next one) is not on screen,
+    the week view goes there first (week and phone day picked). The panel
+    closes on phones and compact screens, it covers the grid;
   - switched off, or only in another profile: muted and dashed, nothing is
     wrong with the link; a press says so with "Show in groups" or "Switch to
     „Plan B“" (user decision: no warning on switching, tinkering is the
@@ -274,18 +285,84 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   (`opensMention`; inside a word, an e-mail address, it stays a character).
   What is searched goes into the picker's own field, never into the note:
   the typed `@` is replaced by the finished link on a pick, kept with the
-  caret after it on leaving. Step 1: a row per class and weekday time of
-  the active profile's grid (`seriesIn`, the lecture period widened to every
-  listed date), a press (or Enter on the first, highlighted row) links its
-  next date; a date ("9.11"), "heute"/"morgen", a weekday ("mi") or a week
-  ("kw46") in the field narrows to those dates. Step 2, the calendar at a
-  row's end: every date of the class, a month per line; past ones muted AND
-  struck through with a line of their own (user decision: `line-through`
-  alone vanished in grey two-digit numbers), the next one ringed, those
-  already linked with the notes' icon. Same two steps on every step (user
-  decision). From the bar without a caret the link goes on a line of its
-  own at the end. "Pick in the timetable" was designed and dropped (user
-  decision: too much).
+  caret after it on leaving. **Several at once** (user request,
+  2026-10-26; was one per press, then a tab "Every date"): a press picks
+  or unpicks (a box at the row's start; no kind dot beside it, it read as
+  a second box), a bar at the bottom says how many and "Insert" writes the
+  links, one per class (`pickedTokens`): one Termin as `@[date time
+label]`, several as `@[day day … time? label]` (the time when they share
+  one), all dates of the class in the picker (more than one) as
+  `@[label]`. Enter with nothing picked inserts the first, highlighted row
+  at once. Step 1: a row per class and weekday time of the active
+  profile's grid (`seriesIn`, the lecture period widened to every listed
+  date), a press picks its next date; a date ("9.11"), "heute"/"morgen", a
+  weekday ("mi") or a week ("kw46") in the field narrows to those dates.
+  Step 2, the calendar at a row's end: every date of the class as its label
+  names it (all its weekdays and times, `datesByLabel`; a lecture and its
+  exam with the same label are one), a month per line, "Pick all" above;
+  picked dates filled, past ones muted AND struck through with a line of
+  their own (user decision: `line-through` alone vanished in grey two-digit
+  numbers), the next one ringed, those already linked with the notes' icon.
+  Picks hold across both steps until the picker closes. Same two steps on
+  every step (user decision). From the bar without a caret the links go on
+  a line of their own at the end. "Pick in the timetable" was designed and
+  dropped (user decision: too much).
+- **Every Termin of a class** (user request, 2026-10-26): "Pick all" in the
+  picker's calendar writes `@[MA3 Ue 2.1]`, no date and time. The chip
+  shows the label with a repeat mark instead of a date, never struck
+  through, and a press shows the class's next Termin (today's included;
+  after the last one the last) in the week view. Its blocks carry the notes' mark in the week AND the general view,
+  their details list the line in both. Switched off, in another profile:
+  as a dated link. Gone: "Subject not found", relinkable to the active
+  grid's classes of that name. It follows an edit of its class like a dated
+  link (new label), a change of time or day leaves it as it is. Plain text,
+  the stored shape stays a string: no migration (`@[…]` around anything
+  but a label stays text).
+- **Hidden: links to part of a label** (user request, 2026-10-26: typed by
+  hand only; NOT in the UI, no hint, placeholder, help text or picker row
+  for it, keep it that way). A label without date names what it gives,
+  the rest is open: `@[MA3]` every MA3, `@[MA3 Ue]` every MA3 with Ue
+  among its kinds ("MA3 SU,Ue" too, user decision), `@[MA3 2.1]` every MA3
+  class of group 2.1; the picker's whole labels likewise (`@[MA3 SU]` takes
+  grouped SU and "SU,Ue" too). Names and kinds in any case (`@[ma3 ue]`,
+  user decision), dated links too. Without kinds the name
+  is one word, so words in brackets stay text. The chip shows the label as
+  written, in the colour of the kind it names, neutral without one; a
+  press shows the next Termin of any class it fits. Followed on an edit
+  only when no class fits any more, in the same shape (`@[MA3 Pr]` ->
+  `@[MA4 Pr]`). Dated links stay exact but for case: the same kinds, in
+  any order, and the same group or none.
+- **Several dates** (the picker writes them for several picked dates of a
+  class) **and, hidden, from / up to** (user requests, 2026-10-26; `+` and
+  `-` typed by hand only, nowhere in the UI). A link names any number of
+  days alone (`@[2026-11-05 2026-11-12 MA3 Ue]`: every fitting Termin
+  those days), at most one day with `+` right after it (that day and every
+  one after) and one with `-` (it and every one before); both: between
+  them, or, `+` after `-` (`@[2026-12-01+ 2026-11-01- MA3]`), the two ends
+  outside the gap. Days alone add to the span. One time at most, and only
+  with a date: on the days alone the Termin starting then, on a bound day
+  the start bounds it (`@[2026-11-09- 09:45 MA3]`). One day with a time
+  and nothing else is the picker's link to one Termin (exact class); every
+  other dated link fits the label as above. The chip: label, the repeat
+  mark, two days then "…" (several without weekdays: "5.11., 12.11., …"),
+  "ab Do 5.11.", "bis Mo 9.11.", "Mo 2.11.–Mo 30.11.", the time, cut with
+  an ellipsis rather than over the panel's edge; struck through once the last day it can name is past
+  (`lastDay`; never with an open `+`). A press shows the next Termin among
+  them (the last when all are past); its blocks carry the notes' mark in
+  the week view only (the general view has no dates). Followed like a link
+  to every Termin, keeping its dates and time.
+- **Hidden: any order** (user request, 2026-10-26, same rule). The words in
+  a link's brackets are read by their shape, wherever they stand
+  (`mentionFields`, `labelParts`): `YYYY-MM-DD` with an optional `+`/`-`
+  the date, `9:45` / `09:45` the start, `2.1` the group, kind codes (any
+  case, `SU,Ue` or two words) the kinds, the other words the name in their
+  order (`@[Ue 2026-11-05+ ma3]`). One time, group, `+` and `-` at most.
+  A name that is all kind codes ("S SU") is read from the end as the
+  picker writes it. A label also reads in the picker's order from the end
+  (`labelReadings`; a link fits a class when either reading does): a name
+  with a word shaped like a kind or group ("WF Robotik", "Physik 1.1")
+  keeps the links the picker wrote for it, released ones included.
+  A link followed after an edit is written back in the picker's order.
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the

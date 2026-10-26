@@ -44,20 +44,33 @@ re-implements primitive logic.
   first load.
 - `notes.ts` — the notes' read view: lines, links (http(s) and `www.` only,
   trailing punctuation and unbalanced brackets cut off), `- [ ]` tasks, `# `
-  headings and links to a Termin (`@[date time label]`), every piece with
+  headings and links to a Termin (`@[date time label]`, or `@[label]` for
+  every Termin of a class, or hand-typed of part of a label, several days,
+  `@[date+ …]` / `@[date- …]` from / up to a day, the words in any order
+  (`mentionFields`: `days`, `from`, `until`, `time`), all hidden in the UI:
+  `src/components/NOTES.md`; never for words), every piece with
   its offset in the text; `toggleTask` changes the one box character;
   `insertLine` / `insertInline` / `opensMention` are the insert bar's and
   the picker's text edits. `notesFromFile` reads an uploaded notes file
   (UTF-8, line ends, limit).
 - `mentions.ts` — links from the notes to a Termin. A link matches a block
-  by date, start time, name, kinds and group (`labelParts` reads the label
-  from the end: a name may hold spaces); room, professor and end are left
-  out, so a room change keeps it. `mentionResolver` gives a link's status
+  by date, start time, name, kinds and group (`labelReadings`: the words
+  in any order, or from the end as the picker writes them, a name may hold
+  spaces; either reading fitting is enough); room, professor and end are left
+  out, so a room change keeps it; a link to every Termin matches by the
+  parts its label gives (`fits`: kinds named among the class's, any case),
+  any date or those in its span (`inSpan`);
+  `isOne` tells a link to one Termin (one day and a time, nothing else)
+  from the others, `isEvery` one without dates. `mentionResolver` gives a link's status
   (`ok` / `off` / `elsewhere` / `broken` with candidates), one week of a
   profile's grid at a time (`weekEntries`, so days off and the lecture
-  period count as in the grid). `followMentions` moves links along with an
+  period count as in the grid; a link to every Termin of a class stands for
+  its next one, in the picker's days, `nextOf`). `followMentions` moves
+  links along with an
   edit (`successorIndex`: the one subject that changed) and counts those a
-  change lost. The picker's rows (`seriesIn`, `pickerRows`) and its query
+  change lost. The picker's rows (`seriesIn`, `pickerRows`), its classes'
+  dates (`datesByLabel`), the links for what is picked (`pickedTokens`)
+  and its query
   (`parseMentionQuery`: words, one date / "heute" / "morgen" / weekday /
   "kw46", dates without a year the nearest one). In the first load for the
   grid's marks (~5 KB gzip with notes.ts and the messages).

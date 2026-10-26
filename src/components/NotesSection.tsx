@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactElement,
   type ReactNode,
 } from "react";
 import {
@@ -17,11 +18,13 @@ import {
   Layers,
   Link,
   Link2,
+  Repeat,
   SquareCheck,
   Type,
   Unlink,
   Upload,
 } from "lucide-react";
+import { parseISO } from "date-fns";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
 import { MentionPicker } from "@/components/MentionPicker";
@@ -35,11 +38,17 @@ import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { dayStamp, downloadText } from "@/lib/download";
 import { kindClass } from "@/lib/kinds";
 import {
+  isEvery,
   isPast,
+  lastDay,
   mentionResolver,
+  namesClass,
   mentionsIn,
   mentionLabel,
+  isOne,
   mentionToken,
+  partsFor,
+  withLabel,
   type MentionTarget,
 } from "@/lib/mentions";
 import { groupName } from "@/lib/primitives/group";
@@ -62,7 +71,7 @@ import { formatTime } from "@/lib/primitives/subject";
 import { MAX_NOTES_LENGTH } from "@/lib/primitives/storage";
 import type { Timetable } from "@/lib/primitives/timetable";
 import type { Entry } from "@/lib/layout";
-import { dayDateLabel } from "@/lib/subjects";
+import { dayDateLabel, shortDate } from "@/lib/subjects";
 
 // From 90% of the limit on, the count shows.
 const SHOW_COUNT_FROM = MAX_NOTES_LENGTH * 0.9;
@@ -96,9 +105,10 @@ type LinkTarget = { from: number; to: number } | null;
 // area with the caret there, leaving it turns it back. Every keystroke is
 // saved (`useNotes`): there is no edit or save button. Empty notes are the
 // text area alone. The insert bar adds a task, a heading, a link with its
-// own text (`LinkDialog`) or a link to a Termin (`MentionPicker`, also
-// opened by an `@` typed at a word's start): on top from compact on, at the
-// bottom on phones within thumb reach, there right above the keyboard. The
+// own text (`LinkPopover`) or a link to a Termin (`MentionPicker`, also
+// opened by an `@` typed at a word's start): right above the text from
+// compact on, at the bottom on phones within thumb reach, there right above
+// the keyboard. The
 // body of a panel (`Panel`: sidebar, sheet or page; user decision, was a
 // strip under the grid), its header buttons are `NotesActions`. Lives in the
 // deferred chunk.
@@ -147,7 +157,7 @@ export function NotesSection({
   const showTextarea = editing || notes === "";
   const [picking, setPicking] = useState<Target | null>(null);
   const [linking, setLinking] = useState<{ target: LinkTarget; label: string } | null>(null);
-  // A fresh dialog per opening, its fields filled anew.
+  // Fresh fields per opening, filled anew.
   const [linkKey, setLinkKey] = useState(0);
   // The keyboard covers the page on phones: the insert bar goes above it.
   const keyboard = useKeyboardInset(narrow && editing);
@@ -156,10 +166,10 @@ export function NotesSection({
   const lit = reveal && reveal.nonce !== faded ? reveal.start : null;
   const lines = notesLines(notes);
   const mentions = mentionsIn(lines);
-  // One lookup per profiles and dates, each week built once.
+  // One lookup per profiles, dates and minute, each week built once.
   const resolver = useMemo(
-    () => mentionResolver(profiles, activeName, dates),
-    [profiles, activeName, dates],
+    () => mentionResolver(profiles, activeName, dates, today),
+    [profiles, activeName, dates, today],
   );
 
   useEffect(() => {
@@ -230,17 +240,18 @@ export function NotesSection({
     setEditing(true);
     onChange(text);
   };
-  const pick = (entry: Entry) => {
+  // `token`: a link to one Termin or to every Termin of a class.
+  const pick = (token: string) => {
     const target = picking ?? { at: null, replace: 0 };
     setPicking(null);
     // Without a caret: a line of its own at the end.
     if (target.at === null) {
       const line = insertLine(notes, notes.length, "");
-      apply(insertInline(line.text, line.caret, mentionToken(entry)));
+      apply(insertInline(line.text, line.caret, token));
       return;
     }
     const replace = target.replace > 0 && notes[target.at] === "@" ? target.replace : 0;
-    apply(insertInline(notes, target.at, mentionToken(entry), replace));
+    apply(insertInline(notes, target.at, token, replace));
   };
   // On phones a popup opens without the keyboard: one left up from the text
   // area stood over the drawer, which then filled the screen above its
@@ -271,7 +282,7 @@ export function NotesSection({
     setLinking(null);
     apply(result);
   };
-  // Leaving the link dialog: the caret (or selection) where it was.
+  // Leaving the link popup: the caret (or selection) where it was.
   const cancelLink = () => {
     const target = linking?.target ?? null;
     setLinking(null);
@@ -377,10 +388,19 @@ export function NotesSection({
         <Heading />
         {m.notes_insert_heading()}
       </Button>
-      <Button variant="ghost" className={barButton} onMouseDown={keepFocus} onClick={openLink}>
-        <Link />
-        {m.notes_insert_link()}
-      </Button>
+      <LinkPopover
+        trigger={
+          <Button variant="ghost" className={barButton} onMouseDown={keepFocus}>
+            <Link />
+            {m.notes_insert_link()}
+          </Button>
+        }
+        open={linking !== null}
+        onOpenChange={(open) => (open ? openLink() : cancelLink())}
+        formKey={linkKey}
+        label={linking?.label ?? ""}
+        onInsert={insertNamedLink}
+      />
       <MentionPicker
         trigger={
           <Button variant="ghost" className={barButton} onMouseDown={keepFocus}>
@@ -399,21 +419,17 @@ export function NotesSection({
         mentions={mentions}
         onPick={pick}
       />
-      <LinkDialog
-        key={linkKey}
-        open={linking !== null}
-        label={linking?.label ?? ""}
-        onCancel={cancelLink}
-        onInsert={insertNamedLink}
-      />
     </div>
   );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 compact:pb-2">
-      {bar}
+      {/* Right under the heading, the insert bar right above the text
+          (user request; on phones it stays at the bottom, above the
+          keyboard). */}
       <p className="text-xs text-muted-foreground">{m.notes_text()}</p>
       {limit}
+      {bar}
       {showTextarea ? (
         <Textarea
           ref={textareaRef}
@@ -498,18 +514,48 @@ export function NotesSection({
 }
 
 // "Link" in the insert bar: a link with its own text, `[text](url)`. The
-// text starts as the selection; without one the address stands alone. A
-// task with an end (the design's dialog, a drawer on phones): only "Insert"
-// puts it in, leaving it changes nothing.
-function LinkDialog({
+// text starts as the selection; without one the address stands alone. Like
+// the Termin picker (user request): a popover at the insert bar's button, a
+// drawer on phones (the design's `Popup`). Only "Insert" puts it in, leaving
+// it changes nothing. The drawer stays mounted between openings, so it
+// slides in (a dialog keyed per opening mounted open and only slid out);
+// `formKey` gives each opening fresh fields.
+function LinkPopover({
+  trigger,
   open,
+  onOpenChange,
+  formKey,
   label,
-  onCancel,
   onInsert,
 }: {
+  trigger: ReactElement<Record<string, unknown>>;
   open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formKey: number;
   label: string;
-  onCancel: () => void;
+  onInsert: (label: string, url: string) => void;
+}) {
+  return (
+    <Popup
+      kind="popover"
+      trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
+      title={m.notes_link_title()}
+      titleHidden
+      align="start"
+      className="gap-3 compact:w-80"
+    >
+      <LinkForm key={formKey} label={label} onInsert={onInsert} />
+    </Popup>
+  );
+}
+
+function LinkForm({
+  label,
+  onInsert,
+}: {
+  label: string;
   onInsert: (label: string, url: string) => void;
 }) {
   const narrow = useStep() === "narrow";
@@ -525,74 +571,62 @@ function LinkDialog({
     else setChecked(true);
   };
 
+  // Enter goes from the text on to the address, there it inserts. With its
+  // text given, the focus starts on the address. Phones keep the keyboard
+  // down until a field is tapped (the drawer's own way on touch).
   return (
-    <Popup
-      kind="dialog"
-      open={open}
-      // Leaving it runs `onCancel`, the only way it closes besides "Insert".
-      onOpenChange={() => {}}
-      onCancel={onCancel}
-      title={m.notes_link_title()}
-      closeLabel={m.panel_close()}
-      // With its text given, on to the address. Phones keep the keyboard
-      // down until a field is tapped (the drawer's own way on touch).
-      initialFocus={label !== "" && !narrow ? urlRef : undefined}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onCancel}>
-            {m.cancel()}
-          </Button>
-          <Button disabled={checked && !valid} onClick={insert}>
-            {m.notes_link_insert()}
-          </Button>
-        </>
-      }
-    >
-      {/* Enter goes from the text on to the address, there it inserts. */}
-      <div className="flex flex-col gap-4">
-        <Field>
-          <FieldLabel htmlFor={`${id}-text`}>{m.notes_link_text()}</FieldLabel>
-          <Input
-            id={`${id}-text`}
-            value={text}
-            enterKeyHint="next"
-            className={cn(narrow && "h-11")}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              urlRef.current?.focus();
-            }}
-          />
-          <FieldDescription>{m.notes_link_text_hint()}</FieldDescription>
-        </Field>
-        <Field data-invalid={checked && !valid}>
-          <FieldLabel htmlFor={`${id}-url`}>{m.notes_link_url()}</FieldLabel>
-          <Input
-            ref={urlRef}
-            id={`${id}-url`}
-            type="url"
-            inputMode="url"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="done"
-            placeholder="https://…"
-            aria-invalid={checked && !valid}
-            className={cn("font-mono", narrow && "h-11")}
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            onBlur={() => setChecked(url.trim() !== "")}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              insert();
-            }}
-          />
-          {checked && !valid && <FieldError>{m.notes_link_invalid()}</FieldError>}
-        </Field>
-      </div>
-    </Popup>
+    <>
+      <Field>
+        <FieldLabel htmlFor={`${id}-text`}>{m.notes_link_text()}</FieldLabel>
+        <Input
+          id={`${id}-text`}
+          autoFocus={!narrow && label === ""}
+          value={text}
+          enterKeyHint="next"
+          className={cn(narrow && "h-11")}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            urlRef.current?.focus();
+          }}
+        />
+        <FieldDescription>{m.notes_link_text_hint()}</FieldDescription>
+      </Field>
+      <Field data-invalid={checked && !valid}>
+        <FieldLabel htmlFor={`${id}-url`}>{m.notes_link_url()}</FieldLabel>
+        <Input
+          ref={urlRef}
+          id={`${id}-url`}
+          autoFocus={!narrow && label !== ""}
+          type="url"
+          inputMode="url"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          placeholder="https://…"
+          aria-invalid={checked && !valid}
+          className={cn("font-mono", narrow && "h-11")}
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          onBlur={() => setChecked(url.trim() !== "")}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            insert();
+          }}
+        />
+        {checked && !valid && <FieldError>{m.notes_link_invalid()}</FieldError>}
+      </Field>
+      <Button
+        disabled={checked && !valid}
+        className={cn("compact:self-end", narrow && "h-11")}
+        onClick={insert}
+      >
+        {m.notes_link_insert()}
+      </Button>
+    </>
   );
 }
 
@@ -729,7 +763,7 @@ function Pieces({ pieces, links }: { pieces: NotesPiece[]; links: Links }) {
 }
 
 const CHIP =
-  "mx-px inline-flex h-5 max-w-full items-center gap-1 rounded-sm border px-1.5 align-[-0.25em] text-xs leading-none font-normal whitespace-nowrap no-underline";
+  "mx-px inline-flex h-5 max-w-full items-center gap-1 overflow-hidden rounded-sm border px-1.5 align-[-0.25em] text-xs leading-none font-normal whitespace-nowrap no-underline";
 
 // A link to a Termin: a chip in its kind colour, "MA3 Ue Mo 26.10."; a
 // press shows it in the grid. Struck through once past (and still pressable,
@@ -747,7 +781,10 @@ function MentionChip({
   links: Links;
 }) {
   const status = links.resolver.status(mention);
-  const past = isPast(mention.date, links.today);
+  // Past once the last day it can name is (a link to every Termin, or from a
+  // date on, never is: it shows the next).
+  const last = lastDay(mention);
+  const past = last !== null && isPast(last, links.today);
   const replace = (text: string) => links.onReplace(mention.start, mention.text.length, text);
   const keepText = {
     label: m.mention_keep_text(),
@@ -756,23 +793,28 @@ function MentionChip({
   };
   if (status.kind === "ok") {
     const { entry } = status;
+    // A link to every Termin shows its label as written (it may name only a
+    // part: `@[MA3]`), coloured by the kind it names, neutral without one.
+    const parts = isOne(mention) ? null : partsFor(mention.label, entry.subject);
+    const kinds = parts ? (parts.kinds ?? []) : entry.subject.kind;
     return (
       <button
         type="button"
         tabIndex={-1}
         data-start={mention.start}
-        title={m.mention_show()}
+        title={isOne(mention) ? m.mention_show() : m.mention_show_next()}
         onClick={() => links.onJump(mention)}
         className={cn(
           CHIP,
           "cursor-pointer text-foreground hover:brightness-[0.97] dark:hover:brightness-125",
-          kindClass(entry.subject.kind),
+          kinds.length > 0 ? kindClass(kinds) : "border-border bg-secondary",
           past && STRUCK,
         )}
       >
-        <b className="font-semibold">{entry.subject.name}</b>
-        <span>{entry.subject.kind.join(", ")}</span>
-        <span className="font-mono">{dayDateLabel(mention.date)}</span>
+        <b className="font-semibold">{parts?.name ?? entry.subject.name}</b>
+        {kinds.length > 0 && <span>{kinds.join(", ")}</span>}
+        {parts?.group && <span>{parts.group}</span>}
+        <ChipDate mention={mention} />
       </button>
     );
   }
@@ -807,8 +849,29 @@ function MentionChip({
       />
     );
   }
+  if (!isOne(mention)) {
+    return (
+      <NoticeChip
+        mention={mention}
+        tone="red"
+        past={past}
+        icon={<CircleAlert />}
+        title={m.mention_class_broken_title()}
+        text={m.mention_class_broken_text({ label: mention.label })}
+        actions={[
+          ...status.candidates.map((entry) => ({
+            label: m.mention_relink(),
+            detail: mentionLabel(entry.subject),
+            icon: <Link2 />,
+            run: () => replace(withLabel(mention, mentionLabel(entry.subject))),
+          })),
+          keepText,
+        ]}
+      />
+    );
+  }
   // The same class that day at another time says what changed.
-  const moved = status.candidates.find((entry) => mentionLabel(entry.subject) === mention.label);
+  const moved = status.candidates.find((entry) => namesClass(mention.label, entry.subject));
   return (
     <NoticeChip
       mention={mention}
@@ -819,12 +882,12 @@ function MentionChip({
       text={
         moved
           ? m.mention_moved_text({
-              date: dayDateLabel(mention.date),
+              date: dayDateLabel(mention.days[0]),
               label: mention.label,
               time: formatTime(moved.meeting.startTime),
               old: mention.time,
             })
-          : m.mention_broken_text({ date: dayDateLabel(mention.date) })
+          : m.mention_broken_text({ date: dayDateLabel(mention.days[0]) })
       }
       actions={[
         ...status.candidates.map((entry) => ({
@@ -836,6 +899,45 @@ function MentionChip({
         keepText,
       ]}
     />
+  );
+}
+
+// A chip's date; a link to every Termin of a class has none, its mark
+// says "every Termin"; one to several says which: the days (two, then
+// "…"), from / up to when or between, the time.
+function ChipDate({ mention }: { mention: Extract<NotesPiece, { kind: "mention" }> }) {
+  if (isOne(mention)) return <span className="font-mono">{dayDateLabel(mention.days[0])}</span>;
+  const mark = <Repeat aria-label={m.mention_every()} className="size-3 shrink-0" />;
+  if (isEvery(mention)) return mark;
+  const { from, until } = mention;
+  const days = [...mention.days].sort();
+  const span =
+    from !== null && until !== null
+      ? from <= until
+        ? [`${dayDateLabel(from)}–${dayDateLabel(until)}`]
+        : [
+            m.mention_until({ date: dayDateLabel(until) }),
+            m.mention_from({ date: dayDateLabel(from) }),
+          ]
+      : from !== null
+        ? [m.mention_from({ date: dayDateLabel(from) })]
+        : until !== null
+          ? [m.mention_until({ date: dayDateLabel(until) })]
+          : [];
+  // Several days without their weekdays, the chip stays short.
+  const day = (date: string) => (days.length > 1 ? shortDate(parseISO(date)) : dayDateLabel(date));
+  const text = [...days.slice(0, 2).map(day), ...(days.length > 2 ? ["…"] : []), ...span].join(
+    ", ",
+  );
+  // Too long for the line all the same: cut with an ellipsis, never over
+  // the panel's edge.
+  return (
+    <>
+      {mark}
+      <span className="min-w-0 truncate font-mono">
+        {[text, mention.time].filter(Boolean).join(" ")}
+      </span>
+    </>
   );
 }
 
@@ -888,7 +990,7 @@ function NoticeChip({
         >
           {red ? <Unlink className="size-3" /> : <CircleSlash className="size-3" />}
           <b className="font-semibold">{mention.label}</b>
-          <span className="font-mono">{dayDateLabel(mention.date)}</span>
+          <ChipDate mention={mention} />
         </button>
       }
     >

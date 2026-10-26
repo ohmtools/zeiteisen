@@ -101,7 +101,7 @@ describe("headings and links to a Termin", () => {
     const mention = line.pieces[1];
     expect(mention).toMatchObject({
       kind: "mention",
-      date: "2026-10-26",
+      days: ["2026-10-26"],
       time: "09:45",
       label: "MA3 Ue 1.1",
     });
@@ -112,7 +112,7 @@ describe("headings and links to a Termin", () => {
 
   it("leaves anything else in brackets as text", () => {
     const [line] = notesLines(
-      "@[2026-10-26 08:00] @[26.10. 08:00 x] @[2026-10-26 x] @[2026-10-26 8:00 x]",
+      "@[2026-10-26 08:00] @[26.10. 08:00 x] @[2026-10-26- 2026-10-27- x] @[08:00 x] @[the slides 2026-10-26]",
     );
     expect(line.pieces.map((piece) => piece.kind)).toEqual(["text"]);
   });

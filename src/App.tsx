@@ -51,6 +51,8 @@ import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import {
   dayOfDate,
   followMentions,
+  isEvery,
+  type Mention,
   mentionMatches,
   mentionResolver,
   mentionsOfText,
@@ -299,10 +301,13 @@ export default function App() {
   }, [flash]);
   // Notes ↔ grid. Links in the notes name a Termin by date, time and class
   // (`@/lib/mentions`): the blocks they point at carry the notes' mark, a
-  // press on one shows its block (which pulses), its details lead back to
-  // the line.
+  // press on one shows its week, where every block it names pulses (user
+  // request: a link to several, all of them), its details lead back to the
+  // line.
   const mentions = useMemo(() => mentionsOfText(notes), [notes]);
-  const [blockFlash, setBlockFlash] = useState<{ key: string; nonce: number } | null>(null);
+  const [blockFlash, setBlockFlash] = useState<{ mention: MentionTarget; nonce: number } | null>(
+    null,
+  );
   useEffect(() => {
     if (!blockFlash) return;
     const done = setTimeout(() => setBlockFlash(null), 1600);
@@ -311,18 +316,6 @@ export default function App() {
   const [noteReveal, setNoteReveal] = useState<{ start: number; nonce: number } | null>(null);
   // Tells one flash or reveal of the same block or line from the next.
   const nonce = useRef(0);
-  const jumpToMention = (mention: MentionTarget) => {
-    const date = parseISO(mention.date);
-    setView("week");
-    pickWeek(startOfISOWeek(date));
-    pickDay(dayOfDate(mention.date));
-    const status = mentionResolver(profiles.profiles, profiles.activeName, dates.dates).status(
-      mention,
-    );
-    if (status.kind === "ok") setBlockFlash({ key: status.entry.key, nonce: ++nonce.current });
-    // The panel covers the grid on phones and compact screens.
-    if (currentStep() !== "wide") openPanel(null);
-  };
   const openNote = (start: number) => {
     openPanel("notes");
     setNoteReveal({ start, nonce: ++nonce.current });
@@ -476,19 +469,61 @@ export default function App() {
     onOpenNote: openNote,
     onMention: mentionInNotes,
   };
-  // The week's blocks a link points at; only blocks on days links name are checked.
-  const mentionedDates = new Set(mentions.map((mention) => mention.date));
+  // The blocks on screen: the shown week's (or the general view's), on
+  // phones the shown day's.
+  const onScreen = step === "narrow" ? entries.filter((entry) => entry.day === day) : entries;
+  // A press on a link (user request): every block on screen it names pulses;
+  // when its next Termin (one for a link to several: a class, days, a span)
+  // is not on screen, the week view goes there first. In the general view a
+  // block of the class stands for its Termine.
+  const jumpToMention = (mention: MentionTarget) => {
+    // The notes' clock: the Termin its chip stands for.
+    const status = mentionResolver(profiles.profiles, profiles.activeName, dates.dates, now).status(
+      mention,
+    );
+    if (status.kind !== "ok") return;
+    const next = status.entry;
+    const shown =
+      week === null
+        ? onScreen.some((entry) => mentionMatches(mention, entry))
+        : onScreen.some(
+            (entry) => entry.key === next.key && entry.meeting.date === next.meeting.date,
+          );
+    if (!shown) {
+      const date = next.meeting.date!;
+      setView("week");
+      // The day with the week: `pickDay` would bind it to the week picked so far.
+      pickWeek(startOfISOWeek(parseISO(date)), dayOfDate(date));
+    }
+    setBlockFlash({ mention, nonce: ++nonce.current });
+    // The panel covers the grid on phones and compact screens.
+    if (currentStep() !== "wide") openPanel(null);
+  };
+  // A followed link: the blocks on screen it names.
+  const flashed = blockFlash
+    ? {
+        keys: new Set(
+          entries
+            .filter((entry) => mentionMatches(blockFlash.mention, entry))
+            .map((entry) => entry.key),
+        ),
+        nonce: blockFlash.nonce,
+      }
+    : null;
+  // The blocks a link points at; only blocks on days links name are checked,
+  // every block when a link names every Termin of a class (the general
+  // view's too: such a link names no date) or a span of them.
+  const spans = (mention: Mention) => mention.from !== null || mention.until !== null;
+  const mentionedDates = new Set(mentions.filter((one) => !spans(one)).flatMap((one) => one.days));
+  const anyClass = mentions.some((mention) => isEvery(mention) || spans(mention));
   const noted = new Set(
-    week === null
-      ? []
-      : entries
-          .filter(
-            (entry) =>
-              entry.meeting.date !== null &&
-              mentionedDates.has(entry.meeting.date) &&
-              mentions.some((mention) => mentionMatches(mention, entry)),
-          )
-          .map((entry) => entry.key),
+    entries
+      .filter(
+        (entry) =>
+          (anyClass || (entry.meeting.date !== null && mentionedDates.has(entry.meeting.date))) &&
+          mentions.some((mention) => mentionMatches(mention, entry)),
+      )
+      .map((entry) => entry.key),
   );
 
   // Over an empty grid: no timetables yet, or a week without classes and
@@ -734,7 +769,7 @@ export default function App() {
               selectedDay={day}
               onSelectDay={pickDay}
               noted={noted}
-              flash={blockFlash}
+              flash={flashed}
               // Swipes change the week where a finger may be the pointer:
               // phones and compact screens, never wide ones (DESIGN.md,
               // "Elements by step"); the buttons stay.
