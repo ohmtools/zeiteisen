@@ -42,15 +42,21 @@ const MENTION = /@\[(?:(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) )?([^\]\n]+)\]/g;
 
 const KINDS = new Set<string>(Object.values(Kind));
 
+export function isKind(value: string): value is Kind {
+  return KINDS.has(value);
+}
+
 // A link's label back in its parts, read from the end (a name may hold
-// spaces): a group like "2.1", the kinds ("SU,Ue"), the name. `null` when it
-// reads as none.
-export function labelParts(label: string): { name: string; kinds: string; group: string } | null {
+// spaces): a group like "2.1", the kinds ("SU,Ue"), the name; `null` for a
+// part not there. Without kinds the name is one word, so `@[…]` around
+// words stays text. `null` when it reads as none.
+export type LabelParts = { name: string; kinds: string | null; group: string | null };
+
+export function labelParts(label: string): LabelParts | null {
   const words = label.trim().split(/ +/);
-  const group = words.length > 2 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : "";
-  const kinds = words.pop();
-  if (!kinds || words.length === 0 || !kinds.split(",").every((kind) => KINDS.has(kind)))
-    return null;
+  const group = words.length > 1 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : null;
+  const kinds = words.length > 1 && words.at(-1)!.split(",").every(isKind) ? words.pop()! : null;
+  if (words.length === 0 || words[0] === "" || (kinds === null && words.length > 1)) return null;
   return { name: words.join(" "), kinds, group };
 }
 
@@ -107,8 +113,9 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
   let last = 0;
   for (const match of text.matchAll(MENTION)) {
     const [token, date, time, label] = match;
-    // Without a date only a class's label makes a link: `@[…]` typed
-    // around anything else stays text.
+    // Without a date only a label makes a link (a whole one, or hand-typed
+    // a part: `@[MA3]`, `@[MA3 Ue]`, `@[MA3 2.1]`): `@[…]` typed around
+    // anything else stays text.
     if (date === undefined && labelParts(label) === null) continue;
     const at = match.index;
     if (at > last) pieces.push(...namedLinkPieces(text.slice(last, at), start + last));

@@ -38,6 +38,7 @@ import { dayStamp, downloadText } from "@/lib/download";
 import { kindClass } from "@/lib/kinds";
 import {
   isPast,
+  labelParts,
   mentionResolver,
   mentionsIn,
   mentionLabel,
@@ -51,6 +52,7 @@ import {
   insertInline,
   insertLine,
   insertLink,
+  isKind,
   linkHref,
   notesFromFile,
   notesLines,
@@ -785,6 +787,10 @@ function MentionChip({
   };
   if (status.kind === "ok") {
     const { entry } = status;
+    // A link to every Termin shows its label as written (it may name only a
+    // part: `@[MA3]`), coloured by the kind it names, neutral without one.
+    const parts = mention.date === null ? labelParts(mention.label) : null;
+    const kinds = parts ? (parts.kinds?.split(",").filter(isKind) ?? []) : entry.subject.kind;
     return (
       <button
         type="button"
@@ -795,12 +801,13 @@ function MentionChip({
         className={cn(
           CHIP,
           "cursor-pointer text-foreground hover:brightness-[0.97] dark:hover:brightness-125",
-          kindClass(entry.subject.kind),
+          kinds.length > 0 ? kindClass(kinds) : "border-border bg-secondary",
           past && STRUCK,
         )}
       >
-        <b className="font-semibold">{entry.subject.name}</b>
-        <span>{entry.subject.kind.join(", ")}</span>
+        <b className="font-semibold">{parts?.name ?? entry.subject.name}</b>
+        {kinds.length > 0 && <span>{kinds.join(", ")}</span>}
+        {parts?.group && <span>{parts.group}</span>}
         <ChipDate mention={mention} />
       </button>
     );

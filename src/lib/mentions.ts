@@ -14,7 +14,13 @@ import {
 import { enabledSubjects, type Timetable } from "@/lib/primitives/timetable";
 import { DAYS, dayOf, eventsForWeek, isoDay, isoWeek } from "@/lib/primitives/week";
 import { weekEntries, type Entry } from "@/lib/layout";
-import { labelParts, notesLines, type NotesLine, type NotesPiece } from "@/lib/notes";
+import {
+  labelParts,
+  notesLines,
+  type LabelParts,
+  type NotesLine,
+  type NotesPiece,
+} from "@/lib/notes";
 
 // Links from the notes to a Termin: `@[2026-10-26 09:45 MA3 Ue 2.1]`, the
 // date, the start time and the class (name, kinds, group) in words; or to
@@ -67,28 +73,55 @@ export function classToken(subject: Subject): string {
 }
 
 // Whether the link points at this block: date, start, name, kinds, group; a
-// link to every Termin of a class at each of its blocks, the general view's
-// too.
+// link to every Termin at each block its label fits, the general view's too.
 export function mentionMatches(
   mention: MentionTarget,
   entry: Pick<Entry, "subject" | "meeting">,
 ): boolean {
   const parts = labelParts(mention.label);
+  if (parts === null) return false;
+  if (mention.date === null) return fits(parts, entry.subject);
   return (
-    parts !== null &&
-    (mention.date === null ||
-      (entry.meeting.date === mention.date &&
-        formatTime(entry.meeting.startTime) === mention.time)) &&
+    entry.meeting.date === mention.date &&
+    formatTime(entry.meeting.startTime) === mention.time &&
     sameClass(parts, entry.subject)
   );
 }
 
-function sameClass(parts: { name: string; kinds: string; group: string }, subject: Subject) {
+// A link to one Termin: the very class, no group being one too.
+function sameClass(parts: LabelParts, subject: Subject) {
   return (
     labelName(subject.name) === parts.name &&
     kindLabel(subject.kind) === parts.kinds &&
-    (subject.group ? groupName(subject.group) : "") === parts.group
+    (subject.group ? groupName(subject.group) : "") === (parts.group ?? "")
   );
+}
+
+// A link to every Termin: the parts its label names, the others any. A
+// whole label (the picker's) names the class, a missing group left open:
+// `@[MA3]` every MA3, `@[MA3 Ue]` its exercises, `@[MA3 2.1]` its group 2.1
+// of every kind (user request: typed by hand only, nowhere offered or
+// explained in the app).
+function fits(parts: LabelParts, subject: Subject) {
+  return (
+    labelName(subject.name) === parts.name &&
+    (parts.kinds === null || kindLabel(subject.kind) === parts.kinds) &&
+    (parts.group === null ||
+      (subject.group !== undefined && groupName(subject.group) === parts.group))
+  );
+}
+
+// A label naming the same parts as `parts` for `subject`: where a link to
+// every Termin goes when its class changes.
+function labelLike(parts: LabelParts, subject: Subject): string {
+  const shaped = [
+    labelName(subject.name),
+    parts.kinds !== null ? kindLabel(subject.kind) : null,
+    parts.group !== null && subject.group ? groupName(subject.group) : null,
+  ]
+    .filter((part) => part !== null)
+    .join(" ");
+  return labelParts(shaped) ? shaped : mentionLabel(subject);
 }
 
 export type Mention = Extract<NotesPiece, { kind: "mention" }> & {
@@ -300,7 +333,7 @@ export function followMentions(
       if (editedBefore && editedAfter && was && !classIn(editedAfter, mention.label)) {
         const successor = followedClass(was, editedAfter);
         if (successor) {
-          replace(mention, classToken(successor));
+          replace(mention, `@[${labelLike(labelParts(mention.label)!, successor)}]`);
           continue;
         }
       }
@@ -330,7 +363,7 @@ function classIn(
   const parts = labelParts(label);
   if (!profile || !parts) return null;
   for (const timetable of profile.timetables) {
-    const index = timetable.subjects.toSubjects().findIndex((subject) => sameClass(parts, subject));
+    const index = timetable.subjects.toSubjects().findIndex((subject) => fits(parts, subject));
     if (index !== -1) return { timetable, index };
   }
   return null;

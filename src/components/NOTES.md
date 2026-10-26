@@ -307,7 +307,19 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   grid's classes of that name. It follows an edit of its class like a dated
   link (new label), a change of time or day leaves it as it is. Plain text,
   the stored shape stays a string: no migration (`@[…]` around anything
-  but a class's label stays text).
+  but a label stays text).
+- **Hidden: links to part of a label** (user request, 2026-10-26: typed by
+  hand only; NOT in the UI, no hint, placeholder, help text or picker row
+  for it, keep it that way). A label without date names what it gives,
+  the rest is open: `@[MA3]` every MA3, `@[MA3 Ue]` every MA3 exercise,
+  `@[MA3 2.1]` every MA3 class of group 2.1; the picker's whole labels
+  likewise leave a missing group open (`@[MA3 SU]` takes grouped SU too).
+  Kinds compare as a whole ("Ue" is not "SU,Ue"). Without kinds the name
+  is one word, so words in brackets stay text. The chip shows the label as
+  written, in the colour of the kind it names, neutral without one; a
+  press shows the next Termin of any class it fits. Followed on an edit
+  only when no class fits any more, in the same shape (`@[MA3 Pr]` ->
+  `@[MA4 Pr]`). Dated links stay exact.
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the

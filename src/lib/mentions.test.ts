@@ -6,6 +6,7 @@ import {
   followMentions,
   labelParts,
   mentionLabel,
+  mentionMatches,
   mentionResolver,
   mentionsOfText,
   mentionToken,
@@ -58,9 +59,12 @@ describe("labels", () => {
       kinds: "SU,Ue",
       group: "2.1",
     });
-    expect(labelParts("PH2 SU")).toEqual({ name: "PH2", kinds: "SU", group: "" });
-    expect(labelParts("PH2")).toBeNull();
+    expect(labelParts("PH2 SU")).toEqual({ name: "PH2", kinds: "SU", group: null });
+    expect(labelParts("PH2")).toEqual({ name: "PH2", kinds: null, group: null });
+    expect(labelParts("MA3 2.1")).toEqual({ name: "MA3", kinds: null, group: "2.1" });
+    // Without kinds one word only: words in brackets are no label.
     expect(labelParts("PH2 Lecture")).toBeNull();
+    expect(labelParts("2.1")).toEqual({ name: "2.1", kinds: null, group: null });
   });
 
   it("keep brackets and line ends out of a name", () => {
@@ -127,7 +131,7 @@ describe("links to every Termin of a class", () => {
   it("read as a link without date and time, only for a class's label", () => {
     const [mention] = mentionsOfText(EVERY);
     expect(mention).toMatchObject({ date: null, time: null, label: "MA3 Ue 2.1" });
-    expect(mentionsOfText("see @[the slides] and @[MA3]")).toEqual([]);
+    expect(mentionsOfText("see @[the slides] and @[]")).toEqual([]);
   });
 
   it("stand for the class's next Termin, today's included", () => {
@@ -182,6 +186,62 @@ describe("links to every Termin of a class", () => {
     });
     const removed = [profile("Main", [withSubjects(TIMETABLES[0].subjects.withRemoved(0))])];
     expect(followMentions(EVERY, PROFILES, removed, DATES, null)).toMatchObject({ lost: 1 });
+  });
+});
+
+describe("hand-typed links to part of a label", () => {
+  const MA3_SU = subject("MA3", { kind: ["SU"] });
+  const MA3_UE_2 = subject("MA3", {
+    kind: ["Ue"],
+    group: { category: 2, index: 2 },
+    repeat: weekly("tuesday"),
+  });
+  const MA3_PR = subject("MA3", {
+    kind: ["Pr"],
+    group: { category: 2, index: 1 },
+    repeat: weekly("thursday"),
+  });
+  const ALL = [MA3, MA3_SU, MA3_UE_2, MA3_PR, PH2];
+  const ON = [profile("Main", [timetable("BEI3", ALL)])];
+  const named = (text: string) => {
+    const [mention] = mentionsOfText(text);
+    return ALL.filter((one) =>
+      mentionMatches(mention, { subject: one, meeting: { date: null } } as never),
+    ).map(mentionLabel);
+  };
+
+  it("point at every class whose label has the parts given", () => {
+    expect(named("@[MA3]")).toEqual(["MA3 Ue 2.1", "MA3 SU", "MA3 Ue 2.2", "MA3 Pr 2.1"]);
+    expect(named("@[MA3 Ue]")).toEqual(["MA3 Ue 2.1", "MA3 Ue 2.2"]);
+    expect(named("@[MA3 2.1]")).toEqual(["MA3 Ue 2.1", "MA3 Pr 2.1"]);
+    expect(named("@[MA3 Ue 2.1]")).toEqual(["MA3 Ue 2.1"]);
+    expect(named("@[MA3 SU]")).toEqual(["MA3 SU"]);
+  });
+
+  it("stand for the next Termin of any of them", () => {
+    const [mention] = mentionsOfText("@[MA3 2.1]");
+    // Thursday's lab comes before next Monday's exercise.
+    expect(mentionResolver(ON, "Main", DATES, new Date(2026, 9, 27)).status(mention)).toMatchObject(
+      { kind: "ok", entry: { meeting: { date: "2026-10-29" } } },
+    );
+  });
+
+  it("keep their shape when following a renamed class", () => {
+    const renamed = [
+      profile("Main", [
+        timetable(
+          "BEI3",
+          ALL.map((one) => (one === MA3_PR ? { ...one, name: "MA4" } : one)),
+        ),
+      ]),
+    ];
+    const before = [profile("Main", [timetable("BEI3", ALL)])];
+    expect(followMentions("@[MA3 Pr]", before, renamed, DATES, "Main").text).toBe("@[MA4 Pr]");
+    // Others still fit: nothing to follow.
+    expect(followMentions("@[MA3]", before, renamed, DATES, "Main")).toMatchObject({
+      moved: 0,
+      lost: 0,
+    });
   });
 });
 
