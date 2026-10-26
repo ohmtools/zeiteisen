@@ -112,7 +112,7 @@ describe("headings and links to a Termin", () => {
 
   it("leaves anything else in brackets as text", () => {
     const [line] = notesLines(
-      "@[2026-10-26 08:00] @[26.10. 08:00 x] @[2026-10-26 x] @[2026-10-26 8:00 x]",
+      "@[2026-10-26 08:00] @[26.10. 08:00 x] @[2026-10-26 x] @[08:00 x] @[x 2026-10-26 2026-10-27+]",
     );
     expect(line.pieces.map((piece) => piece.kind)).toEqual(["text"]);
   });

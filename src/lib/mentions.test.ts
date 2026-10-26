@@ -265,6 +265,49 @@ describe("hand-typed links to part of a label", () => {
   });
 });
 
+describe("hand-typed links in any order", () => {
+  const fields = (text: string) => {
+    const [mention] = mentionsOfText(text);
+    return (
+      mention && {
+        date: mention.date,
+        time: mention.time,
+        bound: mention.bound,
+        parts: labelParts(mention.label),
+      }
+    );
+  };
+
+  it("read their parts wherever they stand", () => {
+    const usual = fields("@[2026-10-26 08:00 MA3 Ue 2.1]");
+    expect(fields("@[2.1 Ue 08:00 MA3 2026-10-26]")).toEqual(usual);
+    expect(fields("@[ue ma3 8:00 2.1 2026-10-26]")).toMatchObject({
+      date: "2026-10-26",
+      time: "08:00",
+      parts: { name: "ma3", kinds: ["Ue"], group: "2.1" },
+    });
+    expect(fields("@[Ue MA3 2026-11-05+]")).toMatchObject({
+      date: "2026-11-05",
+      bound: "+",
+      parts: { name: "MA3", kinds: ["Ue"], group: null },
+    });
+    expect(fields("@[2.1 MA3]")).toMatchObject({
+      parts: { name: "MA3", kinds: null, group: "2.1" },
+    });
+    // Kinds in two words add up.
+    expect(labelParts("SU MA3 Ue")).toEqual({ name: "MA3", kinds: ["SU", "Ue"], group: null });
+  });
+
+  it("match as the usual order does", () => {
+    const [one] = mentionsOfText("@[2.1 ue 2026-10-26 08:00 MA3]");
+    expect(mentionResolver(PROFILES, "Main", DATES, TODAY).status(one).kind).toBe("ok");
+  });
+
+  it("keep a name of kind codes read from the end", () => {
+    expect(labelParts("S SU")).toEqual({ name: "S", kinds: ["SU"], group: null });
+  });
+});
+
 describe("hand-typed links from or up to a date", () => {
   const dates = (text: string, today = TODAY) => {
     const [mention] = mentionsOfText(text);

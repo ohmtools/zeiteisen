@@ -333,6 +333,15 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   the span (its last when all are past); its blocks carry the notes' mark
   in the week view only (the general view has no dates). Followed like a
   link to every Termin, keeping date, sign and time.
+- **Hidden: any order** (user request, 2026-10-26, same rule). The words in
+  a link's brackets are read by their shape, wherever they stand
+  (`mentionFields`, `labelParts`): `YYYY-MM-DD` with an optional `+`/`-`
+  the date, `9:45` / `09:45` the start, `2.1` the group, kind codes (any
+  case, `SU,Ue` or two words) the kinds, the other words the name in their
+  order (`@[Ue 2026-11-05+ ma3]`). One date, time and group at most. A name
+  that is all kind codes ("S SU") is read from the end as the picker
+  writes it; a name word shaped like a kind or group reads as one. A link
+  followed after an edit is written back in the picker's order.
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the

@@ -18,6 +18,7 @@ import {
   labelParts,
   notesLines,
   type LabelParts,
+  type MentionFields,
   type NotesLine,
   type NotesPiece,
 } from "@/lib/notes";
@@ -34,11 +35,7 @@ import {
 // What a link points at: one Termin; with `date` null every Termin of the
 // class; with a `bound` every Termin fitting the label from `date` (and
 // `time`, if given) on ("+") or up to it ("-"), typed by hand only.
-export type MentionTarget = { label: string } & (
-  | { date: string; time: string; bound: null }
-  | { date: null; time: null; bound: null }
-  | { date: string; time: string | null; bound: "+" | "-" }
-);
+export type MentionTarget = MentionFields;
 
 export { labelParts };
 
@@ -118,6 +115,12 @@ export function mentionMatches(
 // Names compare in any case ("ma3" is "MA3"), like the kinds.
 function sameName(subject: Subject, parts: LabelParts): boolean {
   return labelName(subject.name).toLowerCase() === parts.name.toLowerCase();
+}
+
+// Whether a label (in any order and case) names exactly this class.
+export function namesClass(label: string, subject: Subject): boolean {
+  const parts = labelParts(label);
+  return parts !== null && sameClass(parts, subject);
 }
 
 // A link to one Termin: the very class (its kinds in any order), no group

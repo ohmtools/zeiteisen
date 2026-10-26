@@ -40,6 +40,7 @@ import {
   isPast,
   labelParts,
   mentionResolver,
+  namesClass,
   mentionsIn,
   mentionLabel,
   isOne,
@@ -866,9 +867,7 @@ function MentionChip({
     );
   }
   // The same class that day at another time says what changed.
-  const moved = status.candidates.find(
-    (entry) => mentionLabel(entry.subject).toLowerCase() === mention.label.toLowerCase(),
-  );
+  const moved = status.candidates.find((entry) => namesClass(mention.label, entry.subject));
   return (
     <NoticeChip
       mention={mention}

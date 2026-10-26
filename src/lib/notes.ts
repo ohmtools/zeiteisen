@@ -17,11 +17,15 @@ export type NotesPiece =
   // `@[2026-10-26+ MA3]` / `@[2026-10-26- MA3]`, a sign after the date
   // (hand-typed only): every Termin fitting the label from that date on /
   // up to it, a time after the sign bounding that day too.
-  | ({ kind: "mention"; start: number; text: string; label: string } & (
-      | { date: string; time: string; bound: null }
-      | { date: null; time: null; bound: null }
-      | { date: string; time: string | null; bound: "+" | "-" }
-    ));
+  // The parts in any order (`@[Ue 2026-10-26+ ma3]`, hand-typed); `label`
+  // is the words that are neither date nor time, as written.
+  | ({ kind: "mention"; start: number; text: string } & MentionFields);
+
+export type MentionFields = { label: string } & (
+  | { date: string; time: string; bound: null }
+  | { date: null; time: null; bound: null }
+  | { date: string; time: string | null; bound: "+" | "-" }
+);
 
 export type NotesLine = {
   start: number;
@@ -42,8 +46,12 @@ const HEADING = /^#{1,3} /;
 
 // A link to a Termin: date, start time and label, brackets around; without
 // date and time a link to every Termin of the class; a sign after the date:
-// every Termin from / up to it, the time optional.
-const MENTION = /@\[(?:(\d{4}-\d{2}-\d{2})([+-])?(?: (\d{2}:\d{2}))? )?([^\]\n]+)\]/g;
+// every Termin from / up to it, the time optional. Read word by word
+// (`mentionFields`), so in any order.
+const MENTION = /@\[([^\]\n]+)\]/g;
+const DATE = /^(\d{4}-\d{2}-\d{2})([+-])?$/;
+const TIME = /^(\d{1,2}):(\d{2})$/;
+const GROUP = /^\d+\.\d+$/;
 
 // The kinds by their code in any case ("ue", "UE" are `Ue`).
 const KINDS = new Map<string, Kind>(Object.values(Kind).map((kind) => [kind.toLowerCase(), kind]));
@@ -54,19 +62,72 @@ function kindsOf(word: string): Kind[] | null {
   return kinds.every((kind) => kind !== undefined) ? kinds : null;
 }
 
-// A link's label back in its parts, read from the end (a name may hold
-// spaces): a group like "2.1", the kinds ("SU,Ue", any case), the name;
-// `null` for a part not there. Without kinds the name is one word, so
-// `@[…]` around words stays text. `null` when it reads as none.
+// A link's label in its parts, the words in any order (user request): a
+// group like "2.1", kinds ("SU,Ue", any case; several such words add up),
+// the other words the name, in their order. `null` for a part not there.
+// Without kinds the name is one word, so `@[…]` around words stays text.
+// A name that is all kind codes ("S SU") reads from the end, the way the
+// picker writes it. `null` when it reads as none.
 export type LabelParts = { name: string; kinds: Kind[] | null; group: string | null };
 
 export function labelParts(label: string): LabelParts | null {
-  const words = label.trim().split(/ +/);
-  const group = words.length > 1 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : null;
+  let kinds: Kind[] | null = null;
+  let group: string | null = null;
+  const name: string[] = [];
+  for (const word of label.trim().split(/\s+/)) {
+    const named = kindsOf(word);
+    if (GROUP.test(word)) {
+      if (group !== null) return null;
+      group = word;
+    } else if (named) {
+      kinds = [...(kinds ?? []), ...named.filter((kind) => !kinds?.includes(kind))];
+    } else if (word !== "") {
+      name.push(word);
+    }
+  }
+  if (name.length === 0) return fromEnd(label);
+  if (kinds === null && name.length > 1) return null;
+  return { name: name.join(" "), kinds, group };
+}
+
+// The picker's order, name kinds group, read from the end.
+function fromEnd(label: string): LabelParts | null {
+  const words = label.trim().split(/\s+/);
+  const group = words.length > 1 && GROUP.test(words.at(-1)!) ? words.pop()! : null;
   const kinds = words.length > 1 ? kindsOf(words.at(-1)!) : null;
   if (kinds) words.pop();
   if (words.length === 0 || words[0] === "" || (kinds === null && words.length > 1)) return null;
   return { name: words.join(" "), kinds, group };
+}
+
+// What a link's brackets hold, word by word in any order: a date (a sign
+// right after it: from / up to it), a start time ("9:45" too), the rest the
+// label. A date needs a time or a sign, a time a date; the label has to
+// read as one. `null`: no link, the text stays as typed.
+export function mentionFields(content: string): MentionFields | null {
+  let date: string | null = null;
+  let bound: "+" | "-" | null = null;
+  let time: string | null = null;
+  const rest: string[] = [];
+  for (const word of content.trim().split(/\s+/)) {
+    const day = DATE.exec(word);
+    const clock = TIME.exec(word);
+    if (day) {
+      if (date !== null) return null;
+      date = day[1];
+      bound = day[2] === "+" || day[2] === "-" ? day[2] : null;
+    } else if (clock) {
+      if (time !== null) return null;
+      time = `${clock[1].padStart(2, "0")}:${clock[2]}`;
+    } else {
+      rest.push(word);
+    }
+  }
+  const label = rest.join(" ");
+  if (labelParts(label) === null) return null;
+  if (date === null) return time === null ? { label, date, time, bound: null } : null;
+  if (bound !== null) return { label, date, time, bound };
+  return time === null ? null : { label, date, time, bound };
 }
 
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)
@@ -121,24 +182,14 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
   const pieces: NotesPiece[] = [];
   let last = 0;
   for (const match of text.matchAll(MENTION)) {
-    const [token, date, sign, time, label] = match;
-    const bound = sign === "+" || sign === "-" ? sign : null;
-    // A date alone, neither time nor sign, names nothing. Without a date or
-    // with a sign only a label makes a link (a whole one, or hand-typed a
-    // part: `@[MA3]`, `@[MA3 Ue]`, `@[MA3 2.1]`): `@[…]` typed around
-    // anything else stays text.
-    if (date !== undefined && bound === null && time === undefined) continue;
-    if ((date === undefined || bound !== null) && labelParts(label) === null) continue;
+    // Only a label makes a link (a whole one, or hand-typed a part:
+    // `@[MA3]`, `@[MA3 Ue]`, `@[MA3 2.1]`): `@[…]` typed around anything
+    // else stays text.
+    const fields = mentionFields(match[1]);
+    if (!fields) continue;
     const at = match.index;
     if (at > last) pieces.push(...namedLinkPieces(text.slice(last, at), start + last));
-    const piece = { kind: "mention" as const, start: start + at, text: token, label: label.trim() };
-    pieces.push(
-      date === undefined
-        ? { ...piece, date: null, time: null, bound: null }
-        : bound !== null
-          ? { ...piece, date, time: time ?? null, bound }
-          : { ...piece, date, time, bound },
-    );
+    pieces.push({ kind: "mention", start: start + at, text: match[0], ...fields });
     last = at + match[0].length;
   }
   if (last < text.length) pieces.push(...namedLinkPieces(text.slice(last), start + last));

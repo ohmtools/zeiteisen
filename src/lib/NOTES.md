@@ -46,7 +46,8 @@ re-implements primitive logic.
   trailing punctuation and unbalanced brackets cut off), `- [ ]` tasks, `# `
   headings and links to a Termin (`@[date time label]`, or `@[label]` for
   every Termin of a class, or hand-typed of part of a label, `@[date+ …]` /
-  `@[date- …]` from / up to a date, both hidden in the UI:
+  `@[date- …]` from / up to a date, the words in any order
+  (`mentionFields`), all hidden in the UI:
   `src/components/NOTES.md`; never for words), every piece with
   its offset in the text; `toggleTask` changes the one box character;
   `insertLine` / `insertInline` / `opensMention` are the insert bar's and
