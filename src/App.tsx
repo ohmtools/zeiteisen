@@ -477,12 +477,10 @@ export default function App() {
   // is not on screen, the week view goes there first. In the general view a
   // block of the class stands for its Termine.
   const jumpToMention = (mention: MentionTarget) => {
-    const status = mentionResolver(
-      profiles.profiles,
-      profiles.activeName,
-      dates.dates,
-      new Date(),
-    ).status(mention);
+    // The notes' clock: the Termin its chip stands for.
+    const status = mentionResolver(profiles.profiles, profiles.activeName, dates.dates, now).status(
+      mention,
+    );
     if (status.kind !== "ok") return;
     const next = status.entry;
     const shown =
@@ -494,8 +492,8 @@ export default function App() {
     if (!shown) {
       const date = next.meeting.date!;
       setView("week");
-      pickWeek(startOfISOWeek(parseISO(date)));
-      pickDay(dayOfDate(date));
+      // The day with the week: `pickDay` would bind it to the week picked so far.
+      pickWeek(startOfISOWeek(parseISO(date)), dayOfDate(date));
     }
     setBlockFlash({ mention, nonce: ++nonce.current });
     // The panel covers the grid on phones and compact screens.
