@@ -115,24 +115,33 @@ export function mentionMatches(
   );
 }
 
-// A link to one Termin: the very class, no group being one too.
+// Names compare in any case ("ma3" is "MA3"), like the kinds.
+function sameName(subject: Subject, parts: LabelParts): boolean {
+  return labelName(subject.name).toLowerCase() === parts.name.toLowerCase();
+}
+
+// A link to one Termin: the very class (its kinds in any order), no group
+// being one too.
 function sameClass(parts: LabelParts, subject: Subject) {
   return (
-    labelName(subject.name) === parts.name &&
-    kindLabel(subject.kind) === parts.kinds &&
+    sameName(subject, parts) &&
+    parts.kinds !== null &&
+    parts.kinds.length === subject.kind.length &&
+    parts.kinds.every((kind) => subject.kind.includes(kind)) &&
     (subject.group ? groupName(subject.group) : "") === (parts.group ?? "")
   );
 }
 
-// A link to every Termin: the parts its label names, the others any. A
-// whole label (the picker's) names the class, a missing group left open:
-// `@[MA3]` every MA3, `@[MA3 Ue]` its exercises, `@[MA3 2.1]` its group 2.1
-// of every kind (user request: typed by hand only, nowhere offered or
-// explained in the app).
+// A link to every Termin: the parts its label names, the others any, in any
+// case. Kinds named are among the class's (user decision: `@[MA3 Ue]` takes
+// "MA3 SU,Ue" too), a missing group is left open: `@[MA3]` every MA3,
+// `@[MA3 Ue]` everything of MA3 with Ue, `@[MA3 2.1]` its group 2.1 of every
+// kind (user request: typed by hand only, nowhere offered or explained in
+// the app). The picker's whole labels follow the same rule.
 function fits(parts: LabelParts, subject: Subject) {
   return (
-    labelName(subject.name) === parts.name &&
-    (parts.kinds === null || kindLabel(subject.kind) === parts.kinds) &&
+    sameName(subject, parts) &&
+    (parts.kinds === null || parts.kinds.every((kind) => subject.kind.includes(kind))) &&
     (parts.group === null ||
       (subject.group !== undefined && groupName(subject.group) === parts.group))
   );
@@ -143,7 +152,7 @@ function fits(parts: LabelParts, subject: Subject) {
 function labelLike(parts: LabelParts, subject: Subject): string {
   const shaped = [
     labelName(subject.name),
-    parts.kinds !== null ? kindLabel(subject.kind) : null,
+    parts.kinds !== null ? kindLabel(parts.kinds) : null,
     parts.group !== null && subject.group ? groupName(subject.group) : null,
   ]
     .filter((part) => part !== null)
@@ -291,7 +300,7 @@ export function mentionResolver(
         const named = new Map<string, Entry[]>();
         if (active && parts) {
           for (const entry of classes(active, false)) {
-            if (labelName(entry.subject.name) !== parts.name) continue;
+            if (!sameName(entry.subject, parts)) continue;
             const label = mentionLabel(entry.subject);
             named.set(label, [...(named.get(label) ?? []), entry]);
           }
@@ -302,7 +311,7 @@ export function mentionResolver(
       const candidates =
         active && parts
           ? day(active, false, mention.date)
-              .filter((entry) => labelName(entry.subject.name) === parts.name)
+              .filter((entry) => sameName(entry.subject, parts))
               .sort(
                 (a, b) => Number(sameClass(parts, b.subject)) - Number(sameClass(parts, a.subject)),
               )

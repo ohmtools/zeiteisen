@@ -45,22 +45,26 @@ const HEADING = /^#{1,3} /;
 // every Termin from / up to it, the time optional.
 const MENTION = /@\[(?:(\d{4}-\d{2}-\d{2})([+-])?(?: (\d{2}:\d{2}))? )?([^\]\n]+)\]/g;
 
-const KINDS = new Set<string>(Object.values(Kind));
+// The kinds by their code in any case ("ue", "UE" are `Ue`).
+const KINDS = new Map<string, Kind>(Object.values(Kind).map((kind) => [kind.toLowerCase(), kind]));
 
-export function isKind(value: string): value is Kind {
-  return KINDS.has(value);
+// "SU,Ue" in any case as kinds; `null` when a part is none.
+function kindsOf(word: string): Kind[] | null {
+  const kinds = word.split(",").map((one) => KINDS.get(one.toLowerCase()));
+  return kinds.every((kind) => kind !== undefined) ? kinds : null;
 }
 
 // A link's label back in its parts, read from the end (a name may hold
-// spaces): a group like "2.1", the kinds ("SU,Ue"), the name; `null` for a
-// part not there. Without kinds the name is one word, so `@[…]` around
-// words stays text. `null` when it reads as none.
-export type LabelParts = { name: string; kinds: string | null; group: string | null };
+// spaces): a group like "2.1", the kinds ("SU,Ue", any case), the name;
+// `null` for a part not there. Without kinds the name is one word, so
+// `@[…]` around words stays text. `null` when it reads as none.
+export type LabelParts = { name: string; kinds: Kind[] | null; group: string | null };
 
 export function labelParts(label: string): LabelParts | null {
   const words = label.trim().split(/ +/);
   const group = words.length > 1 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : null;
-  const kinds = words.length > 1 && words.at(-1)!.split(",").every(isKind) ? words.pop()! : null;
+  const kinds = words.length > 1 ? kindsOf(words.at(-1)!) : null;
+  if (kinds) words.pop();
   if (words.length === 0 || words[0] === "" || (kinds === null && words.length > 1)) return null;
   return { name: words.join(" "), kinds, group };
 }

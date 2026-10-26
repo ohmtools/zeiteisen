@@ -56,10 +56,12 @@ describe("labels", () => {
     expect(mentionLabel(MA3)).toBe("MA3 Ue 2.1");
     expect(labelParts("Mathe 3 SU,Ue 2.1")).toEqual({
       name: "Mathe 3",
-      kinds: "SU,Ue",
+      kinds: ["SU", "Ue"],
       group: "2.1",
     });
-    expect(labelParts("PH2 SU")).toEqual({ name: "PH2", kinds: "SU", group: null });
+    expect(labelParts("PH2 SU")).toEqual({ name: "PH2", kinds: ["SU"], group: null });
+    // Kinds in any case.
+    expect(labelParts("ph2 su,UE")).toEqual({ name: "ph2", kinds: ["SU", "Ue"], group: null });
     expect(labelParts("PH2")).toEqual({ name: "PH2", kinds: null, group: null });
     expect(labelParts("MA3 2.1")).toEqual({ name: "MA3", kinds: null, group: "2.1" });
     // Without kinds one word only: words in brackets are no label.
@@ -201,7 +203,8 @@ describe("hand-typed links to part of a label", () => {
     group: { category: 2, index: 1 },
     repeat: weekly("thursday"),
   });
-  const ALL = [MA3, MA3_SU, MA3_UE_2, MA3_PR, PH2];
+  const MA3_SU_UE = subject("MA3", { kind: ["SU", "Ue"], repeat: weekly("friday") });
+  const ALL = [MA3, MA3_SU, MA3_UE_2, MA3_PR, MA3_SU_UE, PH2];
   const ON = [profile("Main", [timetable("BEI3", ALL)])];
   const named = (text: string) => {
     const [mention] = mentionsOfText(text);
@@ -211,11 +214,28 @@ describe("hand-typed links to part of a label", () => {
   };
 
   it("point at every class whose label has the parts given", () => {
-    expect(named("@[MA3]")).toEqual(["MA3 Ue 2.1", "MA3 SU", "MA3 Ue 2.2", "MA3 Pr 2.1"]);
-    expect(named("@[MA3 Ue]")).toEqual(["MA3 Ue 2.1", "MA3 Ue 2.2"]);
+    expect(named("@[MA3]")).toEqual([
+      "MA3 Ue 2.1",
+      "MA3 SU",
+      "MA3 Ue 2.2",
+      "MA3 Pr 2.1",
+      "MA3 SU,Ue",
+    ]);
     expect(named("@[MA3 2.1]")).toEqual(["MA3 Ue 2.1", "MA3 Pr 2.1"]);
     expect(named("@[MA3 Ue 2.1]")).toEqual(["MA3 Ue 2.1"]);
-    expect(named("@[MA3 SU]")).toEqual(["MA3 SU"]);
+  });
+
+  it("take every class holding the kinds named, among others too", () => {
+    expect(named("@[MA3 Ue]")).toEqual(["MA3 Ue 2.1", "MA3 Ue 2.2", "MA3 SU,Ue"]);
+    expect(named("@[MA3 SU]")).toEqual(["MA3 SU", "MA3 SU,Ue"]);
+    expect(named("@[MA3 Ue,SU]")).toEqual(["MA3 SU,Ue"]);
+  });
+
+  it("read name and kinds in any case", () => {
+    expect(named("@[ma3 ue]")).toEqual(named("@[MA3 Ue]"));
+    expect(named("@[Ma3 2.1]")).toEqual(named("@[MA3 2.1]"));
+    const [one] = mentionsOfText("@[2026-10-26 08:00 ma3 ue 2.1]");
+    expect(mentionResolver(PROFILES, "Main", DATES, TODAY).status(one).kind).toBe("ok");
   });
 
   it("stand for the next Termin of any of them", () => {

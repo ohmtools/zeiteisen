@@ -53,7 +53,6 @@ import {
   insertInline,
   insertLine,
   insertLink,
-  isKind,
   linkHref,
   notesFromFile,
   notesLines,
@@ -792,7 +791,7 @@ function MentionChip({
     // A link to every Termin shows its label as written (it may name only a
     // part: `@[MA3]`), coloured by the kind it names, neutral without one.
     const parts = isOne(mention) ? null : labelParts(mention.label);
-    const kinds = parts ? (parts.kinds?.split(",").filter(isKind) ?? []) : entry.subject.kind;
+    const kinds = parts ? (parts.kinds ?? []) : entry.subject.kind;
     return (
       <button
         type="button"
@@ -867,7 +866,9 @@ function MentionChip({
     );
   }
   // The same class that day at another time says what changed.
-  const moved = status.candidates.find((entry) => mentionLabel(entry.subject) === mention.label);
+  const moved = status.candidates.find(
+    (entry) => mentionLabel(entry.subject).toLowerCase() === mention.label.toLowerCase(),
+  );
   return (
     <NoticeChip
       mention={mention}

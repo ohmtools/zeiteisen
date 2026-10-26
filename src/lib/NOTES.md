@@ -56,7 +56,8 @@ re-implements primitive logic.
   by date, start time, name, kinds and group (`labelParts` reads the label
   from the end: a name may hold spaces); room, professor and end are left
   out, so a room change keeps it; a link to every Termin matches by the
-  parts its label gives (`fits`), any date or those in its span (`inSpan`);
+  parts its label gives (`fits`: kinds named among the class's, any case),
+  any date or those in its span (`inSpan`);
   `isOne` tells a link to one Termin from the others. `mentionResolver` gives a link's status
   (`ok` / `off` / `elsewhere` / `broken` with candidates), one week of a
   profile's grid at a time (`weekEntries`, so days off and the lecture

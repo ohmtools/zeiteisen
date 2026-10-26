@@ -311,15 +311,17 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - **Hidden: links to part of a label** (user request, 2026-10-26: typed by
   hand only; NOT in the UI, no hint, placeholder, help text or picker row
   for it, keep it that way). A label without date names what it gives,
-  the rest is open: `@[MA3]` every MA3, `@[MA3 Ue]` every MA3 exercise,
-  `@[MA3 2.1]` every MA3 class of group 2.1; the picker's whole labels
-  likewise leave a missing group open (`@[MA3 SU]` takes grouped SU too).
-  Kinds compare as a whole ("Ue" is not "SU,Ue"). Without kinds the name
+  the rest is open: `@[MA3]` every MA3, `@[MA3 Ue]` every MA3 with Ue
+  among its kinds ("MA3 SU,Ue" too, user decision), `@[MA3 2.1]` every MA3
+  class of group 2.1; the picker's whole labels likewise (`@[MA3 SU]` takes
+  grouped SU and "SU,Ue" too). Names and kinds in any case (`@[ma3 ue]`,
+  user decision), dated links too. Without kinds the name
   is one word, so words in brackets stay text. The chip shows the label as
   written, in the colour of the kind it names, neutral without one; a
   press shows the next Termin of any class it fits. Followed on an edit
   only when no class fits any more, in the same shape (`@[MA3 Pr]` ->
-  `@[MA4 Pr]`). Dated links stay exact.
+  `@[MA4 Pr]`). Dated links stay exact but for case: the same kinds, in
+  any order, and the same group or none.
 - **Hidden: links from or up to a date** (user request, 2026-10-26, same
   rule: typed by hand only, nowhere in the UI). A sign right after the
   date: `@[2026-11-05+ MA3 Ue]` the Termin on that date and every one
