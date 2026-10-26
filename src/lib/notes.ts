@@ -1,11 +1,13 @@
 // The notes' read view: plain text cut into lines, each line into text,
-// links and links to a Termin, `- [ ]` / `- [x]` lines into tasks, `# `
+// links (bare or `[text](url)`) and links to a Termin, `- [ ]` / `- [x]` lines into tasks, `# `
 // lines into headings. Every piece carries its `start` in the text, so a
 // click on the view puts the caret at the very character in the text area,
 // and ticking a task changes exactly one character.
 
 export type NotesPiece =
   | { kind: "text"; start: number; text: string }
+  // A bare address is its own text; `[text](url)` shows its text alone,
+  // `start` is where that text begins.
   | { kind: "link"; start: number; text: string; href: string }
   // `@[2026-10-26 09:45 MA3 Ue 2.1]`: the Termin on that date at that start
   // time whose name, kinds and group the label spells (`@/lib/mentions`).
@@ -34,6 +36,10 @@ const MENTION = /@\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) ([^\]\n]+)\]/g;
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)
 // stays text.
 const LINK = /\b(?:https?:\/\/|www\.)[^\s<>"]+/gi;
+
+// Markdown's link with its own text: `[text](url)`, the address one level of
+// brackets deep (Wikipedia's "…_(Begriffsklärung)").
+const NAMED_LINK = /\[([^\]\n]+)\]\(((?:https?:\/\/|www\.)(?:[^\s()]|\([^\s()]*\))+)\)/gi;
 
 export function notesLines(text: string): NotesLine[] {
   const lines: NotesLine[] = [];
@@ -73,13 +79,14 @@ export function toggleTask(text: string, at: number): string {
   return text.slice(0, at) + (box === " " ? "x" : " ") + text.slice(at + 1);
 }
 
-// Links to a Termin first, web links in the text between them.
+// Links to a Termin first, links with their own text in the text between
+// them, then bare addresses.
 function inlinePieces(text: string, start: number): NotesPiece[] {
   const pieces: NotesPiece[] = [];
   let last = 0;
   for (const match of text.matchAll(MENTION)) {
     const at = match.index;
-    if (at > last) pieces.push(...linkPieces(text.slice(last, at), start + last));
+    if (at > last) pieces.push(...namedLinkPieces(text.slice(last, at), start + last));
     pieces.push({
       kind: "mention",
       start: start + at,
@@ -88,6 +95,25 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
       time: match[2],
       label: match[3].trim(),
     });
+    last = at + match[0].length;
+  }
+  if (last < text.length) pieces.push(...namedLinkPieces(text.slice(last), start + last));
+  return pieces;
+}
+
+// `[text](url)`: the text alone, at its own offset (the brackets and the
+// address are only in the text area). An address that is no http(s) one
+// stays as typed.
+function namedLinkPieces(text: string, start: number): NotesPiece[] {
+  const pieces: NotesPiece[] = [];
+  let last = 0;
+  for (const match of text.matchAll(NAMED_LINK)) {
+    const href = hrefOf(match[2]);
+    const label = match[1];
+    if (!href || label.trim() === "") continue;
+    const at = match.index;
+    if (at > last) pieces.push(...linkPieces(text.slice(last, at), start + last));
+    pieces.push({ kind: "link", start: start + at + 1, text: label, href });
     last = at + match[0].length;
   }
   if (last < text.length) pieces.push(...linkPieces(text.slice(last), start + last));
@@ -173,6 +199,50 @@ export function insertInline(
   const inserted =
     (before === "" || /[\s(]$/.test(before) ? "" : " ") + token + (/^\s/.test(after) ? "" : " ");
   return { text: before + inserted + after, caret: before.length + inserted.length };
+}
+
+// The insert bar's "Link": `[label](url)` in place of `from`–`to` (the
+// selection, or the caret where they are equal), a bare address without a
+// label. Brackets in the label would end it early, so they turn round;
+// brackets in the address are escaped. A space before it unless a line, a
+// space or a bracket comes first, a space after it unless a space or a
+// sentence's mark follows. The caret goes after it. `null`: no http(s)
+// address (`linkHref`).
+export function insertLink(
+  text: string,
+  from: number,
+  to: number,
+  label: string,
+  url: string,
+): { text: string; caret: number } | null {
+  const href = linkHref(url);
+  if (!href) return null;
+  const name = label.replace(/\s+/g, " ").trim().replace(/\[/g, "(").replace(/\]/g, ")");
+  const address = href.replace(/\(/g, "%28").replace(/\)/g, "%29");
+  const token = name === "" || name === href ? address : `[${name}](${address})`;
+  const before = text.slice(0, from);
+  const after = text.slice(to);
+  const inserted =
+    (before === "" || /[\s(]$/.test(before) ? "" : " ") +
+    token +
+    (/^[\s.,;:!?)\]]/.test(after) ? "" : " ");
+  return { text: before + inserted + after, caret: before.length + inserted.length };
+}
+
+// What was typed into the link's address field as the address it links to:
+// `https://` added where no scheme was typed; `null` for anything but http(s)
+// or without a host.
+export function linkHref(url: string): string | null {
+  const typed = url.trim();
+  if (typed === "" || /\s/.test(typed)) return null;
+  const absolute = /^[a-z][a-z\d+.-]*:/i.test(typed) ? typed : `https://${typed}`;
+  try {
+    const parsed = new URL(absolute);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.hostname.includes(".") || parsed.hostname === "localhost" ? parsed.href : null;
+  } catch {
+    return null;
+  }
 }
 
 // Whether the `@` just typed at `at` starts a link to a Termin: at the

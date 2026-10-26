@@ -141,8 +141,11 @@ function PickerBody({
 
   return (
     <>
+      {/* Not on phones: a drawer opened with the keyboard up filled the
+          screen above its own field (user report); a tap on it brings the
+          keyboard the drawer's way. */}
       <Input
-        autoFocus
+        autoFocus={!narrow}
         enterKeyHint="done"
         aria-label={m.mention_search_label()}
         placeholder={m.mention_search()}

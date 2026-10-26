@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   insertInline,
   insertLine,
+  insertLink,
+  linkHref,
   notesFromFile,
   notesLines,
   opensMention,
@@ -40,6 +42,27 @@ describe("notesLines", () => {
   it("keeps brackets the link opens itself", () => {
     const [piece] = notesLines("https://de.wikipedia.org/wiki/A_(B)")[0].pieces;
     expect(piece.text).toBe("https://de.wikipedia.org/wiki/A_(B)");
+  });
+
+  it("shows a link's own text alone, at its offset", () => {
+    const text =
+      "See [the plan](https://example.org/a?b=1). And [wiki](https://de.wikipedia.org/wiki/A_(B))";
+    const links = notesLines(text)[0].pieces.filter((piece) => piece.kind === "link");
+    expect(links.map((link) => [link.text, link.kind === "link" && link.href])).toEqual([
+      ["the plan", "https://example.org/a?b=1"],
+      ["wiki", "https://de.wikipedia.org/wiki/A_(B)"],
+    ]);
+    expect(rebuilt(text)).toBe("See |the plan|. And |wiki");
+  });
+
+  it("leaves a named link to another scheme, or without text, as typed", () => {
+    const [line] = notesLines("[x](javascript:alert(1)) [ ](https://a.de) [y](www.b.de)");
+    expect(line.pieces.map((piece) => [piece.kind, piece.text])).toEqual([
+      ["text", "[x](javascript:alert(1)) [ ]("],
+      ["link", "https://a.de"],
+      ["text", ") "],
+      ["link", "y"],
+    ]);
   });
 
   it("leaves other schemes as text", () => {
@@ -116,6 +139,41 @@ describe("insertInline", () => {
   it("puts a space before it after a word", () => {
     expect(insertInline("Exam", 4, "@[x]")).toEqual({ text: "Exam @[x] ", caret: 10 });
     expect(insertInline("(", 1, "@[x]")).toEqual({ text: "(@[x] ", caret: 6 });
+  });
+});
+
+describe("insertLink", () => {
+  it("puts a named link at the caret, spaced from the words around it", () => {
+    expect(insertLink("See", 3, 3, "the plan", "example.org")).toEqual({
+      text: "See [the plan](https://example.org/) ",
+      caret: 37,
+    });
+    expect(insertLink("", 0, 0, "", "https://a.de/x")).toEqual({
+      text: "https://a.de/x ",
+      caret: 15,
+    });
+  });
+
+  it("replaces the selection, no space before a sentence's mark", () => {
+    expect(insertLink("See plan.", 4, 8, "plan", "https://a.de")).toEqual({
+      text: "See [plan](https://a.de/).",
+      caret: 25,
+    });
+  });
+
+  it("keeps brackets from ending it early", () => {
+    const { text } = insertLink("", 0, 0, "a [b]", "https://w.org/A_(B)")!;
+    expect(text).toBe("[a (b)](https://w.org/A_%28B%29) ");
+    expect(notesLines(text)[0].pieces[0]).toMatchObject({ kind: "link", text: "a (b)" });
+  });
+
+  it("refuses anything but an http(s) address", () => {
+    expect(insertLink("", 0, 0, "x", "javascript:alert(1)")).toBeNull();
+    expect(linkHref("ftp://a.de")).toBeNull();
+    expect(linkHref("a b.de")).toBeNull();
+    expect(linkHref("nothost")).toBeNull();
+    expect(linkHref(" www.th-nuernberg.de ")).toBe("https://www.th-nuernberg.de/");
+    expect(linkHref("http://localhost:5173/x")).toBe("http://localhost:5173/x");
   });
 });
 

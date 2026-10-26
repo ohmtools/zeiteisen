@@ -79,3 +79,8 @@ goes through primitives `storage.ts`.
 - `useInstallHint` — iOS browser tab (not standalone): one toast, once per
   device (`tt.ioshint.v1`), because Safari deletes script storage after 7
   days without a visit unless the app is on the home screen.
+- `useKeyboardInset` — no state of its own to store: how far the on-screen
+  keyboard covers the page (`visualViewport` against the layout viewport),
+  while asked. The notes' insert bar stands on it on phones
+  (`src/components/NOTES.md`, Notes). Undoes any window scroll on the way:
+  the page is one viewport tall and never scrolls.

@@ -185,8 +185,12 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   on desktop). Plain text in `tt.notes.v1`, never shared (no link, no
   profile file; the backup holds it). At most `MAX_NOTES_LENGTH` characters
   (1,000,000, user decision), a count shows from 90% on.
+- Under the panel's header one muted line: on this device only, never in a
+  link or a profile file. Nothing more (user decision, 2026-10-26: the
+  syntax help was dropped; the insert bar shows what there is).
 - Two faces of the same text (user decision): a read view where http(s) and
-  `www.` links open in a new tab, `- [ ]` / `- [x]` lines (GitHub's task
+  `www.` links open in a new tab, `[text](url)` (Markdown's, user request)
+  shows its text alone as the link, `- [ ]` / `- [x]` lines (GitHub's task
   syntax, `*` too, indented too) are checkboxes that tick the text itself,
   `# ` lines (up to `###`) are headings and links to a Termin are chips
   (`@/lib/notes`, `@/lib/mentions`); the text area while editing, where all
@@ -206,12 +210,33 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   text up with the hint shifted it left only, `w-full` kept its width). No
   underline on either, focused or not (user decision).
 - **Insert bar** (design "Zeiteisen Notizen", 2026-10-25): "Task", "Heading",
-  "Termin" (ghost buttons with labels): on top of the panel from compact on
+  "Link", "Termin" (ghost buttons, 44px, four equal columns with the label
+  under the icon on every step: side by side the German labels overran the
+  340px sidebar and the 380px sheet): on top of the panel from compact on
   (user decision: not at the bottom on desktop), at the bottom on phones
-  within thumb reach, 44px. Task and heading put `- [ ] ` / `# ` on the
-  empty line the caret is on, else on a new line after it (`insertLine`);
-  without a caret at the end. The buttons keep the focus off themselves
-  (`preventDefault` on mousedown), so the text area keeps its caret.
+  within thumb reach, there **right above the keyboard** (user report: the
+  keyboard covered it; `useKeyboardInset` lifts it by what the keyboard
+  covers, the text area gets shorter). Task and heading put `- [ ] ` / `# `
+  on the empty line the caret is on, else on a new line after it
+  (`insertLine`); without a caret at the end. The buttons keep the focus off
+  themselves (`preventDefault` on mousedown), so the text area keeps its
+  caret.
+- **Link with its own text** (user request, 2026-10-26): "Link" opens a
+  dialog (`Popup kind="dialog"`, a drawer on phones) with "Text" (the
+  selection, if any) and "Address" (`https://` added when no scheme is
+  typed; anything but http(s) refused, `linkHref`). "Insert" writes
+  `[text](url)` in place of the selection, or at the caret, spaced like a
+  Termin link (`insertLink`); without text the bare address; without a
+  caret on a line of its own at the end. Brackets in the text turn round,
+  in the address they are escaped, so the link always ends where it should.
+  Plain text, the stored shape stays a string: no migration. Hand-typed
+  addresses may hold one level of brackets (Wikipedia's).
+- **Popups from the notes open without the keyboard on phones** (user
+  report): the text area's keyboard stayed up as the Termin picker took the
+  focus, and the drawer then filled the screen above its own search field.
+  Opening the picker or the link dialog on phones blurs the text area, and
+  neither autofocuses a field there (the drawer's own way on touch); a tap
+  on a field brings the keyboard, the drawer lifted above it.
 - **Links to a Termin** (user request): `@[2026-10-26 09:45 MA3 Ue 2.1]`,
   date, start time and the class in words (user decision, 2026-10-25; was
   date + hash: a hash cannot say what no longer fits). Plain text in
@@ -274,8 +299,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   notes first"). Plain text has no schema, so no zod here.
 - The on-screen keyboard covers the page instead of resizing it
   (`interactive-widget=resizes-visual` in `index.html`, the design's rule:
-  the keyboard never changes the step); the browser keeps the caret in
-  view, and a drawer stands above the keyboard (the design's `Drawer`). Was
+  the keyboard never changes the step); a drawer stands above the keyboard
+  (the design's `Drawer`), the phones' insert bar too (`useKeyboardInset`,
+  which also takes back the scroll a browser makes to reveal the caret:
+  the page never scrolls, and that scroll pushed its top out of view). Was
   `resizes-content` for the notes' sake.
 
 ## Grid

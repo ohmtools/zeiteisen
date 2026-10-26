@@ -1,4 +1,12 @@
-import { useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ArrowRightLeft,
   AtSign,
@@ -7,6 +15,7 @@ import {
   Download,
   Heading,
   Layers,
+  Link,
   Link2,
   SquareCheck,
   Type,
@@ -19,7 +28,10 @@ import { MentionPicker } from "@/components/MentionPicker";
 import { Popup } from "@/components/ohmtools/popup";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { dayStamp, downloadText } from "@/lib/download";
 import { kindClass } from "@/lib/kinds";
 import {
@@ -35,6 +47,8 @@ import type { Profile, ProfileName } from "@/lib/primitives/profile";
 import {
   insertInline,
   insertLine,
+  insertLink,
+  linkHref,
   notesFromFile,
   notesLines,
   opensMention,
@@ -70,15 +84,21 @@ export type NotesHandle = {
 // without a caret: on a line of its own at the end.
 type Target = { at: number | null; replace: number };
 
-// The user's notes, plain text. Read as a view where links open, `- [ ]`
-// lines are checkboxes, `# ` lines headings and links to a Termin chips in
-// the Termin's kind colour (struck through once past, red once the Termin
-// is gone); a click on the text (or Tab to it, or N) turns it into the text
+// Where the link from the insert bar's "Link" goes: in place of the
+// selection `from`–`to` (the caret where equal), whose text becomes the
+// link's; `null` without a caret: on a line of its own at the end.
+type LinkTarget = { from: number; to: number } | null;
+
+// The user's notes, plain text. Read as a view where links open (a
+// `[text](url)` one by its text), `- [ ]` lines are checkboxes, `# ` lines
+// headings and links to a Termin chips in the Termin's kind colour (struck
+// through once past, red once the Termin is gone); a click on the text (or Tab to it, or N) turns it into the text
 // area with the caret there, leaving it turns it back. Every keystroke is
 // saved (`useNotes`): there is no edit or save button. Empty notes are the
-// text area alone. The insert bar adds a task, a heading or a link to a
-// Termin (`MentionPicker`, also opened by an `@` typed at a word's start):
-// on top from compact on, at the bottom on phones, within thumb reach. The
+// text area alone. The insert bar adds a task, a heading, a link with its
+// own text (`LinkDialog`) or a link to a Termin (`MentionPicker`, also
+// opened by an `@` typed at a word's start): on top from compact on, at the
+// bottom on phones within thumb reach, there right above the keyboard. The
 // body of a panel (`Panel`: sidebar, sheet or page; user decision, was a
 // strip under the grid), its header buttons are `NotesActions`. Lives in the
 // deferred chunk.
@@ -126,6 +146,11 @@ export function NotesSection({
   const pending = useRef<{ at: number; scrollTop: number | null } | null>(null);
   const showTextarea = editing || notes === "";
   const [picking, setPicking] = useState<Target | null>(null);
+  const [linking, setLinking] = useState<{ target: LinkTarget; label: string } | null>(null);
+  // A fresh dialog per opening, its fields filled anew.
+  const [linkKey, setLinkKey] = useState(0);
+  // The keyboard covers the page on phones: the insert bar goes above it.
+  const keyboard = useKeyboardInset(narrow && editing);
   // The revealed line is lit until its moment is over.
   const [faded, setFaded] = useState<number | null>(null);
   const lit = reveal && reveal.nonce !== faded ? reveal.start : null;
@@ -161,6 +186,15 @@ export function NotesSection({
       clearTimeout(done);
     };
   }, [reveal]);
+
+  // The text area just got shorter above the keyboard: its caret back into
+  // view (setting the selection again scrolls to it).
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!keyboard || !textarea || document.activeElement !== textarea) return;
+    const { selectionStart, selectionEnd, selectionDirection } = textarea;
+    textarea.setSelectionRange(selectionStart, selectionEnd, selectionDirection ?? undefined);
+  }, [keyboard]);
 
   const startEditing = (at: number, scrollTop: number | null) => {
     pending.current = { at, scrollTop };
@@ -208,6 +242,45 @@ export function NotesSection({
     const replace = target.replace > 0 && notes[target.at] === "@" ? target.replace : 0;
     apply(insertInline(notes, target.at, mentionToken(entry), replace));
   };
+  // On phones a popup opens without the keyboard: one left up from the text
+  // area stood over the drawer, which then filled the screen above its
+  // search field (user report). Tapping a field brings it back.
+  const dropKeyboard = () => {
+    if (narrow) textareaRef.current?.blur();
+  };
+  const openPicker = (target: Target) => {
+    setPicking(target);
+    dropKeyboard();
+  };
+  const openLink = () => {
+    const textarea = textareaRef.current;
+    const focused = textarea !== null && document.activeElement === textarea;
+    const target = focused ? { from: textarea.selectionStart, to: textarea.selectionEnd } : null;
+    setLinking({ target, label: target ? notes.slice(target.from, target.to) : "" });
+    setLinkKey((key) => key + 1);
+    dropKeyboard();
+  };
+  const insertNamedLink = (label: string, url: string) => {
+    const target = linking?.target ?? null;
+    // Without a caret: a line of its own at the end.
+    const line = target ? null : insertLine(notes, notes.length, "");
+    const result = line
+      ? insertLink(line.text, line.caret, line.caret, label, url)
+      : insertLink(notes, target!.from, target!.to, label, url);
+    if (!result) return;
+    setLinking(null);
+    apply(result);
+  };
+  // Leaving the link dialog: the caret (or selection) where it was.
+  const cancelLink = () => {
+    const target = linking?.target ?? null;
+    setLinking(null);
+    if (target) {
+      pending.current = { at: target.to, scrollTop: viewRef.current?.scrollTop ?? null };
+      setEditing(true);
+    }
+  };
+
   // Leaving the picker without a pick: back to the typed `@`.
   const cancelPicking = () => {
     const target = picking;
@@ -266,19 +339,28 @@ export function NotesSection({
 
   // Kept from taking the focus: the text area keeps its caret.
   const keepFocus = (event: React.MouseEvent) => event.preventDefault();
-  const barButton = cn(narrow ? "h-11 flex-1" : "px-2");
+  // Four labelled buttons side by side overran the sidebar in German: four
+  // equal columns, the label under the icon, on every step.
+  const barButton = "h-11 min-w-0 flex-1 flex-col gap-0.5 px-1 text-xs";
   const bar = (
     <div
       role="toolbar"
       aria-label={m.notes_insert()}
       className={cn(
         "flex shrink-0 gap-1",
-        narrow ? "order-last -mx-4 border-t px-3 pt-2" : "-mx-2 -mt-2",
+        narrow ? "order-last -mx-4 border-t px-3 pt-2" : "-mx-2",
       )}
+      // Right above the keyboard, which hides the page's own space below.
+      style={
+        keyboard > 0
+          ? {
+              marginBottom: `calc(${keyboard}px + 0.5rem - max(1rem, env(safe-area-inset-bottom)))`,
+            }
+          : undefined
+      }
     >
       <Button
         variant="ghost"
-        size={narrow ? "default" : "sm"}
         className={barButton}
         onMouseDown={keepFocus}
         onClick={() => apply(insertLine(notes, caret() ?? notes.length, "- [ ] "))}
@@ -288,7 +370,6 @@ export function NotesSection({
       </Button>
       <Button
         variant="ghost"
-        size={narrow ? "default" : "sm"}
         className={barButton}
         onMouseDown={keepFocus}
         onClick={() => apply(insertLine(notes, caret() ?? notes.length, "# "))}
@@ -296,21 +377,20 @@ export function NotesSection({
         <Heading />
         {m.notes_insert_heading()}
       </Button>
+      <Button variant="ghost" className={barButton} onMouseDown={keepFocus} onClick={openLink}>
+        <Link />
+        {m.notes_insert_link()}
+      </Button>
       <MentionPicker
         trigger={
-          <Button
-            variant="ghost"
-            size={narrow ? "default" : "sm"}
-            className={barButton}
-            onMouseDown={keepFocus}
-          >
+          <Button variant="ghost" className={barButton} onMouseDown={keepFocus}>
             <AtSign />
             {m.notes_insert_mention()}
           </Button>
         }
         open={picking !== null}
         onOpenChange={(open) => {
-          if (open) setPicking({ at: caret(), replace: 0 });
+          if (open) openPicker({ at: caret(), replace: 0 });
           else cancelPicking();
         }}
         timetables={timetables}
@@ -318,6 +398,13 @@ export function NotesSection({
         today={today}
         mentions={mentions}
         onPick={pick}
+      />
+      <LinkDialog
+        key={linkKey}
+        open={linking !== null}
+        label={linking?.label ?? ""}
+        onCancel={cancelLink}
+        onInsert={insertNamedLink}
       />
     </div>
   );
@@ -341,7 +428,7 @@ export function NotesSection({
             onChange(value);
             // An `@` typed at a word's start: the picker, which replaces it.
             if (value.length === notes.length + 1 && opensMention(value, at))
-              setPicking({ at, replace: 1 });
+              openPicker({ at, replace: 1 });
           }}
           onFocus={() => setEditing(true)}
           onBlur={() => setEditing(false)}
@@ -407,6 +494,105 @@ export function NotesSection({
         </div>
       )}
     </div>
+  );
+}
+
+// "Link" in the insert bar: a link with its own text, `[text](url)`. The
+// text starts as the selection; without one the address stands alone. A
+// task with an end (the design's dialog, a drawer on phones): only "Insert"
+// puts it in, leaving it changes nothing.
+function LinkDialog({
+  open,
+  label,
+  onCancel,
+  onInsert,
+}: {
+  open: boolean;
+  label: string;
+  onCancel: () => void;
+  onInsert: (label: string, url: string) => void;
+}) {
+  const narrow = useStep() === "narrow";
+  const id = useId();
+  const [text, setText] = useState(label);
+  const [url, setUrl] = useState("");
+  // The error once something was typed and left, or on a try to insert.
+  const [checked, setChecked] = useState(false);
+  const urlRef = useRef<HTMLInputElement>(null);
+  const valid = linkHref(url) !== null;
+  const insert = () => {
+    if (valid) onInsert(text, url);
+    else setChecked(true);
+  };
+
+  return (
+    <Popup
+      kind="dialog"
+      open={open}
+      // Leaving it runs `onCancel`, the only way it closes besides "Insert".
+      onOpenChange={() => {}}
+      onCancel={onCancel}
+      title={m.notes_link_title()}
+      closeLabel={m.panel_close()}
+      // With its text given, on to the address. Phones keep the keyboard
+      // down until a field is tapped (the drawer's own way on touch).
+      initialFocus={label !== "" && !narrow ? urlRef : undefined}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onCancel}>
+            {m.cancel()}
+          </Button>
+          <Button disabled={checked && !valid} onClick={insert}>
+            {m.notes_link_insert()}
+          </Button>
+        </>
+      }
+    >
+      {/* Enter goes from the text on to the address, there it inserts. */}
+      <div className="flex flex-col gap-4">
+        <Field>
+          <FieldLabel htmlFor={`${id}-text`}>{m.notes_link_text()}</FieldLabel>
+          <Input
+            id={`${id}-text`}
+            value={text}
+            enterKeyHint="next"
+            className={cn(narrow && "h-11")}
+            onChange={(event) => setText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              urlRef.current?.focus();
+            }}
+          />
+          <FieldDescription>{m.notes_link_text_hint()}</FieldDescription>
+        </Field>
+        <Field data-invalid={checked && !valid}>
+          <FieldLabel htmlFor={`${id}-url`}>{m.notes_link_url()}</FieldLabel>
+          <Input
+            ref={urlRef}
+            id={`${id}-url`}
+            type="url"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="done"
+            placeholder="https://…"
+            aria-invalid={checked && !valid}
+            className={cn("font-mono", narrow && "h-11")}
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            onBlur={() => setChecked(url.trim() !== "")}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              insert();
+            }}
+          />
+          {checked && !valid && <FieldError>{m.notes_link_invalid()}</FieldError>}
+        </Field>
+      </div>
+    </Popup>
   );
 }
 
