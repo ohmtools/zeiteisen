@@ -42,8 +42,9 @@ import {
   mentionResolver,
   mentionsIn,
   mentionLabel,
-  classToken,
+  isOne,
   mentionToken,
+  withLabel,
   type MentionTarget,
 } from "@/lib/mentions";
 import { groupName } from "@/lib/primitives/group";
@@ -777,8 +778,9 @@ function MentionChip({
   links: Links;
 }) {
   const status = links.resolver.status(mention);
-  // A link to every Termin of a class is never past: it shows the next.
-  const past = mention.date !== null && isPast(mention.date, links.today);
+  // A link to every Termin (from a date on too) is never past: it shows the
+  // next; one up to a date is once that date is.
+  const past = mention.date !== null && mention.bound !== "+" && isPast(mention.date, links.today);
   const replace = (text: string) => links.onReplace(mention.start, mention.text.length, text);
   const keepText = {
     label: m.mention_keep_text(),
@@ -789,14 +791,14 @@ function MentionChip({
     const { entry } = status;
     // A link to every Termin shows its label as written (it may name only a
     // part: `@[MA3]`), coloured by the kind it names, neutral without one.
-    const parts = mention.date === null ? labelParts(mention.label) : null;
+    const parts = isOne(mention) ? null : labelParts(mention.label);
     const kinds = parts ? (parts.kinds?.split(",").filter(isKind) ?? []) : entry.subject.kind;
     return (
       <button
         type="button"
         tabIndex={-1}
         data-start={mention.start}
-        title={mention.date === null ? m.mention_show_next() : m.mention_show()}
+        title={isOne(mention) ? m.mention_show() : m.mention_show_next()}
         onClick={() => links.onJump(mention)}
         className={cn(
           CHIP,
@@ -843,12 +845,12 @@ function MentionChip({
       />
     );
   }
-  if (mention.date === null) {
+  if (!isOne(mention)) {
     return (
       <NoticeChip
         mention={mention}
         tone="red"
-        past={false}
+        past={past}
         icon={<CircleAlert />}
         title={m.mention_class_broken_title()}
         text={m.mention_class_broken_text({ label: mention.label })}
@@ -857,7 +859,7 @@ function MentionChip({
             label: m.mention_relink(),
             detail: mentionLabel(entry.subject),
             icon: <Link2 />,
-            run: () => replace(classToken(entry.subject)),
+            run: () => replace(withLabel(mention, mentionLabel(entry.subject))),
           })),
           keepText,
         ]}
@@ -897,12 +899,19 @@ function MentionChip({
 }
 
 // A chip's date; a link to every Termin of a class has none, its mark
-// says "every Termin".
+// says "every Termin"; a bound one says from or up to when.
 function ChipDate({ mention }: { mention: Extract<NotesPiece, { kind: "mention" }> }) {
-  return mention.date === null ? (
-    <Repeat aria-label={m.mention_every()} className="size-3" />
-  ) : (
-    <span className="font-mono">{dayDateLabel(mention.date)}</span>
+  if (mention.date === null) return <Repeat aria-label={m.mention_every()} className="size-3" />;
+  if (mention.bound === null)
+    return <span className="font-mono">{dayDateLabel(mention.date)}</span>;
+  const date = [dayDateLabel(mention.date), mention.time].filter(Boolean).join(" ");
+  return (
+    <>
+      <Repeat aria-label={m.mention_every()} className="size-3" />
+      <span className="font-mono">
+        {mention.bound === "+" ? m.mention_from({ date }) : m.mention_until({ date })}
+      </span>
+    </>
   );
 }
 

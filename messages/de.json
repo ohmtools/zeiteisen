@@ -653,6 +653,8 @@
   "mention_every_next": "Wählen verknüpft jeden Termin des Fachs",
   "mention_every_hint": "Ein Klick auf den Link zeigt den nächsten Termin",
   "mention_every": "jeder Termin",
+  "mention_from": "ab {date}",
+  "mention_until": "bis {date}",
   "mention_show_next": "Nächsten Termin im Stundenplan zeigen",
   "mention_class_broken_title": "Fach nicht gefunden",
   "mention_class_broken_text": "{label} steht in keinem Profil mehr: geändert oder gelöscht.",

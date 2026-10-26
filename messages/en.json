@@ -653,6 +653,8 @@
   "mention_every_next": "Picking links every date of the subject",
   "mention_every_hint": "A press on the link shows the next date",
   "mention_every": "every date",
+  "mention_from": "from {date}",
+  "mention_until": "until {date}",
   "mention_show_next": "Show the next date in the timetable",
   "mention_class_broken_title": "Subject not found",
   "mention_class_broken_text": "{label} is in no profile any more: changed or removed.",

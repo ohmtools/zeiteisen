@@ -245,6 +245,71 @@ describe("hand-typed links to part of a label", () => {
   });
 });
 
+describe("hand-typed links from or up to a date", () => {
+  const dates = (text: string, today = TODAY) => {
+    const [mention] = mentionsOfText(text);
+    const series = seriesIn(TIMETABLES, DATES, pickerRange(TIMETABLES, DATES, today));
+    return series
+      .flatMap((one) => one.dates)
+      .filter((entry) => mentionMatches(mention, entry))
+      .map((entry) => entry.meeting.date!)
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  it("read the sign after the date, the time optional", () => {
+    expect(mentionsOfText("@[2026-11-02+ MA3]")[0]).toMatchObject({
+      date: "2026-11-02",
+      time: null,
+      bound: "+",
+      label: "MA3",
+    });
+    expect(mentionsOfText("@[2026-11-02- 08:00 MA3 Ue]")[0]).toMatchObject({
+      time: "08:00",
+      bound: "-",
+    });
+    // A date alone names nothing.
+    expect(mentionsOfText("@[2026-11-02 MA3]")).toEqual([]);
+  });
+
+  it("take the date's Termin and every one after / before it", () => {
+    // MA3 meets Mondays 08:00: 5.10., 12.10., 26.10., 2.11. (19.10. off).
+    expect(dates("@[2026-10-26+ MA3]")).toEqual(["2026-10-26", "2026-11-02"]);
+    expect(dates("@[2026-10-26- MA3]")).toEqual(["2026-10-05", "2026-10-12", "2026-10-26"]);
+    expect(dates("@[2026-10-26+ 08:01 MA3]")).toEqual(["2026-11-02"]);
+    expect(dates("@[2026-10-26- 07:59 MA3]")).toEqual(["2026-10-05", "2026-10-12"]);
+  });
+
+  it("stand for the next Termin in their span", () => {
+    const resolve = (text: string, today: Date) =>
+      mentionResolver(PROFILES, "Main", DATES, today).status(mentionsOfText(text)[0]);
+    expect(resolve("@[2026-11-02+ MA3]", TODAY)).toMatchObject({
+      kind: "ok",
+      entry: { meeting: { date: "2026-11-02" } },
+    });
+    // Up to a date gone by: its last one.
+    expect(resolve("@[2026-10-12- MA3]", TODAY)).toMatchObject({
+      kind: "ok",
+      entry: { meeting: { date: "2026-10-12" } },
+    });
+    expect(resolve("@[2026-11-03+ MA3]", TODAY).kind).toBe("broken");
+  });
+
+  it("keep date and sign when following their class", () => {
+    const renamed = [
+      profile("Main", [
+        withSubjects(
+          TIMETABLES[0].subjects.withMappedSubjects((one, i) =>
+            i === 0 ? { ...one, name: "MA4" } : one,
+          ),
+        ),
+      ]),
+    ];
+    expect(
+      followMentions("@[2026-10-26+ 08:00 MA3 Ue]", PROFILES, renamed, DATES, "Main").text,
+    ).toBe("@[2026-10-26+ 08:00 MA4 Ue]");
+  });
+});
+
 describe("followMentions", () => {
   const edited = (patch: Partial<typeof MA3>) =>
     profile("Main", [

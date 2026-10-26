@@ -31,17 +31,43 @@ import {
 // `tt.notes.v1`, so the notes stay a string. Was a hash of the same fields
 // (user decision, 2026-10-25: a hash tells nothing once it no longer fits).
 
-// What a link points at: one Termin, or with `date` null every Termin of
-// the class.
+// What a link points at: one Termin; with `date` null every Termin of the
+// class; with a `bound` every Termin fitting the label from `date` (and
+// `time`, if given) on ("+") or up to it ("-"), typed by hand only.
 export type MentionTarget = { label: string } & (
-  | { date: string; time: string }
-  | { date: null; time: null }
+  | { date: string; time: string; bound: null }
+  | { date: null; time: null; bound: null }
+  | { date: string; time: string | null; bound: "+" | "-" }
 );
 
 export { labelParts };
 
 // A link to one Termin.
-type DatedTarget = Extract<MentionTarget, { date: string }>;
+type OneTarget = Extract<MentionTarget, { date: string; bound: null }>;
+
+export function isOne<T extends MentionTarget>(mention: T): mention is T & OneTarget {
+  return mention.bound === null && mention.date !== null;
+}
+
+// The text of a link like `mention` (one Termin aside), naming `label`.
+export function withLabel(mention: MentionTarget, label: string): string {
+  if (mention.date === null) return `@[${label}]`;
+  const bound = mention.bound ?? "";
+  return `@[${[`${mention.date}${bound}`, mention.time, label].filter(Boolean).join(" ")}]`;
+}
+
+// Whether a block lies in a link's span: any for every Termin, from or up
+// to the date (and time) for a bound one; the general view's have no date.
+function inSpan(mention: MentionTarget, meeting: Entry["meeting"]): boolean {
+  if (mention.date === null) return true;
+  if (meeting.date === null) return false;
+  if (meeting.date !== mention.date) {
+    return mention.bound === "+" ? meeting.date > mention.date : meeting.date < mention.date;
+  }
+  if (mention.time === null) return true;
+  const start = formatTime(meeting.startTime);
+  return mention.bound === "+" ? start >= mention.time : start <= mention.time;
+}
 
 // A name as a label holds it: one space between words, no brackets.
 function labelName(name: string): string {
@@ -73,14 +99,15 @@ export function classToken(subject: Subject): string {
 }
 
 // Whether the link points at this block: date, start, name, kinds, group; a
-// link to every Termin at each block its label fits, the general view's too.
+// link to every Termin at each block its label fits (the general view's
+// too), a bound one at those in its span.
 export function mentionMatches(
   mention: MentionTarget,
   entry: Pick<Entry, "subject" | "meeting">,
 ): boolean {
   const parts = labelParts(mention.label);
   if (parts === null) return false;
-  if (mention.date === null) return fits(parts, entry.subject);
+  if (!isOne(mention)) return fits(parts, entry.subject) && inSpan(mention, entry.meeting);
   return (
     entry.meeting.date === mention.date &&
     formatTime(entry.meeting.startTime) === mention.time &&
@@ -242,12 +269,12 @@ export function mentionResolver(
   return {
     status: (mention) => {
       const find = (profile: Profile, all: boolean) =>
-        mention.date === null
-          ? nextOf(
+        isOne(mention)
+          ? day(profile, all, mention.date).find((entry) => mentionMatches(mention, entry))
+          : nextOf(
               classes(profile, all).filter((entry) => mentionMatches(mention, entry)),
               today,
-            )
-          : day(profile, all, mention.date).find((entry) => mentionMatches(mention, entry));
+            );
       if (active) {
         const on = find(active, false);
         if (on) return { kind: "ok", entry: on };
@@ -260,7 +287,7 @@ export function mentionResolver(
         if (there) return { kind: "elsewhere", entry: there, profile: profile.name };
       }
       const parts = labelParts(mention.label);
-      if (mention.date === null) {
+      if (!isOne(mention)) {
         const named = new Map<string, Entry[]>();
         if (active && parts) {
           for (const entry of classes(active, false)) {
@@ -287,8 +314,8 @@ export function mentionResolver(
 
 // Links whose class changed with a profile change (an edit, a catalog
 // update, a deletion): `before` and `after` are the profiles around it.
-// A link to every Termin of a class looks for the class alone (any time,
-// any date) and follows it as a class.
+// A link to every Termin of a class (bound or not) looks for the class
+// alone (any time, any date) and follows it as a class.
 // A link to the class in the profile edited (`relinkIn`) follows it where
 // that is clear (the one subject that changed in its timetable, on the same
 // date, at the same start or its only one that day), even when another
@@ -307,7 +334,7 @@ export function followMentions(
   const find = (
     profile: Profile | undefined,
     day: ReturnType<typeof dayLookup>,
-    mention: DatedTarget,
+    mention: OneTarget,
   ) =>
     profile
       ? day(profile, true, mention.date).find((one) => mentionMatches(mention, one))
@@ -315,7 +342,7 @@ export function followMentions(
   const anywhere = (
     profiles: readonly Profile[],
     day: ReturnType<typeof dayLookup>,
-    mention: DatedTarget,
+    mention: OneTarget,
   ) => profiles.some((profile) => find(profile, day, mention));
   const editedBefore = before.find((profile) => profile.name === relinkIn);
   const editedAfter = after.find((profile) => profile.name === relinkIn);
@@ -328,12 +355,12 @@ export function followMentions(
   };
   // From the end, so the offsets before each link still hold.
   for (const mention of mentionsOfText(text).reverse()) {
-    if (mention.date === null) {
+    if (!isOne(mention)) {
       const was = classIn(editedBefore, mention.label);
       if (editedBefore && editedAfter && was && !classIn(editedAfter, mention.label)) {
         const successor = followedClass(was, editedAfter);
         if (successor) {
-          replace(mention, `@[${labelLike(labelParts(mention.label)!, successor)}]`);
+          replace(mention, withLabel(mention, labelLike(labelParts(mention.label)!, successor)));
           continue;
         }
       }
@@ -387,7 +414,7 @@ function followed(
   was: Entry,
   after: Profile,
   day: ReturnType<typeof dayLookup>,
-  mention: DatedTarget,
+  mention: OneTarget,
 ): Entry | null {
   const name = was.timetableName;
   const old = before.timetables.find((one) => one.name === name);

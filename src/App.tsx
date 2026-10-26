@@ -51,6 +51,7 @@ import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import {
   dayOfDate,
   followMentions,
+  isOne,
   mentionMatches,
   mentionResolver,
   mentionsOfText,
@@ -311,7 +312,8 @@ export default function App() {
   const [noteReveal, setNoteReveal] = useState<{ start: number; nonce: number } | null>(null);
   // Tells one flash or reveal of the same block or line from the next.
   const nonce = useRef(0);
-  // A link to every Termin of a class: its next one.
+  // A link to every Termin of a class (from or up to a date too): its next
+  // one.
   const jumpToMention = (mention: MentionTarget) => {
     const status = mentionResolver(
       profiles.profiles,
@@ -319,7 +321,11 @@ export default function App() {
       dates.dates,
       new Date(),
     ).status(mention);
-    const target = mention.date ?? (status.kind === "broken" ? null : status.entry.meeting.date);
+    const target = isOne(mention)
+      ? mention.date
+      : status.kind === "broken"
+        ? null
+        : status.entry.meeting.date;
     if (target === null) return;
     setView("week");
     pickWeek(startOfISOWeek(parseISO(target)));
@@ -483,9 +489,9 @@ export default function App() {
   };
   // The blocks a link points at; only blocks on days links name are checked,
   // every block when a link names every Termin of a class (the general
-  // view's too: such a link names no date).
-  const mentionedDates = new Set(mentions.map((mention) => mention.date));
-  const anyClass = mentionedDates.has(null);
+  // view's too: such a link names no date) or a span of them.
+  const mentionedDates = new Set(mentions.filter(isOne).map((mention) => mention.date));
+  const anyClass = mentions.some((mention) => !isOne(mention));
   const noted = new Set(
     entries
       .filter(

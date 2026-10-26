@@ -14,9 +14,13 @@ export type NotesPiece =
   // `@[2026-10-26 09:45 MA3 Ue 2.1]`: the Termin on that date at that start
   // time whose name, kinds and group the label spells (`@/lib/mentions`).
   // `@[MA3 Ue 2.1]`, without date and time: every Termin of that class.
+  // `@[2026-10-26+ MA3]` / `@[2026-10-26- MA3]`, a sign after the date
+  // (hand-typed only): every Termin fitting the label from that date on /
+  // up to it, a time after the sign bounding that day too.
   | ({ kind: "mention"; start: number; text: string; label: string } & (
-      | { date: string; time: string }
-      | { date: null; time: null }
+      | { date: string; time: string; bound: null }
+      | { date: null; time: null; bound: null }
+      | { date: string; time: string | null; bound: "+" | "-" }
     ));
 
 export type NotesLine = {
@@ -37,8 +41,9 @@ const TASK = /^(\s*)[-*] \[([ xX])\] /;
 const HEADING = /^#{1,3} /;
 
 // A link to a Termin: date, start time and label, brackets around; without
-// date and time a link to every Termin of the class.
-const MENTION = /@\[(?:(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) )?([^\]\n]+)\]/g;
+// date and time a link to every Termin of the class; a sign after the date:
+// every Termin from / up to it, the time optional.
+const MENTION = /@\[(?:(\d{4}-\d{2}-\d{2})([+-])?(?: (\d{2}:\d{2}))? )?([^\]\n]+)\]/g;
 
 const KINDS = new Set<string>(Object.values(Kind));
 
@@ -112,16 +117,23 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
   const pieces: NotesPiece[] = [];
   let last = 0;
   for (const match of text.matchAll(MENTION)) {
-    const [token, date, time, label] = match;
-    // Without a date only a label makes a link (a whole one, or hand-typed
-    // a part: `@[MA3]`, `@[MA3 Ue]`, `@[MA3 2.1]`): `@[…]` typed around
+    const [token, date, sign, time, label] = match;
+    const bound = sign === "+" || sign === "-" ? sign : null;
+    // A date alone, neither time nor sign, names nothing. Without a date or
+    // with a sign only a label makes a link (a whole one, or hand-typed a
+    // part: `@[MA3]`, `@[MA3 Ue]`, `@[MA3 2.1]`): `@[…]` typed around
     // anything else stays text.
-    if (date === undefined && labelParts(label) === null) continue;
+    if (date !== undefined && bound === null && time === undefined) continue;
+    if ((date === undefined || bound !== null) && labelParts(label) === null) continue;
     const at = match.index;
     if (at > last) pieces.push(...namedLinkPieces(text.slice(last, at), start + last));
     const piece = { kind: "mention" as const, start: start + at, text: token, label: label.trim() };
     pieces.push(
-      date === undefined ? { ...piece, date: null, time: null } : { ...piece, date, time },
+      date === undefined
+        ? { ...piece, date: null, time: null, bound: null }
+        : bound !== null
+          ? { ...piece, date, time: time ?? null, bound }
+          : { ...piece, date, time, bound },
     );
     last = at + match[0].length;
   }

@@ -320,6 +320,17 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   press shows the next Termin of any class it fits. Followed on an edit
   only when no class fits any more, in the same shape (`@[MA3 Pr]` ->
   `@[MA4 Pr]`). Dated links stay exact.
+- **Hidden: links from or up to a date** (user request, 2026-10-26, same
+  rule: typed by hand only, nowhere in the UI). A sign right after the
+  date: `@[2026-11-05+ MA3 Ue]` the Termin on that date and every one
+  after, `@[2026-11-09- MA3]` it and every one before; a time after the
+  sign bounds that day by start too (`@[2026-11-09- 09:45 MA3]`). The label
+  as for links to part of a label. A date without sign or time stays text.
+  The chip: label, the repeat mark, "ab Do 5.11." / "bis Mo 9.11. 09:45";
+  struck through once an end date is past. A press shows the next Termin in
+  the span (its last when all are past); its blocks carry the notes' mark
+  in the week view only (the general view has no dates). Followed like a
+  link to every Termin, keeping date, sign and time.
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the
