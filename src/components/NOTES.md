@@ -255,7 +255,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   - in the active grid: a chip in the kind's colour, "MA3 Ue Mo 26.10.", a
     press shows its block in the week view (week and phone day picked, the
     block pulses and scrolls into view; the panel closes on phones and
-    compact screens, it covers the grid);
+    compact screens, it covers the grid). A link naming several (a class,
+    days, a span): its next Termin's week and day, and every block of that
+    week it names pulses (user request), on phones those of the day shown;
+    the first scrolls into view;
   - switched off, or only in another profile: muted and dashed, nothing is
     wrong with the link; a press says so with "Show in groups" or "Switch to
     „Plan B“" (user decision: no warning on switching, tinkering is the

@@ -302,10 +302,13 @@ export default function App() {
   }, [flash]);
   // Notes ↔ grid. Links in the notes name a Termin by date, time and class
   // (`@/lib/mentions`): the blocks they point at carry the notes' mark, a
-  // press on one shows its block (which pulses), its details lead back to
-  // the line.
+  // press on one shows its week, where every block it names pulses (user
+  // request: a link to several, all of them), its details lead back to the
+  // line.
   const mentions = useMemo(() => mentionsOfText(notes), [notes]);
-  const [blockFlash, setBlockFlash] = useState<{ key: string; nonce: number } | null>(null);
+  const [blockFlash, setBlockFlash] = useState<{ mention: MentionTarget; nonce: number } | null>(
+    null,
+  );
   useEffect(() => {
     if (!blockFlash) return;
     const done = setTimeout(() => setBlockFlash(null), 1600);
@@ -332,7 +335,7 @@ export default function App() {
     setView("week");
     pickWeek(startOfISOWeek(parseISO(target)));
     pickDay(dayOfDate(target));
-    if (status.kind === "ok") setBlockFlash({ key: status.entry.key, nonce: ++nonce.current });
+    if (status.kind === "ok") setBlockFlash({ mention, nonce: ++nonce.current });
     // The panel covers the grid on phones and compact screens.
     if (currentStep() !== "wide") openPanel(null);
   };
@@ -489,6 +492,18 @@ export default function App() {
     onOpenNote: openNote,
     onMention: mentionInNotes,
   };
+  // A followed link: the shown week's blocks it names.
+  const flashed =
+    blockFlash && week
+      ? {
+          keys: new Set(
+            entries
+              .filter((entry) => mentionMatches(blockFlash.mention, entry))
+              .map((entry) => entry.key),
+          ),
+          nonce: blockFlash.nonce,
+        }
+      : null;
   // The blocks a link points at; only blocks on days links name are checked,
   // every block when a link names every Termin of a class (the general
   // view's too: such a link names no date) or a span of them.
@@ -748,7 +763,7 @@ export default function App() {
               selectedDay={day}
               onSelectDay={pickDay}
               noted={noted}
-              flash={blockFlash}
+              flash={flashed}
               // Swipes change the week where a finger may be the pointer:
               // phones and compact screens, never wide ones (DESIGN.md,
               // "Elements by step"); the buttons stay.

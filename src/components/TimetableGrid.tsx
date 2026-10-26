@@ -95,7 +95,7 @@ type Props = {
   // Blocks a link in the notes points at (by key): the notes' mark.
   noted?: ReadonlySet<string>;
   // The block a followed link points at: it pulses and scrolls into view.
-  flash?: { key: string; nonce: number } | null;
+  flash?: { keys: ReadonlySet<string>; nonce: number } | null;
 };
 
 export function TimetableGrid({
@@ -131,16 +131,18 @@ export function TimetableGrid({
       slideIn(element, direction, { delay: Number(element.dataset.slide) * 24 });
     }
   });
-  // A followed link: its block into view once it is on screen.
+  // A followed link: its (first) block into view once it is on screen,
+  // once per press.
+  const flashNonce = flash?.nonce;
   useEffect(() => {
-    if (!flash) return;
+    if (flashNonce === undefined) return;
     const frame = requestAnimationFrame(() =>
       rootRef.current
         ?.querySelector("[data-flash]")
         ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
     );
     return () => cancelAnimationFrame(frame);
-  }, [flash]);
+  }, [flashNonce]);
   // The subject under the mouse: its other blocks get a faint ring.
   const [hovered, setHovered] = useState<string | null>(null);
   // The hour grid's size: how wide a day column is (lanes narrower than
@@ -425,7 +427,7 @@ export function TimetableGrid({
                       onHover={setHovered}
                       expanded={openKey === shown.entry.key}
                       noted={noted?.has(shown.entry.key)}
-                      flashing={flash?.key === shown.entry.key}
+                      flashing={flash?.keys.has(shown.entry.key)}
                       onPress={press([shown.entry.key])}
                     />
                   ) : (
@@ -470,7 +472,7 @@ export function TimetableGrid({
                     onHover={setHovered}
                     expanded={openKey === entry.key}
                     noted={noted?.has(entry.key)}
-                    flashing={flash?.key === entry.key}
+                    flashing={flash?.keys.has(entry.key)}
                     onPress={press([entry.key])}
                   />
                 ))}
