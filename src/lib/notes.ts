@@ -14,18 +14,22 @@ export type NotesPiece =
   // `@[2026-10-26 09:45 MA3 Ue 2.1]`: the Termin on that date at that start
   // time whose name, kinds and group the label spells (`@/lib/mentions`).
   // `@[MA3 Ue 2.1]`, without date and time: every Termin of that class.
-  // `@[2026-10-26+ MA3]` / `@[2026-10-26- MA3]`, a sign after the date
-  // (hand-typed only): every Termin fitting the label from that date on /
-  // up to it, a time after the sign bounding that day too.
-  // The parts in any order (`@[Ue 2026-10-26+ ma3]`, hand-typed); `label`
-  // is the words that are neither date nor time, as written.
+  // Hand-typed only: several dates, `+` / `-` right after one for from /
+  // up to it (`@[2026-10-26+ 2026-12-01- MA3]`), a date without time for
+  // the whole day, the parts in any order (`@[Ue 2026-10-26+ ma3]`).
   | ({ kind: "mention"; start: number; text: string } & MentionFields);
 
-export type MentionFields = { label: string } & (
-  | { date: string; time: string; bound: null }
-  | { date: null; time: null; bound: null }
-  | { date: string; time: string | null; bound: "+" | "-" }
-);
+// What a link names: the label (the words that are neither date nor time,
+// as written), the days named alone (in order, each once), the day it runs
+// from (`+`) and up to (`-`), and a start time (on the days named alone:
+// the Termin then; on a bound day: from / up to then).
+export type MentionFields = {
+  label: string;
+  days: string[];
+  from: string | null;
+  until: string | null;
+  time: string | null;
+};
 
 export type NotesLine = {
   start: number;
@@ -100,22 +104,27 @@ function fromEnd(label: string): LabelParts | null {
   return { name: words.join(" "), kinds, group };
 }
 
-// What a link's brackets hold, word by word in any order: a date (a sign
-// right after it: from / up to it), a start time ("9:45" too), the rest the
-// label. A date needs a time or a sign, a time a date; the label has to
-// read as one. `null`: no link, the text stays as typed.
+// What a link's brackets hold, word by word in any order: dates (as many as
+// wanted; a sign right after one: from / up to it, one of each), a start
+// time ("9:45" too, one), the rest the label, which has to read as one. A
+// time needs a date. `null`: no link, the text stays as typed.
 export function mentionFields(content: string): MentionFields | null {
-  let date: string | null = null;
-  let bound: "+" | "-" | null = null;
+  const days: string[] = [];
+  let from: string | null = null;
+  let until: string | null = null;
   let time: string | null = null;
   const rest: string[] = [];
   for (const word of content.trim().split(/\s+/)) {
     const day = DATE.exec(word);
     const clock = TIME.exec(word);
-    if (day) {
-      if (date !== null) return null;
-      date = day[1];
-      bound = day[2] === "+" || day[2] === "-" ? day[2] : null;
+    if (day && day[2] === "+") {
+      if (from !== null) return null;
+      from = day[1];
+    } else if (day && day[2] === "-") {
+      if (until !== null) return null;
+      until = day[1];
+    } else if (day) {
+      if (!days.includes(day[1])) days.push(day[1]);
     } else if (clock) {
       if (time !== null) return null;
       time = `${clock[1].padStart(2, "0")}:${clock[2]}`;
@@ -125,9 +134,8 @@ export function mentionFields(content: string): MentionFields | null {
   }
   const label = rest.join(" ");
   if (labelParts(label) === null) return null;
-  if (date === null) return time === null ? { label, date, time, bound: null } : null;
-  if (bound !== null) return { label, date, time, bound };
-  return time === null ? null : { label, date, time, bound };
+  if (time !== null && days.length === 0 && from === null && until === null) return null;
+  return { label, days, from, until, time };
 }
 
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)

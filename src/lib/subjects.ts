@@ -99,9 +99,16 @@ export function dateLabel(date: string): string {
 
 // "Mo 26.10." / "Mon 10/26": a date with its weekday, short, the way the
 // grid's day heads read (links to a Termin in the notes, the Termin picker).
+// A weekend day is "Other" in the grid only: here "Sa" / "Sun", without
+// the dot German puts after it.
 export function dayDateLabel(date: string): string {
   const day = parseISO(date);
-  return `${dayName(dayOf(day))} ${shortDate(day)}`;
+  const weekday = dayOf(day);
+  const name =
+    weekday === Day.other
+      ? new Intl.DateTimeFormat(getLocale(), { weekday: "short" }).format(day).replace(/\.$/, "")
+      : dayName(weekday);
+  return `${name} ${shortDate(day)}`;
 }
 
 // "21.10." / "10/21": a weekday's date in the week view.

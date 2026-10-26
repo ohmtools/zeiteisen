@@ -32,38 +32,73 @@ import {
 // `tt.notes.v1`, so the notes stay a string. Was a hash of the same fields
 // (user decision, 2026-10-25: a hash tells nothing once it no longer fits).
 
-// What a link points at: one Termin; with `date` null every Termin of the
-// class; with a `bound` every Termin fitting the label from `date` (and
-// `time`, if given) on ("+") or up to it ("-"), typed by hand only.
+// What a link points at (`MentionFields`): one Termin, a date and a time
+// alone (the picker's); every Termin of the class, no date at all (the
+// picker's "Every date"); else, typed by hand only, the Termine fitting the
+// label on the days named, from / up to a day, or both.
 export type MentionTarget = MentionFields;
 
 export { labelParts };
 
 // A link to one Termin.
-type OneTarget = Extract<MentionTarget, { date: string; bound: null }>;
+type OneTarget = MentionTarget & { days: [string]; time: string; from: null; until: null };
 
 export function isOne<T extends MentionTarget>(mention: T): mention is T & OneTarget {
-  return mention.bound === null && mention.date !== null;
+  return (
+    mention.days.length === 1 &&
+    mention.time !== null &&
+    mention.from === null &&
+    mention.until === null
+  );
+}
+
+// A link to every Termin of what its label names, whatever the date.
+export function isEvery(mention: MentionTarget): boolean {
+  return mention.days.length === 0 && mention.from === null && mention.until === null;
 }
 
 // The text of a link like `mention` (one Termin aside), naming `label`.
 export function withLabel(mention: MentionTarget, label: string): string {
-  if (mention.date === null) return `@[${label}]`;
-  const bound = mention.bound ?? "";
-  return `@[${[`${mention.date}${bound}`, mention.time, label].filter(Boolean).join(" ")}]`;
+  const dates = [
+    ...mention.days,
+    mention.from && `${mention.from}+`,
+    mention.until && `${mention.until}-`,
+    mention.time,
+  ];
+  return `@[${[...dates, label].filter(Boolean).join(" ")}]`;
 }
 
-// Whether a block lies in a link's span: any for every Termin, from or up
-// to the date (and time) for a bound one; the general view's have no date.
+// Whether a block lies in a link's dates: any for every Termin; else one
+// of the days named (at its time, if given), or in the span: from a day on,
+// up to one, or between the two; from after up to (`@[2026-12-01+
+// 2026-11-01- …]`) is the two ends, outside the gap. On a bound day the
+// time bounds the start. The general view's blocks have no date.
 function inSpan(mention: MentionTarget, meeting: Entry["meeting"]): boolean {
-  if (mention.date === null) return true;
+  if (isEvery(mention)) return true;
   if (meeting.date === null) return false;
-  if (meeting.date !== mention.date) {
-    return mention.bound === "+" ? meeting.date > mention.date : meeting.date < mention.date;
-  }
-  if (mention.time === null) return true;
+  const { date } = meeting;
   const start = formatTime(meeting.startTime);
-  return mention.bound === "+" ? start >= mention.time : start <= mention.time;
+  if (mention.days.includes(date) && (mention.time === null || start === mention.time)) return true;
+  const { from, until, time } = mention;
+  const after =
+    from !== null && (date > from || (date === from && (time === null || start >= time)));
+  const before =
+    until !== null && (date < until || (date === until && (time === null || start <= time)));
+  if (from !== null && until !== null) return from <= until ? after && before : after || before;
+  return after || before;
+}
+
+// The last day a link can name, `null` when it runs on without end: past
+// once that day is.
+export function lastDay(mention: MentionTarget): string | null {
+  const { days, from, until } = mention;
+  if (isEvery(mention) || (from !== null && (until === null || from > until))) return null;
+  return (
+    [...days, until]
+      .filter((day) => day !== null)
+      .sort()
+      .at(-1) ?? null
+  );
 }
 
 // A name as a label holds it: one space between words, no brackets.
@@ -106,7 +141,7 @@ export function mentionMatches(
   if (parts === null) return false;
   if (!isOne(mention)) return fits(parts, entry.subject) && inSpan(mention, entry.meeting);
   return (
-    entry.meeting.date === mention.date &&
+    entry.meeting.date === mention.days[0] &&
     formatTime(entry.meeting.startTime) === mention.time &&
     sameClass(parts, entry.subject)
   );
@@ -282,7 +317,7 @@ export function mentionResolver(
     status: (mention) => {
       const find = (profile: Profile, all: boolean) =>
         isOne(mention)
-          ? day(profile, all, mention.date).find((entry) => mentionMatches(mention, entry))
+          ? day(profile, all, mention.days[0]).find((entry) => mentionMatches(mention, entry))
           : nextOf(
               classes(profile, all).filter((entry) => mentionMatches(mention, entry)),
               today,
@@ -313,7 +348,7 @@ export function mentionResolver(
       }
       const candidates =
         active && parts
-          ? day(active, false, mention.date)
+          ? day(active, false, mention.days[0])
               .filter((entry) => sameName(entry.subject, parts))
               .sort(
                 (a, b) => Number(sameClass(parts, b.subject)) - Number(sameClass(parts, a.subject)),
@@ -349,7 +384,7 @@ export function followMentions(
     mention: OneTarget,
   ) =>
     profile
-      ? day(profile, true, mention.date).find((one) => mentionMatches(mention, one))
+      ? day(profile, true, mention.days[0]).find((one) => mentionMatches(mention, one))
       : undefined;
   const anywhere = (
     profiles: readonly Profile[],
@@ -434,7 +469,7 @@ function followed(
   if (!old || !now) return null;
   const index = successorIndex(old.subjects.toSubjects(), now.subjects.toSubjects(), was.index);
   if (index === null) return null;
-  const blocks = day(after, true, mention.date).filter(
+  const blocks = day(after, true, mention.days[0]).filter(
     (entry) => entry.timetableName === name && entry.index === index,
   );
   return (

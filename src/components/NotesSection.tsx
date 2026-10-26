@@ -37,8 +37,10 @@ import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { dayStamp, downloadText } from "@/lib/download";
 import { kindClass } from "@/lib/kinds";
 import {
+  isEvery,
   isPast,
   labelParts,
+  lastDay,
   mentionResolver,
   namesClass,
   mentionsIn,
@@ -778,9 +780,10 @@ function MentionChip({
   links: Links;
 }) {
   const status = links.resolver.status(mention);
-  // A link to every Termin (from a date on too) is never past: it shows the
-  // next; one up to a date is once that date is.
-  const past = mention.date !== null && mention.bound !== "+" && isPast(mention.date, links.today);
+  // Past once the last day it can name is (a link to every Termin, or from a
+  // date on, never is: it shows the next).
+  const last = lastDay(mention);
+  const past = last !== null && isPast(last, links.today);
   const replace = (text: string) => links.onReplace(mention.start, mention.text.length, text);
   const keepText = {
     label: m.mention_keep_text(),
@@ -878,12 +881,12 @@ function MentionChip({
       text={
         moved
           ? m.mention_moved_text({
-              date: dayDateLabel(mention.date),
+              date: dayDateLabel(mention.days[0]),
               label: mention.label,
               time: formatTime(moved.meeting.startTime),
               old: mention.time,
             })
-          : m.mention_broken_text({ date: dayDateLabel(mention.date) })
+          : m.mention_broken_text({ date: dayDateLabel(mention.days[0]) })
       }
       actions={[
         ...status.candidates.map((entry) => ({
@@ -899,18 +902,36 @@ function MentionChip({
 }
 
 // A chip's date; a link to every Termin of a class has none, its mark
-// says "every Termin"; a bound one says from or up to when.
+// says "every Termin"; one to several says which: the days (two, then
+// "…"), from / up to when or between, the time.
 function ChipDate({ mention }: { mention: Extract<NotesPiece, { kind: "mention" }> }) {
-  if (mention.date === null) return <Repeat aria-label={m.mention_every()} className="size-3" />;
-  if (mention.bound === null)
-    return <span className="font-mono">{dayDateLabel(mention.date)}</span>;
-  const date = [dayDateLabel(mention.date), mention.time].filter(Boolean).join(" ");
+  if (isOne(mention)) return <span className="font-mono">{dayDateLabel(mention.days[0])}</span>;
+  const mark = <Repeat aria-label={m.mention_every()} className="size-3" />;
+  if (isEvery(mention)) return mark;
+  const { from, until } = mention;
+  const days = [...mention.days].sort();
+  const span =
+    from !== null && until !== null
+      ? from <= until
+        ? [`${dayDateLabel(from)}–${dayDateLabel(until)}`]
+        : [
+            m.mention_until({ date: dayDateLabel(until) }),
+            m.mention_from({ date: dayDateLabel(from) }),
+          ]
+      : from !== null
+        ? [m.mention_from({ date: dayDateLabel(from) })]
+        : until !== null
+          ? [m.mention_until({ date: dayDateLabel(until) })]
+          : [];
+  const text = [
+    ...days.slice(0, 2).map(dayDateLabel),
+    ...(days.length > 2 ? ["…"] : []),
+    ...span,
+  ].join(", ");
   return (
     <>
-      <Repeat aria-label={m.mention_every()} className="size-3" />
-      <span className="font-mono">
-        {mention.bound === "+" ? m.mention_from({ date }) : m.mention_until({ date })}
-      </span>
+      {mark}
+      <span className="font-mono">{[text, mention.time].filter(Boolean).join(" ")}</span>
     </>
   );
 }

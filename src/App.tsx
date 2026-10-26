@@ -51,7 +51,9 @@ import { DEFAULT_CATALOG_URL } from "@/lib/catalog";
 import {
   dayOfDate,
   followMentions,
+  isEvery,
   isOne,
+  type Mention,
   mentionMatches,
   mentionResolver,
   mentionsOfText,
@@ -322,7 +324,7 @@ export default function App() {
       new Date(),
     ).status(mention);
     const target = isOne(mention)
-      ? mention.date
+      ? mention.days[0]
       : status.kind === "broken"
         ? null
         : status.entry.meeting.date;
@@ -490,8 +492,9 @@ export default function App() {
   // The blocks a link points at; only blocks on days links name are checked,
   // every block when a link names every Termin of a class (the general
   // view's too: such a link names no date) or a span of them.
-  const mentionedDates = new Set(mentions.filter(isOne).map((mention) => mention.date));
-  const anyClass = mentions.some((mention) => !isOne(mention));
+  const spans = (mention: Mention) => mention.from !== null || mention.until !== null;
+  const mentionedDates = new Set(mentions.filter((one) => !spans(one)).flatMap((one) => one.days));
+  const anyClass = mentions.some((mention) => isEvery(mention) || spans(mention));
   const noted = new Set(
     entries
       .filter(

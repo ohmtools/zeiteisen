@@ -5,6 +5,7 @@ import {
   classRows,
   followMentions,
   labelParts,
+  lastDay,
   mentionLabel,
   mentionMatches,
   mentionResolver,
@@ -132,7 +133,13 @@ describe("links to every Termin of a class", () => {
 
   it("read as a link without date and time, only for a class's label", () => {
     const [mention] = mentionsOfText(EVERY);
-    expect(mention).toMatchObject({ date: null, time: null, label: "MA3 Ue 2.1" });
+    expect(mention).toMatchObject({
+      days: [],
+      from: null,
+      until: null,
+      time: null,
+      label: "MA3 Ue 2.1",
+    });
     expect(mentionsOfText("see @[the slides] and @[]")).toEqual([]);
   });
 
@@ -270,9 +277,9 @@ describe("hand-typed links in any order", () => {
     const [mention] = mentionsOfText(text);
     return (
       mention && {
-        date: mention.date,
+        days: mention.days,
+        from: mention.from,
         time: mention.time,
-        bound: mention.bound,
         parts: labelParts(mention.label),
       }
     );
@@ -282,13 +289,13 @@ describe("hand-typed links in any order", () => {
     const usual = fields("@[2026-10-26 08:00 MA3 Ue 2.1]");
     expect(fields("@[2.1 Ue 08:00 MA3 2026-10-26]")).toEqual(usual);
     expect(fields("@[ue ma3 8:00 2.1 2026-10-26]")).toMatchObject({
-      date: "2026-10-26",
+      days: ["2026-10-26"],
       time: "08:00",
       parts: { name: "ma3", kinds: ["Ue"], group: "2.1" },
     });
     expect(fields("@[Ue MA3 2026-11-05+]")).toMatchObject({
-      date: "2026-11-05",
-      bound: "+",
+      days: [],
+      from: "2026-11-05",
       parts: { name: "MA3", kinds: ["Ue"], group: null },
     });
     expect(fields("@[2.1 MA3]")).toMatchObject({
@@ -321,17 +328,51 @@ describe("hand-typed links from or up to a date", () => {
 
   it("read the sign after the date, the time optional", () => {
     expect(mentionsOfText("@[2026-11-02+ MA3]")[0]).toMatchObject({
-      date: "2026-11-02",
+      days: [],
+      from: "2026-11-02",
+      until: null,
       time: null,
-      bound: "+",
       label: "MA3",
     });
     expect(mentionsOfText("@[2026-11-02- 08:00 MA3 Ue]")[0]).toMatchObject({
       time: "08:00",
-      bound: "-",
+      until: "2026-11-02",
     });
-    // A date alone names nothing.
-    expect(mentionsOfText("@[2026-11-02 MA3]")).toEqual([]);
+    // One of each sign; a time needs a date.
+    expect(mentionsOfText("@[2026-11-02+ 2026-11-09+ MA3] @[08:00 MA3]")).toEqual([]);
+  });
+
+  it("take every Termin on the days named, at the time if given", () => {
+    expect(dates("@[2026-10-12 2026-11-02 MA3]")).toEqual(["2026-10-12", "2026-11-02"]);
+    // A day without the class names nothing more.
+    expect(dates("@[2026-10-13 2026-10-26 MA3]")).toEqual(["2026-10-26"]);
+    expect(dates("@[2026-10-12 2026-11-02 09:00 MA3]")).toEqual([]);
+  });
+
+  it("take what lies between a from and an up to, or both ends when crossed", () => {
+    expect(dates("@[2026-10-12+ 2026-10-26- MA3]")).toEqual(["2026-10-12", "2026-10-26"]);
+    expect(dates("@[2026-10-26+ 2026-10-12- MA3]")).toEqual([
+      "2026-10-05",
+      "2026-10-12",
+      "2026-10-26",
+      "2026-11-02",
+    ]);
+    expect(dates("@[2026-11-02+ 2026-10-05- MA3]")).toEqual(["2026-10-05", "2026-11-02"]);
+    // Days named alone add to the span.
+    expect(dates("@[2026-10-05 2026-10-26+ MA3]")).toEqual([
+      "2026-10-05",
+      "2026-10-26",
+      "2026-11-02",
+    ]);
+  });
+
+  it("are past once the last day they can name is", () => {
+    const last = (text: string) => lastDay(mentionsOfText(text)[0]);
+    expect(last("@[2026-10-12 2026-11-02 MA3]")).toBe("2026-11-02");
+    expect(last("@[2026-10-12+ 2026-10-26- MA3]")).toBe("2026-10-26");
+    expect(last("@[2026-10-12+ MA3]")).toBeNull();
+    expect(last("@[2026-10-26+ 2026-10-12- MA3]")).toBeNull();
+    expect(last("@[MA3]")).toBeNull();
   });
 
   it("take the date's Termin and every one after / before it", () => {

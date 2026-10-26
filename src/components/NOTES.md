@@ -322,26 +322,32 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   only when no class fits any more, in the same shape (`@[MA3 Pr]` ->
   `@[MA4 Pr]`). Dated links stay exact but for case: the same kinds, in
   any order, and the same group or none.
-- **Hidden: links from or up to a date** (user request, 2026-10-26, same
-  rule: typed by hand only, nowhere in the UI). A sign right after the
-  date: `@[2026-11-05+ MA3 Ue]` the Termin on that date and every one
-  after, `@[2026-11-09- MA3]` it and every one before; a time after the
-  sign bounds that day by start too (`@[2026-11-09- 09:45 MA3]`). The label
-  as for links to part of a label. A date without sign or time stays text.
-  The chip: label, the repeat mark, "ab Do 5.11." / "bis Mo 9.11. 09:45";
-  struck through once an end date is past. A press shows the next Termin in
-  the span (its last when all are past); its blocks carry the notes' mark
-  in the week view only (the general view has no dates). Followed like a
-  link to every Termin, keeping date, sign and time.
+- **Hidden: several dates, from, up to** (user requests, 2026-10-26, same
+  rule: typed by hand only, nowhere in the UI). A link names any number of
+  days alone (`@[2026-11-05 2026-11-12 MA3 Ue]`: every fitting Termin
+  those days), at most one day with `+` right after it (that day and every
+  one after) and one with `-` (it and every one before); both: between
+  them, or, `+` after `-` (`@[2026-12-01+ 2026-11-01- MA3]`), the two ends
+  outside the gap. Days alone add to the span. One time at most, and only
+  with a date: on the days alone the Termin starting then, on a bound day
+  the start bounds it (`@[2026-11-09- 09:45 MA3]`). One day with a time
+  and nothing else is the picker's link to one Termin (exact class); every
+  other dated link fits the label as above. The chip: label, the repeat
+  mark, two days then "…", "ab Do 5.11.", "bis Mo 9.11.", "Mo 2.11.–Mo
+  30.11.", the time; struck through once the last day it can name is past
+  (`lastDay`; never with an open `+`). A press shows the next Termin among
+  them (the last when all are past); its blocks carry the notes' mark in
+  the week view only (the general view has no dates). Followed like a link
+  to every Termin, keeping its dates and time.
 - **Hidden: any order** (user request, 2026-10-26, same rule). The words in
   a link's brackets are read by their shape, wherever they stand
   (`mentionFields`, `labelParts`): `YYYY-MM-DD` with an optional `+`/`-`
   the date, `9:45` / `09:45` the start, `2.1` the group, kind codes (any
   case, `SU,Ue` or two words) the kinds, the other words the name in their
-  order (`@[Ue 2026-11-05+ ma3]`). One date, time and group at most. A name
-  that is all kind codes ("S SU") is read from the end as the picker
-  writes it; a name word shaped like a kind or group reads as one. A link
-  followed after an edit is written back in the picker's order.
+  order (`@[Ue 2026-11-05+ ma3]`). One time, group, `+` and `-` at most.
+  A name that is all kind codes ("S SU") is read from the end as the
+  picker writes it; a name word shaped like a kind or group reads as one.
+  A link followed after an edit is written back in the picker's order.
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the

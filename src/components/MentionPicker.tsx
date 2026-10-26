@@ -17,6 +17,7 @@ import { kindClass } from "@/lib/kinds";
 import {
   classRows,
   classToken,
+  isEvery,
   isPast,
   mentionMatches,
   mentionToken,
@@ -125,7 +126,7 @@ function PickerBody({
   // in "Every date", classes linked as a whole.
   const noted = (entry: Entry) => mentions.some((mention) => mentionMatches(mention, entry));
   const notedClass = (entry: Entry) =>
-    mentions.some((mention) => mention.date === null && mentionMatches(mention, entry));
+    mentions.some((mention) => isEvery(mention) && mentionMatches(mention, entry));
 
   if (shown) {
     return (

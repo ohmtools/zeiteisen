@@ -45,9 +45,9 @@ re-implements primitive logic.
 - `notes.ts` — the notes' read view: lines, links (http(s) and `www.` only,
   trailing punctuation and unbalanced brackets cut off), `- [ ]` tasks, `# `
   headings and links to a Termin (`@[date time label]`, or `@[label]` for
-  every Termin of a class, or hand-typed of part of a label, `@[date+ …]` /
-  `@[date- …]` from / up to a date, the words in any order
-  (`mentionFields`), all hidden in the UI:
+  every Termin of a class, or hand-typed of part of a label, several days,
+  `@[date+ …]` / `@[date- …]` from / up to a day, the words in any order
+  (`mentionFields`: `days`, `from`, `until`, `time`), all hidden in the UI:
   `src/components/NOTES.md`; never for words), every piece with
   its offset in the text; `toggleTask` changes the one box character;
   `insertLine` / `insertInline` / `opensMention` are the insert bar's and
@@ -59,7 +59,8 @@ re-implements primitive logic.
   out, so a room change keeps it; a link to every Termin matches by the
   parts its label gives (`fits`: kinds named among the class's, any case),
   any date or those in its span (`inSpan`);
-  `isOne` tells a link to one Termin from the others. `mentionResolver` gives a link's status
+  `isOne` tells a link to one Termin (one day and a time, nothing else)
+  from the others, `isEvery` one without dates. `mentionResolver` gives a link's status
   (`ok` / `off` / `elsewhere` / `broken` with candidates), one week of a
   profile's grid at a time (`weekEntries`, so days off and the lecture
   period count as in the grid; a link to every Termin of a class stands for
