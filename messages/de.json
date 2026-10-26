@@ -647,6 +647,15 @@
   "mention_elsewhere_title": "Nicht in diesem Profil",
   "mention_elsewhere_text": "{label} steht im Profil „{profile}“.",
   "mention_switch_profile": "Zu „{profile}“ wechseln",
+  "mention_mode_label": "Was verknüpfen",
+  "mention_mode_one": "Ein Termin",
+  "mention_mode_every": "Jeder Termin",
+  "mention_every_next": "Wählen verknüpft jeden Termin des Fachs",
+  "mention_every_hint": "Ein Klick auf den Link zeigt den nächsten Termin",
+  "mention_every": "jeder Termin",
+  "mention_show_next": "Nächsten Termin im Stundenplan zeigen",
+  "mention_class_broken_title": "Fach nicht gefunden",
+  "mention_class_broken_text": "{label} steht in keinem Profil mehr: geändert oder gelöscht.",
   "toast_mentions_moved": [
     {
       "declarations": [

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { dated, profile, subject, timetable, weekly } from "@/lib/primitives/fixtures.test-util";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import {
+  classRows,
   followMentions,
   labelParts,
   mentionLabel,
@@ -70,7 +71,7 @@ describe("labels", () => {
 describe("mentionResolver", () => {
   it("finds the block of a link written for it", () => {
     const [mention] = mentionsOfText(LINK);
-    const status = mentionResolver(PROFILES, "Main", DATES).status(mention);
+    const status = mentionResolver(PROFILES, "Main", DATES, TODAY).status(mention);
     expect(status.kind).toBe("ok");
     if (status.kind !== "ok") return;
     expect(mentionToken(status.entry)).toBe(mention.text);
@@ -81,16 +82,16 @@ describe("mentionResolver", () => {
     const off = withSubjects(
       TIMETABLES[0].subjects.withMappedExtra((_, i) => ({ enabled: i !== 0 })),
     );
-    expect(mentionResolver([profile("Main", [off])], "Main", DATES).status(mention).kind).toBe(
-      "off",
-    );
-    const elsewhere = mentionResolver([profile("Empty", []), ...PROFILES], "Empty", DATES);
+    expect(
+      mentionResolver([profile("Main", [off])], "Main", DATES, TODAY).status(mention).kind,
+    ).toBe("off");
+    const elsewhere = mentionResolver([profile("Empty", []), ...PROFILES], "Empty", DATES, TODAY);
     expect(elsewhere.status(mention)).toMatchObject({ kind: "elsewhere", profile: "Main" });
   });
 
   it("offers the class at its new time for a link that no longer fits", () => {
     const [mention] = mentionsOfText("@[2026-10-26 09:45 MA3 Ue 2.1]");
-    const status = mentionResolver(PROFILES, "Main", DATES).status(mention);
+    const status = mentionResolver(PROFILES, "Main", DATES, TODAY).status(mention);
     expect(status.kind).toBe("broken");
     if (status.kind !== "broken") return;
     expect(status.candidates.map((entry) => entry.subject.name)).toEqual(["MA3"]);
@@ -98,7 +99,7 @@ describe("mentionResolver", () => {
 
   it("finds nothing on a day off", () => {
     const [mention] = mentionsOfText("@[2026-10-19 08:00 MA3 Ue 2.1]");
-    expect(mentionResolver(PROFILES, "Main", DATES).status(mention)).toEqual({
+    expect(mentionResolver(PROFILES, "Main", DATES, TODAY).status(mention)).toEqual({
       kind: "broken",
       candidates: [],
     });
@@ -117,6 +118,70 @@ describe("mentionResolver", () => {
     expect(a.heading).toBe("");
     expect(b.heading).toBe("Exams");
     expect(b.line.task?.done).toBe(false);
+  });
+});
+
+describe("links to every Termin of a class", () => {
+  const EVERY = "Read up @[MA3 Ue 2.1] first";
+
+  it("read as a link without date and time, only for a class's label", () => {
+    const [mention] = mentionsOfText(EVERY);
+    expect(mention).toMatchObject({ date: null, time: null, label: "MA3 Ue 2.1" });
+    expect(mentionsOfText("see @[the slides] and @[MA3]")).toEqual([]);
+  });
+
+  it("stand for the class's next Termin, today's included", () => {
+    const [mention] = mentionsOfText(EVERY);
+    const status = mentionResolver(PROFILES, "Main", DATES, TODAY).status(mention);
+    expect(status.kind).toBe("ok");
+    if (status.kind !== "ok") return;
+    expect(status.entry.meeting.date).toBe("2026-10-26");
+    const later = mentionResolver(PROFILES, "Main", DATES, new Date(2026, 9, 27)).status(mention);
+    expect(later).toMatchObject({ kind: "ok", entry: { meeting: { date: "2026-11-02" } } });
+    // After the last one: the last one.
+    const after = mentionResolver(PROFILES, "Main", DATES, new Date(2027, 0, 1)).status(mention);
+    expect(after).toMatchObject({ kind: "ok", entry: { meeting: { date: "2026-11-02" } } });
+  });
+
+  it("offer the classes of that name when theirs is gone", () => {
+    const [mention] = mentionsOfText("@[MA3 SU]");
+    const status = mentionResolver(PROFILES, "Main", DATES, TODAY).status(mention);
+    expect(status.kind).toBe("broken");
+    if (status.kind !== "broken") return;
+    expect(status.candidates.map((entry) => mentionLabel(entry.subject))).toEqual(["MA3 Ue 2.1"]);
+  });
+
+  it("follow their class, whatever its time, and count it lost when gone", () => {
+    const moved = [
+      profile("Main", [
+        withSubjects(
+          TIMETABLES[0].subjects.withMappedSubjects((one, i) =>
+            i === 0 ? { ...one, repeat: weekly("tuesday") } : one,
+          ),
+        ),
+      ]),
+    ];
+    expect(followMentions(EVERY, PROFILES, moved, DATES, "Main")).toEqual({
+      text: EVERY,
+      moved: 0,
+      lost: 0,
+    });
+    const regrouped = [
+      profile("Main", [
+        withSubjects(
+          TIMETABLES[0].subjects.withMappedSubjects((one, i) =>
+            i === 0 ? { ...one, group: { category: 2, index: 2 } } : one,
+          ),
+        ),
+      ]),
+    ];
+    expect(followMentions(EVERY, PROFILES, regrouped, DATES, "Main")).toEqual({
+      text: "Read up @[MA3 Ue 2.2] first",
+      moved: 1,
+      lost: 0,
+    });
+    const removed = [profile("Main", [withSubjects(TIMETABLES[0].subjects.withRemoved(0))])];
+    expect(followMentions(EVERY, PROFILES, removed, DATES, null)).toMatchObject({ lost: 1 });
   });
 });
 
@@ -233,6 +298,16 @@ describe("the picker", () => {
     expect(wed.map((row) => row.entry.meeting.day)).toEqual(["wednesday", "wednesday"]);
     const week = pickerRows(series, parseMentionQuery("kw45", TODAY), haystack, TODAY);
     expect(week.map((row) => row.entry.meeting.date)).toEqual(["2026-11-02", "2026-11-04"]);
+  });
+
+  it("has a row per class for every date, a lecture and its exam as one", () => {
+    const rows = classRows(series, parseMentionQuery("", TODAY), haystack, TODAY);
+    expect(rows.map((row) => [row.key, row.count, row.entry.meeting.date])).toEqual([
+      ["MA3 Ue 2.1", 4, "2026-10-26"],
+      ["PH2 SU", 5, "2026-10-28"],
+    ]);
+    const wed = classRows(series, parseMentionQuery("mi", TODAY), haystack, TODAY);
+    expect(wed.map((row) => row.key)).toEqual(["PH2 SU"]);
   });
 
   it("reads dates without a year as the nearest one", () => {

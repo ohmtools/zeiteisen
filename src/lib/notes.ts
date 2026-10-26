@@ -1,3 +1,5 @@
+import { Kind } from "@/lib/primitives/subject";
+
 // The notes' read view: plain text cut into lines, each line into text,
 // links (bare or `[text](url)`) and links to a Termin, `- [ ]` / `- [x]` lines into tasks, `# `
 // lines into headings. Every piece carries its `start` in the text, so a
@@ -11,7 +13,11 @@ export type NotesPiece =
   | { kind: "link"; start: number; text: string; href: string }
   // `@[2026-10-26 09:45 MA3 Ue 2.1]`: the Termin on that date at that start
   // time whose name, kinds and group the label spells (`@/lib/mentions`).
-  | { kind: "mention"; start: number; text: string; date: string; time: string; label: string };
+  // `@[MA3 Ue 2.1]`, without date and time: every Termin of that class.
+  | ({ kind: "mention"; start: number; text: string; label: string } & (
+      | { date: string; time: string }
+      | { date: null; time: null }
+    ));
 
 export type NotesLine = {
   start: number;
@@ -30,8 +36,23 @@ const TASK = /^(\s*)[-*] \[([ xX])\] /;
 // Markdown's headings; one look for all three levels.
 const HEADING = /^#{1,3} /;
 
-// A link to a Termin: date, start time and label, brackets around.
-const MENTION = /@\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) ([^\]\n]+)\]/g;
+// A link to a Termin: date, start time and label, brackets around; without
+// date and time a link to every Termin of the class.
+const MENTION = /@\[(?:(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) )?([^\]\n]+)\]/g;
+
+const KINDS = new Set<string>(Object.values(Kind));
+
+// A link's label back in its parts, read from the end (a name may hold
+// spaces): a group like "2.1", the kinds ("SU,Ue"), the name. `null` when it
+// reads as none.
+export function labelParts(label: string): { name: string; kinds: string; group: string } | null {
+  const words = label.trim().split(/ +/);
+  const group = words.length > 2 && /^\d+\.\d+$/.test(words.at(-1)!) ? words.pop()! : "";
+  const kinds = words.pop();
+  if (!kinds || words.length === 0 || !kinds.split(",").every((kind) => KINDS.has(kind)))
+    return null;
+  return { name: words.join(" "), kinds, group };
+}
 
 // http(s) and bare `www.` addresses; anything else (`javascript:`, `file:`)
 // stays text.
@@ -85,16 +106,16 @@ function inlinePieces(text: string, start: number): NotesPiece[] {
   const pieces: NotesPiece[] = [];
   let last = 0;
   for (const match of text.matchAll(MENTION)) {
+    const [token, date, time, label] = match;
+    // Without a date only a class's label makes a link: `@[…]` typed
+    // around anything else stays text.
+    if (date === undefined && labelParts(label) === null) continue;
     const at = match.index;
     if (at > last) pieces.push(...namedLinkPieces(text.slice(last, at), start + last));
-    pieces.push({
-      kind: "mention",
-      start: start + at,
-      text: match[0],
-      date: match[1],
-      time: match[2],
-      label: match[3].trim(),
-    });
+    const piece = { kind: "mention" as const, start: start + at, text: token, label: label.trim() };
+    pieces.push(
+      date === undefined ? { ...piece, date: null, time: null } : { ...piece, date, time },
+    );
     last = at + match[0].length;
   }
   if (last < text.length) pieces.push(...namedLinkPieces(text.slice(last), start + last));

@@ -311,14 +311,19 @@ export default function App() {
   const [noteReveal, setNoteReveal] = useState<{ start: number; nonce: number } | null>(null);
   // Tells one flash or reveal of the same block or line from the next.
   const nonce = useRef(0);
+  // A link to every Termin of a class: its next one.
   const jumpToMention = (mention: MentionTarget) => {
-    const date = parseISO(mention.date);
+    const status = mentionResolver(
+      profiles.profiles,
+      profiles.activeName,
+      dates.dates,
+      new Date(),
+    ).status(mention);
+    const target = mention.date ?? (status.kind === "broken" ? null : status.entry.meeting.date);
+    if (target === null) return;
     setView("week");
-    pickWeek(startOfISOWeek(date));
-    pickDay(dayOfDate(mention.date));
-    const status = mentionResolver(profiles.profiles, profiles.activeName, dates.dates).status(
-      mention,
-    );
+    pickWeek(startOfISOWeek(parseISO(target)));
+    pickDay(dayOfDate(target));
     if (status.kind === "ok") setBlockFlash({ key: status.entry.key, nonce: ++nonce.current });
     // The panel covers the grid on phones and compact screens.
     if (currentStep() !== "wide") openPanel(null);
@@ -476,19 +481,19 @@ export default function App() {
     onOpenNote: openNote,
     onMention: mentionInNotes,
   };
-  // The week's blocks a link points at; only blocks on days links name are checked.
+  // The blocks a link points at; only blocks on days links name are checked,
+  // every block when a link names every Termin of a class (the general
+  // view's too: such a link names no date).
   const mentionedDates = new Set(mentions.map((mention) => mention.date));
+  const anyClass = mentionedDates.has(null);
   const noted = new Set(
-    week === null
-      ? []
-      : entries
-          .filter(
-            (entry) =>
-              entry.meeting.date !== null &&
-              mentionedDates.has(entry.meeting.date) &&
-              mentions.some((mention) => mentionMatches(mention, entry)),
-          )
-          .map((entry) => entry.key),
+    entries
+      .filter(
+        (entry) =>
+          (anyClass || (entry.meeting.date !== null && mentionedDates.has(entry.meeting.date))) &&
+          mentions.some((mention) => mentionMatches(mention, entry)),
+      )
+      .map((entry) => entry.key),
   );
 
   // Over an empty grid: no timetables yet, or a week without classes and

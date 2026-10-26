@@ -18,6 +18,7 @@ import {
   Layers,
   Link,
   Link2,
+  Repeat,
   SquareCheck,
   Type,
   Unlink,
@@ -40,6 +41,7 @@ import {
   mentionResolver,
   mentionsIn,
   mentionLabel,
+  classToken,
   mentionToken,
   type MentionTarget,
 } from "@/lib/mentions";
@@ -98,8 +100,9 @@ type LinkTarget = { from: number; to: number } | null;
 // saved (`useNotes`): there is no edit or save button. Empty notes are the
 // text area alone. The insert bar adds a task, a heading, a link with its
 // own text (`LinkPopover`) or a link to a Termin (`MentionPicker`, also
-// opened by an `@` typed at a word's start): on top from compact on, at the
-// bottom on phones within thumb reach, there right above the keyboard. The
+// opened by an `@` typed at a word's start): right above the text from
+// compact on, at the bottom on phones within thumb reach, there right above
+// the keyboard. The
 // body of a panel (`Panel`: sidebar, sheet or page; user decision, was a
 // strip under the grid), its header buttons are `NotesActions`. Lives in the
 // deferred chunk.
@@ -157,10 +160,10 @@ export function NotesSection({
   const lit = reveal && reveal.nonce !== faded ? reveal.start : null;
   const lines = notesLines(notes);
   const mentions = mentionsIn(lines);
-  // One lookup per profiles and dates, each week built once.
+  // One lookup per profiles, dates and minute, each week built once.
   const resolver = useMemo(
-    () => mentionResolver(profiles, activeName, dates),
-    [profiles, activeName, dates],
+    () => mentionResolver(profiles, activeName, dates, today),
+    [profiles, activeName, dates, today],
   );
 
   useEffect(() => {
@@ -231,17 +234,18 @@ export function NotesSection({
     setEditing(true);
     onChange(text);
   };
-  const pick = (entry: Entry) => {
+  // `token`: a link to one Termin or to every Termin of a class.
+  const pick = (token: string) => {
     const target = picking ?? { at: null, replace: 0 };
     setPicking(null);
     // Without a caret: a line of its own at the end.
     if (target.at === null) {
       const line = insertLine(notes, notes.length, "");
-      apply(insertInline(line.text, line.caret, mentionToken(entry)));
+      apply(insertInline(line.text, line.caret, token));
       return;
     }
     const replace = target.replace > 0 && notes[target.at] === "@" ? target.replace : 0;
-    apply(insertInline(notes, target.at, mentionToken(entry), replace));
+    apply(insertInline(notes, target.at, token, replace));
   };
   // On phones a popup opens without the keyboard: one left up from the text
   // area stood over the drawer, which then filled the screen above its
@@ -414,9 +418,12 @@ export function NotesSection({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 compact:pb-2">
-      {bar}
+      {/* Right under the heading, the insert bar right above the text
+          (user request; on phones it stays at the bottom, above the
+          keyboard). */}
       <p className="text-xs text-muted-foreground">{m.notes_text()}</p>
       {limit}
+      {bar}
       {showTextarea ? (
         <Textarea
           ref={textareaRef}
@@ -768,7 +775,8 @@ function MentionChip({
   links: Links;
 }) {
   const status = links.resolver.status(mention);
-  const past = isPast(mention.date, links.today);
+  // A link to every Termin of a class is never past: it shows the next.
+  const past = mention.date !== null && isPast(mention.date, links.today);
   const replace = (text: string) => links.onReplace(mention.start, mention.text.length, text);
   const keepText = {
     label: m.mention_keep_text(),
@@ -782,7 +790,7 @@ function MentionChip({
         type="button"
         tabIndex={-1}
         data-start={mention.start}
-        title={m.mention_show()}
+        title={mention.date === null ? m.mention_show_next() : m.mention_show()}
         onClick={() => links.onJump(mention)}
         className={cn(
           CHIP,
@@ -793,7 +801,7 @@ function MentionChip({
       >
         <b className="font-semibold">{entry.subject.name}</b>
         <span>{entry.subject.kind.join(", ")}</span>
-        <span className="font-mono">{dayDateLabel(mention.date)}</span>
+        <ChipDate mention={mention} />
       </button>
     );
   }
@@ -828,6 +836,27 @@ function MentionChip({
       />
     );
   }
+  if (mention.date === null) {
+    return (
+      <NoticeChip
+        mention={mention}
+        tone="red"
+        past={false}
+        icon={<CircleAlert />}
+        title={m.mention_class_broken_title()}
+        text={m.mention_class_broken_text({ label: mention.label })}
+        actions={[
+          ...status.candidates.map((entry) => ({
+            label: m.mention_relink(),
+            detail: mentionLabel(entry.subject),
+            icon: <Link2 />,
+            run: () => replace(classToken(entry.subject)),
+          })),
+          keepText,
+        ]}
+      />
+    );
+  }
   // The same class that day at another time says what changed.
   const moved = status.candidates.find((entry) => mentionLabel(entry.subject) === mention.label);
   return (
@@ -857,6 +886,16 @@ function MentionChip({
         keepText,
       ]}
     />
+  );
+}
+
+// A chip's date; a link to every Termin of a class has none, its mark
+// says "every Termin".
+function ChipDate({ mention }: { mention: Extract<NotesPiece, { kind: "mention" }> }) {
+  return mention.date === null ? (
+    <Repeat aria-label={m.mention_every()} className="size-3" />
+  ) : (
+    <span className="font-mono">{dayDateLabel(mention.date)}</span>
   );
 }
 
@@ -909,7 +948,7 @@ function NoticeChip({
         >
           {red ? <Unlink className="size-3" /> : <CircleSlash className="size-3" />}
           <b className="font-semibold">{mention.label}</b>
-          <span className="font-mono">{dayDateLabel(mention.date)}</span>
+          <ChipDate mention={mention} />
         </button>
       }
     >

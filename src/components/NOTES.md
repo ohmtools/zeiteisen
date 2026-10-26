@@ -185,9 +185,10 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   on desktop). Plain text in `tt.notes.v1`, never shared (no link, no
   profile file; the backup holds it). At most `MAX_NOTES_LENGTH` characters
   (1,000,000, user decision), a count shows from 90% on.
-- Under the panel's header one muted line: on this device only, never in a
-  link or a profile file. Nothing more (user decision, 2026-10-26: the
-  syntax help was dropped; the insert bar shows what there is).
+- Right under the panel's header one muted line: on this device only, never
+  in a link or a profile file. Nothing more (user decision, 2026-10-26: the
+  syntax help was dropped; the insert bar shows what there is). The insert
+  bar below it, right above the text (user request, 2026-10-26).
 - Two faces of the same text (user decision): a read view where http(s) and
   `www.` links open in a new tab, `[text](url)` (Markdown's, user request)
   shows its text alone as the link, `- [ ]` / `- [x]` lines (GitHub's task
@@ -212,8 +213,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
 - **Insert bar** (design "Zeiteisen Notizen", 2026-10-25): "Task", "Heading",
   "Link", "Termin" (ghost buttons, 44px, four equal columns with the label
   under the icon on every step: side by side the German labels overran the
-  340px sidebar and the 380px sheet): on top of the panel from compact on
-  (user decision: not at the bottom on desktop), at the bottom on phones
+  340px sidebar and the 380px sheet): from compact on above the text, under
+  the hint (user decisions: not at the bottom on desktop; right above the
+  text field, 2026-10-26), at the bottom on phones
   within thumb reach, there **right above the keyboard** (user report: the
   keyboard covered it; `useKeyboardInset` lifts it by what the keyboard
   covers, the text area gets shorter). Task and heading put `- [ ] ` / `# `
@@ -291,6 +293,21 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   decision). From the bar without a caret the link goes on a line of its
   own at the end. "Pick in the timetable" was designed and dropped (user
   decision: too much).
+- **Every Termin of a class** (user request, 2026-10-26): tabs "One date |
+  Every date" at the picker's top (not persisted, "One date" on opening).
+  "Every date" has a row per class as its label names it (name, kinds,
+  group: MA3 SU and MA3 Ue are two, a lecture and its exam with the same
+  label one), its weekdays and times and how many dates; a press writes
+  `@[MA3 Ue 2.1]`, no date and time. The chip shows the label with a repeat
+  mark instead of a date, never struck through, and a press shows the class's
+  next Termin (today's included; after the last one the last) in the week
+  view. Its blocks carry the notes' mark in the week AND the general view,
+  their details list the line in both. Switched off, in another profile:
+  as a dated link. Gone: "Subject not found", relinkable to the active
+  grid's classes of that name. It follows an edit of its class like a dated
+  link (new label), a change of time or day leaves it as it is. Plain text,
+  the stored shape stays a string: no migration (`@[…]` around anything
+  but a class's label stays text).
 - N anywhere outside a field, dialog or menu (App, `isNotesShortcut`) opens
   the notes panel with the caret at the end (`flushSync`: the text area has
   to be on screen to take the focus). Escape in the text area goes back to the

@@ -492,8 +492,9 @@ export function SubjectDetails({
       onClose(stay);
       run();
     };
-  // Links name a date: the general view has none to link or look up.
-  const mentions = meeting.date !== null && !general ? (actions.mentionsOf?.(entry) ?? []) : [];
+  // The general view has no date: only links to every Termin of a class
+  // point at its blocks, and "Mention in the notes" (a date) is not offered.
+  const mentions = actions.mentionsOf?.(entry) ?? [];
   const canMention = meeting.date !== null && !general && actions.onMention !== undefined;
 
   return (

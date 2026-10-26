@@ -1,10 +1,11 @@
 import { use, useState, type ReactElement } from "react";
-import { CalendarDays, ChevronLeft, StickyNote } from "lucide-react";
+import { CalendarDays, ChevronLeft, Repeat, StickyNote } from "lucide-react";
 import { parseISO } from "date-fns";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popup } from "@/components/ohmtools/popup";
 import { OverridesContext } from "@/components/OverridesContext";
 import { groupName } from "@/lib/primitives/group";
@@ -14,8 +15,11 @@ import type { Timetable } from "@/lib/primitives/timetable";
 import type { Entry } from "@/lib/layout";
 import { kindClass } from "@/lib/kinds";
 import {
+  classRows,
+  classToken,
   isPast,
   mentionMatches,
+  mentionToken,
   parseMentionQuery,
   pickerRange,
   pickerRows,
@@ -33,7 +37,8 @@ import { useStep } from "@/lib/ohmtools/steps";
 // Step 1: a row per class and time, a press links its next date; a date,
 // weekday or week typed into the field narrows to those dates. Step 2 (the
 // calendar at a row's end): every date of the class, a month per line, past
-// ones struck through.
+// ones struck through. "Every date" (user request): a row per class, a press
+// links all its dates at once (`@[MA3 Ue 2.1]`), whose press shows the next.
 export function MentionPicker({
   trigger,
   open,
@@ -52,7 +57,8 @@ export function MentionPicker({
   today: Date;
   // The links already in the notes: their dates carry the notes' mark.
   mentions: readonly Mention[];
-  onPick: (entry: Entry) => void;
+  // The link's text: to one Termin or to every Termin of a class.
+  onPick: (token: string) => void;
 }) {
   return (
     <Popup
@@ -89,10 +95,11 @@ function PickerBody({
   dates: SemesterDates | null;
   today: Date;
   mentions: readonly Mention[];
-  onPick: (entry: Entry) => void;
+  onPick: (token: string) => void;
 }) {
   const overrides = use(OverridesContext);
   const narrow = useStep() === "narrow";
+  const [every, setEvery] = useState(false);
   const [query, setQuery] = useState("");
   const [shown, setShown] = useState<Series | null>(null);
   // Built once per opening: every week of the period, a few dozen at most.
@@ -113,7 +120,12 @@ function PickerBody({
       meeting.professor,
     ].join(" ");
   const rows = pickerRows(series, parsed, haystack, today);
+  const classes = classRows(series, parsed, haystack, today);
+  // Dates a link names (one or every Termin of the class) carry the mark;
+  // in "Every date", classes linked as a whole.
   const noted = (entry: Entry) => mentions.some((mention) => mentionMatches(mention, entry));
+  const notedClass = (entry: Entry) =>
+    mentions.some((mention) => mention.date === null && mentionMatches(mention, entry));
 
   if (shown) {
     return (
@@ -123,24 +135,38 @@ function PickerBody({
         narrow={narrow}
         noted={noted}
         onBack={() => setShown(null)}
-        onPick={onPick}
+        onPick={(entry) => onPick(mentionToken(entry))}
       />
     );
   }
 
+  const count = every ? classes.length : rows.length;
   const caption =
     series.length === 0
       ? m.mention_empty()
-      : rows.length === 0
+      : count === 0
         ? m.mention_none()
-        : parsed.date !== null
-          ? m.mention_on_date({ count: rows.length, date: dayDateLabel(parsed.date) })
-          : parsed.week !== null
-            ? m.mention_in_week({ count: rows.length, week: String(parsed.week) })
-            : m.mention_next();
+        : every
+          ? m.mention_every_next()
+          : parsed.date !== null
+            ? m.mention_on_date({ count: rows.length, date: dayDateLabel(parsed.date) })
+            : parsed.week !== null
+              ? m.mention_in_week({ count: rows.length, week: String(parsed.week) })
+              : m.mention_next();
+
+  const row = cn(
+    "h-auto flex-1 justify-start gap-2.5 px-2 text-left",
+    narrow ? "min-h-13 py-1.5" : "min-h-11 py-1",
+  );
 
   return (
     <>
+      <Tabs value={every ? "every" : "one"} onValueChange={(value) => setEvery(value === "every")}>
+        <TabsList aria-label={m.mention_mode_label()} className={cn("w-full", narrow && "h-11!")}>
+          <TabsTrigger value="one">{m.mention_mode_one()}</TabsTrigger>
+          <TabsTrigger value="every">{m.mention_mode_every()}</TabsTrigger>
+        </TabsList>
+      </Tabs>
       {/* Not on phones: a drawer opened with the keyboard up filled the
           screen above its own field (user report); a tap on it brings the
           keyboard the drawer's way. */}
@@ -152,40 +178,56 @@ function PickerBody({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key !== "Enter" || rows.length === 0) return;
+          if (event.key !== "Enter" || count === 0) return;
           event.preventDefault();
-          onPick(rows[0].entry);
+          onPick(every ? classToken(classes[0].entry.subject) : mentionToken(rows[0].entry));
         }}
         className={cn(narrow && "h-11")}
       />
       <p className="text-xs text-muted-foreground">{caption}</p>
-      {rows.length > 0 && (
+      {every && classes.length > 0 && (
+        <div className="-mx-2 flex flex-col compact:max-h-72 compact:overflow-y-auto">
+          {classes.map(({ key, entry, series: all, count: dates }, i) => (
+            <div key={key} className={cn("flex items-center rounded-md", i === 0 && "bg-accent")}>
+              <Button
+                variant="ghost"
+                className={row}
+                onClick={() => onPick(classToken(entry.subject))}
+              >
+                <KindDot entry={entry} />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <ClassName entry={entry} />
+                  <span className="truncate font-mono text-xs font-normal text-muted-foreground">
+                    {[
+                      ...all.map(
+                        (one) =>
+                          `${dayName(one.entry.meeting.day)} ${formatTime(one.entry.meeting.startTime)}`,
+                      ),
+                      m.mention_dates({ count: dates }),
+                    ].join(" · ")}
+                  </span>
+                </span>
+                {notedClass(entry) ? (
+                  <StickyNote aria-label={m.mention_noted()} className="text-muted-foreground" />
+                ) : (
+                  <Repeat aria-hidden className="text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+      {!every && rows.length > 0 && (
         <div className="-mx-2 flex flex-col compact:max-h-72 compact:overflow-y-auto">
           {rows.map(({ series: one, entry, exact }, i) => (
             <div
               key={`${one.key}/${entry.meeting.date}`}
               className={cn("flex items-center rounded-md", i === 0 && "bg-accent")}
             >
-              <Button
-                variant="ghost"
-                className={cn(
-                  "h-auto flex-1 justify-start gap-2.5 px-2 text-left",
-                  narrow ? "min-h-13 py-1.5" : "min-h-11 py-1",
-                )}
-                onClick={() => onPick(entry)}
-              >
+              <Button variant="ghost" className={row} onClick={() => onPick(mentionToken(entry))}>
                 <KindDot entry={entry} />
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate">
-                    <b className="font-semibold">{entry.subject.name}</b>{" "}
-                    <span className="font-normal">{entry.subject.kind.join(", ")}</span>
-                    {entry.subject.group && (
-                      <span className="font-normal text-muted-foreground">
-                        {" "}
-                        {groupName(entry.subject.group)}
-                      </span>
-                    )}
-                  </span>
+                  <ClassName entry={entry} />
                   <span className="truncate font-mono text-xs font-normal text-muted-foreground">
                     {exact
                       ? [
@@ -222,7 +264,11 @@ function PickerBody({
           ))}
         </div>
       )}
-      {series.length > 0 && <p className="text-xs text-muted-foreground">{m.mention_hint()}</p>}
+      {series.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {every ? m.mention_every_hint() : m.mention_hint()}
+        </p>
+      )}
     </>
   );
 }
@@ -332,6 +378,19 @@ function DatesStep({
         ))}
       </div>
     </>
+  );
+}
+
+// "MA3 Ue 2.1": name, kinds, group.
+function ClassName({ entry }: { entry: Entry }) {
+  return (
+    <span className="truncate">
+      <b className="font-semibold">{entry.subject.name}</b>{" "}
+      <span className="font-normal">{entry.subject.kind.join(", ")}</span>
+      {entry.subject.group && (
+        <span className="font-normal text-muted-foreground"> {groupName(entry.subject.group)}</span>
+      )}
+    </span>
   );
 }
 
