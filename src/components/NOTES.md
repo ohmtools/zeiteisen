@@ -281,27 +281,33 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   (`opensMention`; inside a word, an e-mail address, it stays a character).
   What is searched goes into the picker's own field, never into the note:
   the typed `@` is replaced by the finished link on a pick, kept with the
-  caret after it on leaving. Step 1: a row per class and weekday time of
-  the active profile's grid (`seriesIn`, the lecture period widened to every
-  listed date), a press (or Enter on the first, highlighted row) links its
-  next date; a date ("9.11"), "heute"/"morgen", a weekday ("mi") or a week
-  ("kw46") in the field narrows to those dates. Step 2, the calendar at a
-  row's end: every date of the class, a month per line; past ones muted AND
-  struck through with a line of their own (user decision: `line-through`
-  alone vanished in grey two-digit numbers), the next one ringed, those
-  already linked with the notes' icon. Same two steps on every step (user
-  decision). From the bar without a caret the link goes on a line of its
-  own at the end. "Pick in the timetable" was designed and dropped (user
-  decision: too much).
-- **Every Termin of a class** (user request, 2026-10-26): tabs "One date |
-  Every date" at the picker's top (not persisted, "One date" on opening).
-  "Every date" has a row per class as its label names it (name, kinds,
-  group: MA3 SU and MA3 Ue are two, a lecture and its exam with the same
-  label one), its weekdays and times and how many dates; a press writes
-  `@[MA3 Ue 2.1]`, no date and time. The chip shows the label with a repeat
-  mark instead of a date, never struck through, and a press shows the class's
-  next Termin (today's included; after the last one the last) in the week
-  view. Its blocks carry the notes' mark in the week AND the general view,
+  caret after it on leaving. **Several at once** (user request,
+  2026-10-26; was one per press, then a tab "Every date"): a press picks
+  or unpicks (a box at the row's start; no kind dot beside it, it read as
+  a second box), a bar at the bottom says how many and "Insert" writes the
+  links, one per class (`pickedTokens`): one Termin as `@[date time
+label]`, several as `@[day day … time? label]` (the time when they share
+  one), all dates of the class in the picker (more than one) as
+  `@[label]`. Enter with nothing picked inserts the first, highlighted row
+  at once. Step 1: a row per class and weekday time of the active
+  profile's grid (`seriesIn`, the lecture period widened to every listed
+  date), a press picks its next date; a date ("9.11"), "heute"/"morgen", a
+  weekday ("mi") or a week ("kw46") in the field narrows to those dates.
+  Step 2, the calendar at a row's end: every date of the class as its label
+  names it (all its weekdays and times, `datesByLabel`; a lecture and its
+  exam with the same label are one), a month per line, "Pick all" above;
+  picked dates filled, past ones muted AND struck through with a line of
+  their own (user decision: `line-through` alone vanished in grey two-digit
+  numbers), the next one ringed, those already linked with the notes' icon.
+  Picks hold across both steps until the picker closes. Same two steps on
+  every step (user decision). From the bar without a caret the links go on
+  a line of their own at the end. "Pick in the timetable" was designed and
+  dropped (user decision: too much).
+- **Every Termin of a class** (user request, 2026-10-26): "Pick all" in the
+  picker's calendar writes `@[MA3 Ue 2.1]`, no date and time. The chip
+  shows the label with a repeat mark instead of a date, never struck
+  through, and a press shows the class's next Termin (today's included;
+  after the last one the last) in the week view. Its blocks carry the notes' mark in the week AND the general view,
   their details list the line in both. Switched off, in another profile:
   as a dated link. Gone: "Subject not found", relinkable to the active
   grid's classes of that name. It follows an edit of its class like a dated
@@ -322,8 +328,9 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   only when no class fits any more, in the same shape (`@[MA3 Pr]` ->
   `@[MA4 Pr]`). Dated links stay exact but for case: the same kinds, in
   any order, and the same group or none.
-- **Hidden: several dates, from, up to** (user requests, 2026-10-26, same
-  rule: typed by hand only, nowhere in the UI). A link names any number of
+- **Several dates** (the picker writes them for several picked dates of a
+  class) **and, hidden, from / up to** (user requests, 2026-10-26; `+` and
+  `-` typed by hand only, nowhere in the UI). A link names any number of
   days alone (`@[2026-11-05 2026-11-12 MA3 Ue]`: every fitting Termin
   those days), at most one day with `+` right after it (that day and every
   one after) and one with `-` (it and every one before); both: between

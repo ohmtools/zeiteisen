@@ -677,43 +677,44 @@ export function pickerRows(
     }));
 }
 
-// A row of the picker's "Every date": a class (as its label names it, so
-// a lecture and its exam are one) with every weekday and time it meets at,
-// linked as a whole.
-export type ClassRow = {
-  key: string;
-  // The class's next block (today's included), else its last.
-  entry: Entry;
-  series: Series[];
-  count: number;
-};
+// A picked Termin: its block on its date (a block's key repeats weekly).
+export function pickKey(entry: Entry): string {
+  return `${entry.key}@${entry.meeting.date}`;
+}
 
-// The picker's rows for "Every date": a row per class whose words match (a
-// weekday in the query: classes meeting that day); dates and weeks in the
-// query narrow nothing, the link names none.
-export function classRows(
-  series: readonly Series[],
-  query: MentionQuery,
-  haystack: (entry: Entry) => string,
-  today: Date,
-): ClassRow[] {
-  const found = new Map<string, Series[]>();
+// The dates of every class in the picker by its label, in order: what "All"
+// picks, and what tells a pick of all of them.
+export function datesByLabel(series: readonly Series[]): Map<string, Entry[]> {
+  const found = new Map<string, Entry[]>();
   for (const one of series) {
-    const key = mentionLabel(one.entry.subject);
-    found.set(key, [...(found.get(key) ?? []), one]);
+    const label = mentionLabel(one.entry.subject);
+    found.set(label, [...(found.get(label) ?? []), ...one.dates]);
   }
-  return [...found]
-    .filter(([, all]) => {
-      const text = haystack(all[0].entry).toLowerCase();
-      return (
-        query.words.every((word) => text.includes(word)) &&
-        (query.weekday === null || all.some((one) => one.entry.meeting.day === query.weekday))
-      );
-    })
-    .map(([key, all]) => {
-      const dates = all.flatMap((one) => one.dates).sort(byDate);
-      return { key, entry: nextOf(dates, today)!, series: all, count: dates.length };
-    });
+  for (const dates of found.values()) dates.sort(byDate);
+  return found;
+}
+
+// The links for the Termine picked, one per class (by label, in the
+// picker's order): one Termin as ever (`@[date time label]`); every date
+// of the class in the picker, more than one, as the class
+// (`@[label]`); else its days (`@[day day … label]`), with the time when
+// they share one.
+export function pickedTokens(picked: readonly Entry[], series: readonly Series[]): string[] {
+  const keys = new Set(picked.map(pickKey));
+  const tokens: string[] = [];
+  for (const [label, all] of datesByLabel(series)) {
+    const mine = all.filter((entry) => keys.has(pickKey(entry)));
+    if (mine.length === 0) continue;
+    if (mine.length === 1) tokens.push(mentionToken(mine[0]));
+    else if (mine.length === all.length) tokens.push(classToken(mine[0].subject));
+    else {
+      const days = [...new Set(mine.map((entry) => entry.meeting.date!))];
+      const times = new Set(mine.map((entry) => formatTime(entry.meeting.startTime)));
+      const time = times.size === 1 ? [...times] : [];
+      tokens.push(`@[${[...days, ...time, label].join(" ")}]`);
+    }
+  }
+  return tokens;
 }
 
 // Whether a date lies before today: past Termine are struck through.

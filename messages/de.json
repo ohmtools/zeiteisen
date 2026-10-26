@@ -577,7 +577,7 @@
   "mention_title": "Termin verknüpfen",
   "mention_search": "Fach, Art, Datum …",
   "mention_search_label": "Termin suchen",
-  "mention_next": "Wählen fügt den nächsten Termin ein",
+  "mention_next": "Antippen wählt den nächsten Termin, der Kalender weitere",
   "mention_on_date": [
     {
       "declarations": [
@@ -613,7 +613,7 @@
   "mention_none": "Kein Termin gefunden",
   "mention_empty": "Im Stundenplan sind noch keine Termine.",
   "mention_hint": "Datum dazutippen, z. B. „ma3 9.11“",
-  "mention_other_date": "Anderes Datum",
+  "mention_other_date": "Weitere Termine",
   "mention_dates": [
     {
       "declarations": [
@@ -647,12 +647,25 @@
   "mention_elsewhere_title": "Nicht in diesem Profil",
   "mention_elsewhere_text": "{label} steht im Profil „{profile}“.",
   "mention_switch_profile": "Zu „{profile}“ wechseln",
-  "mention_mode_label": "Was verknüpfen",
-  "mention_mode_one": "Ein Termin",
-  "mention_mode_every": "Jeder Termin",
-  "mention_every_next": "Wählen verknüpft jeden Termin des Fachs",
-  "mention_every_hint": "Ein Klick auf den Link zeigt den nächsten Termin",
   "mention_every": "jeder Termin",
+  "mention_picked_none": "Noch nichts gewählt",
+  "mention_insert": "Einfügen",
+  "mention_all": "Alle wählen",
+  "mention_picked": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} Termin gewählt",
+        "countPlural=other": "{count} Termine gewählt"
+      }
+    }
+  ],
   "mention_from": "ab {date}",
   "mention_until": "bis {date}",
   "mention_show_next": "Nächsten Termin im Stundenplan zeigen",

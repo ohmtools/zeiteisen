@@ -67,8 +67,9 @@ re-implements primitive logic.
   its next one, in the picker's days, `nextOf`). `followMentions` moves
   links along with an
   edit (`successorIndex`: the one subject that changed) and counts those a
-  change lost. The picker's rows (`seriesIn`, `pickerRows`, `classRows`
-  for "Every date": one per label) and its query
+  change lost. The picker's rows (`seriesIn`, `pickerRows`), its classes'
+  dates (`datesByLabel`), the links for what is picked (`pickedTokens`)
+  and its query
   (`parseMentionQuery`: words, one date / "heute" / "morgen" / weekday /
   "kw46", dates without a year the nearest one). In the first load for the
   grid's marks (~5 KB gzip with notes.ts and the messages).

@@ -577,7 +577,7 @@
   "mention_title": "Link a class",
   "mention_search": "Subject, kind, date …",
   "mention_search_label": "Search classes",
-  "mention_next": "Picking links the next date",
+  "mention_next": "A press picks the next date, the calendar more",
   "mention_on_date": [
     {
       "declarations": [
@@ -613,7 +613,7 @@
   "mention_none": "No class found",
   "mention_empty": "The timetable has no classes yet.",
   "mention_hint": "Add a date, e.g. “ma3 9.11”",
-  "mention_other_date": "Other date",
+  "mention_other_date": "More dates",
   "mention_dates": [
     {
       "declarations": [
@@ -647,12 +647,25 @@
   "mention_elsewhere_title": "Not in this profile",
   "mention_elsewhere_text": "{label} is in the profile “{profile}”.",
   "mention_switch_profile": "Switch to “{profile}”",
-  "mention_mode_label": "What to link",
-  "mention_mode_one": "One date",
-  "mention_mode_every": "Every date",
-  "mention_every_next": "Picking links every date of the subject",
-  "mention_every_hint": "A press on the link shows the next date",
   "mention_every": "every date",
+  "mention_picked_none": "Nothing picked yet",
+  "mention_insert": "Insert",
+  "mention_all": "Pick all",
+  "mention_picked": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} date picked",
+        "countPlural=other": "{count} dates picked"
+      }
+    }
+  ],
   "mention_from": "from {date}",
   "mention_until": "until {date}",
   "mention_show_next": "Show the next date in the timetable",

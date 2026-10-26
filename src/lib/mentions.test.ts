@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { dated, profile, subject, timetable, weekly } from "@/lib/primitives/fixtures.test-util";
 import type { SemesterDates } from "@/lib/primitives/meta";
 import {
-  classRows,
+  datesByLabel,
   followMentions,
   labelParts,
   lastDay,
@@ -12,6 +12,7 @@ import {
   mentionsOfText,
   mentionToken,
   parseMentionQuery,
+  pickedTokens,
   pickerRange,
   pickerRows,
   plainText,
@@ -529,14 +530,39 @@ describe("the picker", () => {
     expect(week.map((row) => row.entry.meeting.date)).toEqual(["2026-11-02", "2026-11-04"]);
   });
 
-  it("has a row per class for every date, a lecture and its exam as one", () => {
-    const rows = classRows(series, parseMentionQuery("", TODAY), haystack, TODAY);
-    expect(rows.map((row) => [row.key, row.count, row.entry.meeting.date])).toEqual([
-      ["MA3 Ue 2.1", 4, "2026-10-26"],
-      ["PH2 SU", 5, "2026-10-28"],
+  it("gathers each class's dates by its label, a lecture and its exam as one", () => {
+    const byLabel = datesByLabel(series);
+    expect([...byLabel].map(([label, dates]) => [label, dates.length])).toEqual([
+      ["MA3 Ue 2.1", 4],
+      ["PH2 SU", 5],
     ]);
-    const wed = classRows(series, parseMentionQuery("mi", TODAY), haystack, TODAY);
-    expect(wed.map((row) => row.key)).toEqual(["PH2 SU"]);
+  });
+
+  it("writes a link per class for the Termine picked", () => {
+    const byLabel = datesByLabel(series);
+    const ma3 = byLabel.get("MA3 Ue 2.1")!;
+    const ph2 = byLabel.get("PH2 SU")!;
+    expect(pickedTokens([ma3[2]], series)).toEqual(["@[2026-10-26 08:00 MA3 Ue 2.1]"]);
+    expect(pickedTokens([ma3[2], ma3[1]], series)).toEqual([
+      "@[2026-10-12 2026-10-26 08:00 MA3 Ue 2.1]",
+    ]);
+    expect(pickedTokens(ma3, series)).toEqual(["@[MA3 Ue 2.1]"]);
+    // The exercise on Wednesday 14:00 and the exam at 08:00: no one time.
+    const exam = ph2.find((entry) => entry.meeting.date === "2027-02-10")!;
+    expect(pickedTokens([exam, ph2[0], ma3[0]], series)).toEqual([
+      "@[2026-10-05 08:00 MA3 Ue 2.1]",
+      "@[2026-10-07 2027-02-10 PH2 SU]",
+    ]);
+  });
+
+  it("names exactly the Termine picked", () => {
+    const ma3 = datesByLabel(series).get("MA3 Ue 2.1")!;
+    const [token] = pickedTokens([ma3[0], ma3[3]], series);
+    const [mention] = mentionsOfText(token);
+    const named = series
+      .flatMap((one) => one.dates)
+      .filter((entry) => mentionMatches(mention, entry));
+    expect(named).toEqual([ma3[0], ma3[3]]);
   });
 
   it("reads dates without a year as the nearest one", () => {
