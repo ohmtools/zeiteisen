@@ -253,12 +253,12 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   active profile, then with switched-off classes, then in the other profiles
   (the notes belong to the device, not to a profile). Four looks:
   - in the active grid: a chip in the kind's colour, "MA3 Ue Mo 26.10.", a
-    press shows its block in the week view (week and phone day picked, the
-    block pulses and scrolls into view; the panel closes on phones and
-    compact screens, it covers the grid). A link naming several (a class,
-    days, a span): its next Termin's week and day, and every block of that
-    week it names pulses (user request), on phones those of the day shown;
-    the first scrolls into view;
+    press makes every block on screen it names pulse (user request; the
+    shown week, on phones the shown day; in the general view the class's
+    blocks), the first scrolls into view. Only when its Termin (for a link
+    to several, a class, days or a span: its next one) is not on screen,
+    the week view goes there first (week and phone day picked). The panel
+    closes on phones and compact screens, it covers the grid;
   - switched off, or only in another profile: muted and dashed, nothing is
     wrong with the link; a press says so with "Show in groups" or "Switch to
     „Plan B“" (user decision: no warning on switching, tinkering is the

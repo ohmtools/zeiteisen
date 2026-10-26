@@ -52,7 +52,6 @@ import {
   dayOfDate,
   followMentions,
   isEvery,
-  isOne,
   type Mention,
   mentionMatches,
   mentionResolver,
@@ -317,28 +316,6 @@ export default function App() {
   const [noteReveal, setNoteReveal] = useState<{ start: number; nonce: number } | null>(null);
   // Tells one flash or reveal of the same block or line from the next.
   const nonce = useRef(0);
-  // A link to every Termin of a class (from or up to a date too): its next
-  // one.
-  const jumpToMention = (mention: MentionTarget) => {
-    const status = mentionResolver(
-      profiles.profiles,
-      profiles.activeName,
-      dates.dates,
-      new Date(),
-    ).status(mention);
-    const target = isOne(mention)
-      ? mention.days[0]
-      : status.kind === "broken"
-        ? null
-        : status.entry.meeting.date;
-    if (target === null) return;
-    setView("week");
-    pickWeek(startOfISOWeek(parseISO(target)));
-    pickDay(dayOfDate(target));
-    if (status.kind === "ok") setBlockFlash({ mention, nonce: ++nonce.current });
-    // The panel covers the grid on phones and compact screens.
-    if (currentStep() !== "wide") openPanel(null);
-  };
   const openNote = (start: number) => {
     openPanel("notes");
     setNoteReveal({ start, nonce: ++nonce.current });
@@ -492,18 +469,49 @@ export default function App() {
     onOpenNote: openNote,
     onMention: mentionInNotes,
   };
-  // A followed link: the shown week's blocks it names.
-  const flashed =
-    blockFlash && week
-      ? {
-          keys: new Set(
-            entries
-              .filter((entry) => mentionMatches(blockFlash.mention, entry))
-              .map((entry) => entry.key),
-          ),
-          nonce: blockFlash.nonce,
-        }
-      : null;
+  // The blocks on screen: the shown week's (or the general view's), on
+  // phones the shown day's.
+  const onScreen = step === "narrow" ? entries.filter((entry) => entry.day === day) : entries;
+  // A press on a link (user request): every block on screen it names pulses;
+  // when its next Termin (one for a link to several: a class, days, a span)
+  // is not on screen, the week view goes there first. In the general view a
+  // block of the class stands for its Termine.
+  const jumpToMention = (mention: MentionTarget) => {
+    const status = mentionResolver(
+      profiles.profiles,
+      profiles.activeName,
+      dates.dates,
+      new Date(),
+    ).status(mention);
+    if (status.kind !== "ok") return;
+    const next = status.entry;
+    const shown =
+      week === null
+        ? onScreen.some((entry) => mentionMatches(mention, entry))
+        : onScreen.some(
+            (entry) => entry.key === next.key && entry.meeting.date === next.meeting.date,
+          );
+    if (!shown) {
+      const date = next.meeting.date!;
+      setView("week");
+      pickWeek(startOfISOWeek(parseISO(date)));
+      pickDay(dayOfDate(date));
+    }
+    setBlockFlash({ mention, nonce: ++nonce.current });
+    // The panel covers the grid on phones and compact screens.
+    if (currentStep() !== "wide") openPanel(null);
+  };
+  // A followed link: the blocks on screen it names.
+  const flashed = blockFlash
+    ? {
+        keys: new Set(
+          entries
+            .filter((entry) => mentionMatches(blockFlash.mention, entry))
+            .map((entry) => entry.key),
+        ),
+        nonce: blockFlash.nonce,
+      }
+    : null;
   // The blocks a link points at; only blocks on days links name are checked,
   // every block when a link names every Termin of a class (the general
   // view's too: such a link names no date) or a span of them.
