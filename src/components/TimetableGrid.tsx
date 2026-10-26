@@ -438,6 +438,7 @@ export function TimetableGrid({
                       rows={Math.floor((((shown.end - shown.start) / 60) * hourPx) / 16) - 1}
                       dimmed={shown.entries.every(dimmed)}
                       expanded={openKey === shown.key}
+                      flashing={shown.entries.some((entry) => flash?.keys.has(entry.key))}
                       onPress={press(shown.entries.map((entry) => entry.key))}
                     />
                   ),

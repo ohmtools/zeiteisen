@@ -255,7 +255,8 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   - in the active grid: a chip in the kind's colour, "MA3 Ue Mo 26.10.", a
     press makes every block on screen it names pulse (user request; the
     shown week, on phones the shown day; in the general view the class's
-    blocks), the first scrolls into view. Only when its Termin (for a link
+    blocks; a collected block holding one of them pulses as a whole), the
+    first scrolls into view. Only when its Termin (for a link
     to several, a class, days or a span: its next one) is not on screen,
     the week view goes there first (week and phone day picked). The panel
     closes on phones and compact screens, it covers the grid;
