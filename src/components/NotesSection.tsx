@@ -24,6 +24,7 @@ import {
   Unlink,
   Upload,
 } from "lucide-react";
+import { parseISO } from "date-fns";
 import { cn } from "cn";
 import { getLocale, m } from "@/i18n";
 import { MentionPicker } from "@/components/MentionPicker";
@@ -70,7 +71,7 @@ import { formatTime } from "@/lib/primitives/subject";
 import { MAX_NOTES_LENGTH } from "@/lib/primitives/storage";
 import type { Timetable } from "@/lib/primitives/timetable";
 import type { Entry } from "@/lib/layout";
-import { dayDateLabel } from "@/lib/subjects";
+import { dayDateLabel, shortDate } from "@/lib/subjects";
 
 // From 90% of the limit on, the count shows.
 const SHOW_COUNT_FROM = MAX_NOTES_LENGTH * 0.9;
@@ -762,7 +763,7 @@ function Pieces({ pieces, links }: { pieces: NotesPiece[]; links: Links }) {
 }
 
 const CHIP =
-  "mx-px inline-flex h-5 max-w-full items-center gap-1 rounded-sm border px-1.5 align-[-0.25em] text-xs leading-none font-normal whitespace-nowrap no-underline";
+  "mx-px inline-flex h-5 max-w-full items-center gap-1 overflow-hidden rounded-sm border px-1.5 align-[-0.25em] text-xs leading-none font-normal whitespace-nowrap no-underline";
 
 // A link to a Termin: a chip in its kind colour, "MA3 Ue Mo 26.10."; a
 // press shows it in the grid. Struck through once past (and still pressable,
@@ -906,7 +907,7 @@ function MentionChip({
 // "…"), from / up to when or between, the time.
 function ChipDate({ mention }: { mention: Extract<NotesPiece, { kind: "mention" }> }) {
   if (isOne(mention)) return <span className="font-mono">{dayDateLabel(mention.days[0])}</span>;
-  const mark = <Repeat aria-label={m.mention_every()} className="size-3" />;
+  const mark = <Repeat aria-label={m.mention_every()} className="size-3 shrink-0" />;
   if (isEvery(mention)) return mark;
   const { from, until } = mention;
   const days = [...mention.days].sort();
@@ -923,15 +924,19 @@ function ChipDate({ mention }: { mention: Extract<NotesPiece, { kind: "mention" 
         : until !== null
           ? [m.mention_until({ date: dayDateLabel(until) })]
           : [];
-  const text = [
-    ...days.slice(0, 2).map(dayDateLabel),
-    ...(days.length > 2 ? ["…"] : []),
-    ...span,
-  ].join(", ");
+  // Several days without their weekdays, the chip stays short.
+  const day = (date: string) => (days.length > 1 ? shortDate(parseISO(date)) : dayDateLabel(date));
+  const text = [...days.slice(0, 2).map(day), ...(days.length > 2 ? ["…"] : []), ...span].join(
+    ", ",
+  );
+  // Too long for the line all the same: cut with an ellipsis, never over
+  // the panel's edge.
   return (
     <>
       {mark}
-      <span className="font-mono">{[text, mention.time].filter(Boolean).join(" ")}</span>
+      <span className="min-w-0 truncate font-mono">
+        {[text, mention.time].filter(Boolean).join(" ")}
+      </span>
     </>
   );
 }

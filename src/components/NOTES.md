@@ -340,8 +340,9 @@ label]`, several as `@[day day … time? label]` (the time when they share
   the start bounds it (`@[2026-11-09- 09:45 MA3]`). One day with a time
   and nothing else is the picker's link to one Termin (exact class); every
   other dated link fits the label as above. The chip: label, the repeat
-  mark, two days then "…", "ab Do 5.11.", "bis Mo 9.11.", "Mo 2.11.–Mo
-  30.11.", the time; struck through once the last day it can name is past
+  mark, two days then "…" (several without weekdays: "5.11., 12.11., …"),
+  "ab Do 5.11.", "bis Mo 9.11.", "Mo 2.11.–Mo 30.11.", the time, cut with
+  an ellipsis rather than over the panel's edge; struck through once the last day it can name is past
   (`lastDay`; never with an open `+`). A press shows the next Termin among
   them (the last when all are past); its blocks carry the notes' mark in
   the week view only (the general view has no dates). Followed like a link
