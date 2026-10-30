@@ -290,7 +290,7 @@ Designentscheidungen"; this file keeps what the code has to hold to.
   or unpicks (a box at the row's start; no kind dot beside it, it read as
   a second box), a bar at the bottom says how many and "Insert" writes the
   links, one per class (`pickedTokens`): one Termin as `@[date time
-label]`, several as `@[day day … time? label]` (the time when they share
+  label]`, several as `@[day day … time? label]` (the time when they share
   one), all dates of the class in the picker (more than one) as
   `@[label]`. Enter with nothing picked inserts the first, highlighted row
   at once. Step 1: a row per class and weekday time of the active
