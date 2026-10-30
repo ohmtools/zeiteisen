@@ -47,7 +47,7 @@ export function DayToggle({
             role="tab"
             aria-selected={selected}
             className={cn(
-              "relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-md text-sm transition-[color,scale] duration-560 outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
+              "relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-md text-sm transition-[scale] duration-560 outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
               weekStart ? "h-14" : "h-10",
               selected ? "font-semibold text-red-foreground" : "text-muted-foreground",
             )}
@@ -59,11 +59,10 @@ export function DayToggle({
               <>
                 <span>{dayName(day)}</span>
                 {weekStart && (
-                  // Its own colour both ways: inheriting the button's, which
-                  // eases from grey, dipped the picked date to grey and back.
+                  // Its own colour both ways, switched at once like the label's.
                   <span
                     className={cn(
-                      "font-mono text-base transition-colors duration-560",
+                      "font-mono text-base",
                       selected ? "text-red-foreground" : "text-foreground",
                     )}
                   >
