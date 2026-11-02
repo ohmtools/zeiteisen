@@ -413,7 +413,10 @@ label]`, several as `@[day day … time? label]` (the time when they share
   specific kind of the subject (`colourKind`: Pr, Ue, Tu, S, WF, SU), the
   kinds always also written in the block. Name never cut or broken inside;
   kinds and group, then room (mono); in General the rhythm ("even weeks",
-  "G1").
+  "G1"). Every line centred (user decision). **The room is never cut**
+  (user decision): wider than the block it runs out evenly over padding,
+  border and gap (`overflow-x-visible overflow-y-clip`); only the kinds
+  line truncates.
 - **No lane narrower than 48px** (user decision, `fitDay`): a column too
   narrow for every lane of a cluster keeps its first lanes and gathers the
   rest into the last one as a dashed collected block (codes stacked, "+n"

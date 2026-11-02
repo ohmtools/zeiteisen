@@ -217,8 +217,12 @@ export function SubjectBlock({
       {...press}
       aria-expanded={expanded}
       data-flash={flashing ? "" : undefined}
+      // Every line centred (user decision). Clipped only below: a room wider
+      // than the block runs out over padding, border and gap on both sides,
+      // it is never cut (user decision). `clip`, not `hidden`: `hidden` on
+      // one axis turns `visible` on the other into `auto`.
       className={cn(
-        "flex cursor-pointer flex-col overflow-hidden rounded-sm border px-2 py-1 text-left text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex cursor-pointer flex-col items-center overflow-x-visible overflow-y-clip rounded-sm border px-2 py-1 text-center text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
         BLOCK_MOTION,
         kindClass(subject.kind),
         place ? "pointer-events-auto absolute z-[2]" : "relative shrink-0",
@@ -241,7 +245,7 @@ export function SubjectBlock({
       <span
         className={cn(
           "font-semibold break-normal whitespace-nowrap text-foreground",
-          noted && "pr-3",
+          noted && "px-3",
         )}
       >
         {subject.name}
@@ -253,11 +257,15 @@ export function SubjectBlock({
           className="pointer-events-none absolute top-1 right-1 size-3 text-block-kind"
         />
       )}
-      <span className="truncate text-block-kind">{kindsLine(entry)}</span>
-      {unclear && <span className="truncate text-warning">{m.badge_sh_unclear()}</span>}
-      {!brief && when && <span className="truncate font-mono text-block-room">{when}</span>}
+      <span className="max-w-full truncate text-block-kind">{kindsLine(entry)}</span>
+      {unclear && <span className="max-w-full truncate text-warning">{m.badge_sh_unclear()}</span>}
+      {!brief && when && (
+        <span className="max-w-full truncate font-mono text-block-room">{when}</span>
+      )}
+      {/* Never cut, whatever the width (user decision): centred, it runs out
+          evenly on both sides. */}
       {!brief && meeting.location && (
-        <span className="truncate font-mono text-block-room">{meeting.location}</span>
+        <span className="font-mono whitespace-nowrap text-block-room">{meeting.location}</span>
       )}
       {!brief && rhythm && <span className="text-muted-foreground">{rhythm}</span>}
       <span className="sr-only">{spoken}</span>
@@ -300,7 +308,7 @@ export function CollectedBlock({
       aria-label={m.grid_collected({ subjects: entries.map((e) => e.subject.name).join(", ") })}
       data-flash={flashing ? "" : undefined}
       className={cn(
-        "pointer-events-auto absolute z-[2] flex cursor-pointer flex-col overflow-hidden rounded-sm border border-dashed border-muted-foreground/50 bg-surface px-2 py-1 text-left text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "pointer-events-auto absolute z-[2] flex cursor-pointer flex-col items-center overflow-hidden rounded-sm border border-dashed border-muted-foreground/50 bg-surface px-2 py-1 text-center text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring",
         BLOCK_MOTION,
         dimmed && "opacity-30",
         expanded && "outline-2 -outline-offset-1 outline-foreground",
@@ -317,7 +325,7 @@ export function CollectedBlock({
         </span>
       ))}
       {more > 0 && <span className="font-semibold text-foreground">+{more}</span>}
-      {more === 0 && <span className="truncate text-block-kind">{kinds}</span>}
+      {more === 0 && <span className="max-w-full truncate text-block-kind">{kinds}</span>}
     </div>
   );
 }
