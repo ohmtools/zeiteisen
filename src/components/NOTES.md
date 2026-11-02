@@ -400,7 +400,8 @@ label]`, several as `@[day day … time? label]` (the time when they share
   one line (36px, 32px on phones), also in General, where it explains
   itself ("Regular classes, whatever the week"); empty it says "No all-day
   events". Neighbouring days with the very same events share one chip
-  (`@/lib/allday`); a day with several shows "+n", a press lists them (a
+  (`@/lib/allday`). A chip shows the title only (user decision; dates and
+  note are in its list); a day with several shows "+n", a press lists them (a
   popover on iPad and desktop; in the details' drawer or sheet on phones and
   `short` screens, like a block, user request); a lecture-free day wins the
   line. Then 12px to the first hour line.

@@ -680,8 +680,8 @@ function AllDayChip({
   const label = (
     <>
       {prefix && <span className="text-muted-foreground">{prefix}</span>}
+      {/* The title alone (user decision): dates and note are in the list. */}
       <b className="truncate font-semibold">{localized(first.title)}</b>
-      <span className="truncate text-muted-foreground">{eventNote(first)}</span>
       {rest.length > 0 && (
         <span
           className="ml-auto shrink-0 rounded-sm bg-background/40 px-1.5 leading-5"
