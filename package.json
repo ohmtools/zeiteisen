@@ -1,6 +1,6 @@
 {
   "name": "zeiteisen",
-  "version": "2.2.18",
+  "version": "2.2.19",
   "private": true,
   "license": "BSD-3-Clause",
   "type": "module",
@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@inlang/plugin-message-format": "^4.5.6",
     "@rolldown/plugin-babel": "^0.2.3",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^24.13.4",

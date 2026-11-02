@@ -99,6 +99,13 @@
   `src/` is TypeScript only; `.d.ts` are emitted so `allowJs` stays off. The
   `@paraglide/*` alias lives in `tsconfig.app.json`, `vite.config.ts` and
   `vitest.config.ts` — change all three together.
+- The message-format plugin is the devDependency
+  `@inlang/plugin-message-format`, loaded from `./node_modules/...` in
+  `project.inlang/settings.json` (relative to the repo root, not to
+  `project.inlang/`). It was a jsdelivr URL fetched on every compile: with
+  the CDN unreachable paraglide only warns and emits no messages at all, and
+  `tsc -b` does not catch it (`skipLibCheck` hides the broken `.d.ts`, `m`
+  turns `any`). Never go back to a URL.
 - `npm run messages` (CLI) compiles with the default locale strategy (cookie
   first), the vite plugin with `localStorage` first: restart a running dev
   server after the CLI, or the `PARAGLIDE_LOCALE` trick for German
