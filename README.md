@@ -75,7 +75,6 @@ Rootless Quadlet in `~/.config/containers/systemd/`, `zeiteisen.network`:
 
 ```ini
 [Container]
-ContainerName=zeiteisen
 Image=ghcr.io/ohmtools/zeiteisen:latest
 AutoUpdate=registry
 PublishPort=[::1]:8081:8080
